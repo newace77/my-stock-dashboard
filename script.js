@@ -57,6 +57,12 @@ let bubbleChart = null;
 document.addEventListener('DOMContentLoaded', () => {
     fetchData();
 
+    // 10분마다 자동 새로고침
+    setInterval(() => {
+        console.log("자동 새로고침 실행 중...");
+        fetchData();
+    }, 10 * 60 * 1000);
+
     const refreshBtn = document.getElementById('refresh-fab');
     if (refreshBtn) {
         refreshBtn.addEventListener('click', () => fetchData());
@@ -69,7 +75,7 @@ async function fetchData() {
 
     updateTimestamp(null, "업데이트 확인 중...");
 
-    // 1. [Fastest] 로컬 스냅샷 먼저 로드 (기다리지 않고 즉시 표시)
+    // 1. [Fastest] 로컬 스냅샷 먼저 로드
     fetch(CONFIG.snapshotURL + '?t=' + Date.now())
         .then(response => response.json())
         .then(json => {
@@ -80,24 +86,25 @@ async function fetchData() {
         })
         .catch(err => console.warn("Snapshot load failed", err));
 
-    // 2. [Live] 구글 시트 데이터 병렬 로드 및 업데이트
-    Promise.all([
-        fetchWithFallback(CONFIG.summaryURL),
-        fetchWithFallback(CONFIG.holdingsURL),
-        fetchWithFallback(CONFIG.historyURL)
-    ]).then(([summaryData, holdingsData, historyData]) => {
-        if (summaryData) renderSummary(summaryData, summaryTable);
-        if (holdingsData) { processHoldingsData(holdingsData); renderHoldingsTable(); }
-        if (historyData) renderHistoryChart(historyData);
+    // 2. [Live] 구글 시트 데이터 개별 로드 (하나가 실패해도 나머지는 표시)
+    const fetchTasks = [
+        { key: 'summary', url: CONFIG.summaryURL, render: (d) => renderSummary(d, summaryTable) },
+        { key: 'holdings', url: CONFIG.holdingsURL, render: (d) => { processHoldingsData(d); renderHoldingsTable(); } },
+        { key: 'history', url: CONFIG.historyURL, render: (d) => renderHistoryChart(d) }
+    ];
 
-        if (summaryData || holdingsData || historyData) {
-            updateTimestamp(true, "Live 🟢");
-        }
-    }).catch(err => {
-        console.error("Live fetch error", err);
-    });
+    let successCount = 0;
+
+    for (const task of fetchTasks) {
+        fetchWithFallback(task.url).then(data => {
+            if (data) {
+                task.render(data);
+                successCount++;
+                updateTimestamp(true, `Live 🟢 (${successCount}/3)`);
+            }
+        }).catch(err => console.error(`${task.key} fetch failed`, err));
+    }
 }
-
 async function fetchWithFallback(targetUrl) {
     const urlsToTry = [
         targetUrl + '&t=' + Date.now(),

@@ -1,0 +1,97 @@
+name: Auto Update Data Snapshot
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # 매 정시마다 실행 (1시간 간격)
+  workflow_dispatch:      # 수동 실행 가능
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Create Update Script
+        run: |
+          cat << 'EOF' > update_snapshot.js
+          const fs = require('fs');
+          const https = require('https');
+
+          const CONFIG = {
+              summary: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyAvQcej4ON8V6_bjKeqDwbYP9SQL7gGWf9JPREaA5xzoFK3xrwqb4u1IL6lJYjUz5e0IZ9hGRkCKn/pub?gid=0&single=true&output=csv",
+              holdings: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyAvQcej4ON8V6_bjKeqDwbYP9SQL7gGWf9JPREaA5xzoFK3xrwqb4u1IL6lJYjUz5e0IZ9hGRkCKn/pub?gid=58859590&single=true&output=csv",
+              history: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyAvQcej4ON8V6_bjKeqDwbYP9SQL7gGWf9JPREaA5xzoFK3xrwqb4u1IL6lJYjUz5e0IZ9hGRkCKn/pub?gid=1345768416&single=true&output=csv"
+          };
+
+          function fetchCSV(url) {
+              return new Promise((resolve, reject) => {
+                  https.get(url, (res) => {
+                      let data = '';
+                      res.on('data', (chunk) => data += chunk);
+                      res.on('end', () => resolve(data));
+                  }).on('error', reject);
+              });
+          }
+
+          function parseCSV(csvText) {
+              if (!csvText) return [];
+              return csvText.split('\n').map(row => {
+                  const parts = [];
+                  let currentPart = '';
+                  let insideQuotes = false;
+                  for (let i = 0; i < row.length; i++) {
+                      const char = row[i];
+                      if (char === '"') {
+                          insideQuotes = !insideQuotes;
+                      } else if (char === ',' && !insideQuotes) {
+                          parts.push(currentPart.trim().replace(/^"|"$/g, ''));
+                          currentPart = '';
+                      } else {
+                          currentPart += char;
+                      }
+                  }
+                  parts.push(currentPart.trim().replace(/^"|"$/g, ''));
+                  return parts;
+              });
+          }
+
+          async function run() {
+              try {
+                  const [s, h, hist] = await Promise.all([
+                      fetchCSV(CONFIG.summary),
+                      fetchCSV(CONFIG.holdings),
+                      fetchCSV(CONFIG.history)
+                  ]);
+                  
+                  const snapshot = {
+                      summary: parseCSV(s),
+                      holdings: parseCSV(h),
+                      history: parseCSV(hist)
+                  };
+                  
+                  fs.writeFileSync('data_snapshot.json', JSON.stringify(snapshot, null, 2));
+                  console.log('Successfully updated data_snapshot.json');
+              } catch (e) {
+                  console.error(e);
+                  process.exit(1);
+              }
+          }
+          run();
+          EOF
+
+      - name: Run Update Script
+        run: node update_snapshot.js
+
+      - name: Commit and Push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add data_snapshot.json
+          git diff --quiet && git diff --staged --quiet || git commit -m "chore: auto update data snapshot [skip ci]"
+          git push
