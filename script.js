@@ -149,6 +149,25 @@ let historyChart = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     fetchData();
+
+    // 플로팅 버튼 이벤트
+    const refreshBtn = document.getElementById('refresh-fab');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', async () => {
+            refreshBtn.classList.add('fab-spinning');
+            refreshBtn.disabled = true;
+            
+            try {
+                await fetchData();
+            } finally {
+                // 부드러운 전환을 위해 약간의 지연 후 애니메이션 제거
+                setTimeout(() => {
+                    refreshBtn.classList.remove('fab-spinning');
+                    refreshBtn.disabled = false;
+                }, 500);
+            }
+        });
+    }
 });
 
 // 데이터 가져오기 (Waterfall 전략: 직접 -> 프록시1 -> 프록시2 -> 백업)
