@@ -7,7 +7,7 @@ const CONFIG = {
     historyURL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyAvQcej4ON8V6_bjKeqDwbYP9SQL7gGWf9JPREaA5xzoFK3xrwqb4u1IL6lJYjUz5e0IZ9hGRkCKn/pub?gid=1345768416&single=true&output=csv",
     snapshotURL: "data_snapshot.json",
     // 💡 아래 URL을 본인의 Google Apps Script 배포 URL로 교체하세요!
-    gasURL: "https://script.google.com/macros/s/AKfycbyOillTEEqOH_ycT-wFq0CACxgZO-bsRABrUpCKFneTJ1x61KEhbYcUoF046sMTwMWg5A/exec"
+    gasURL: "https://script.google.com/macros/s/AKfycby_w2P7Bb66X5bhtSIffnH6QIIQDqiWZGfrNdEDlQZlIDA1sbXVtbdxIPOHByAJamlg1w/exec"
 };
 
 const PROXIES = [
@@ -251,7 +251,7 @@ function renderSummary(data, tableElement) {
                 const changeElem = document.getElementById(`card-${m.id}-change`);
 
                 if (valElem) valElem.textContent = row[15] || "-"; // P열: 현재가
-                
+
                 const diffVal = row[16] || "0"; // Q열: 변화량
                 const changeVal = row[17] || "0%"; // R열: 변화율 (ex: 1.23%)
 
@@ -319,14 +319,34 @@ function renderSummary(data, tableElement) {
 function processHoldingsData(data) {
     if (!data) return;
     globalHoldings = [];
+    const tickerSelect = document.getElementById('ticker-select');
+
+    // 드롭다운 초기화 (기본 옵션 제외)
+    if (tickerSelect) {
+        tickerSelect.innerHTML = '<option value="">종목을 선택하세요</option><option value="DIRECT">직접 입력 (신규 종목)</option>';
+    }
+
     data.forEach((row, i) => {
         if (i === 0 || !row || !row[0] || ["종목명", "환율"].includes(row[0])) return;
+        const name = row[0];
+        const ticker = row[1] || ""; // 구글 파이낸스 티커
         const weight = parseSafeFloat(row[9]);
         const evalKRW = parseSafeFloat(row[8]);
+
+        // 드롭다운에 추가
+        if (tickerSelect && ticker) {
+            const opt = document.createElement('option');
+            opt.value = ticker;
+            opt.dataset.name = name;
+            opt.textContent = name;
+            tickerSelect.appendChild(opt);
+        }
+
         if (weight === 0 && evalKRW === 0) return;
 
         globalHoldings.push({
-            name: row[0],
+            name: name,
+            ticker: ticker,
             weight: weight,
             returnRate: parseSafeFloat(row[7]),
             eval: evalKRW,
@@ -487,13 +507,36 @@ async function requestMarketRefresh() {
 async function handleTransactionSubmit(e) {
     e.preventDefault();
     const submitBtn = document.getElementById('submit-btn');
+    const tickerSelect = document.getElementById('ticker-select');
+    const inputTicker = document.getElementById('input-ticker');
+
+    let finalTicker = "";
+    let finalStockName = "";
+
+    // 1. 드롭다운 또는 직접 입력에서 데이터 추출
+    if (tickerSelect && tickerSelect.value && tickerSelect.value !== 'DIRECT') {
+        finalTicker = tickerSelect.value;
+        const selectedOption = tickerSelect.options[tickerSelect.selectedIndex];
+        finalStockName = selectedOption.dataset.name || "";
+    } else if (inputTicker) {
+        finalTicker = inputTicker.value.trim();
+        finalStockName = finalTicker;
+    }
+
+    // 2. 유효성 검사 (현금 입출금인 경우 종목 선택 제외)
+    const type = document.getElementById('type-select').value;
+    if (!['현금입금', '현금출금'].includes(type) && !finalTicker) {
+        showStatus('⚠️ 종목을 선택하거나 직접 입력해주세요!', 'error');
+        return;
+    }
 
     const formData = {
         account: document.getElementById('account-select').value,
-        type: document.getElementById('type-select').value,
+        type: type,
         currency: document.getElementById('currency-select').value,
         date: document.getElementById('input-date').value,
-        ticker: document.getElementById('input-ticker').value,
+        ticker: finalTicker,
+        stockName: finalStockName, // 종목명 따로 전송
         quantity: document.getElementById('input-quantity').value,
         price: document.getElementById('input-price').value
     };
@@ -518,12 +561,15 @@ async function handleTransactionSubmit(e) {
 
         showStatus('✅ 성공적으로 기록되었습니다! 멍!', 'success');
 
-        // 폼 전체 리셋 대신 특정 필드만 초기화 (계좌, 거래종류, 통화, 날짜는 유지)
-        const tickerField = document.getElementById('input-ticker');
+        // 3. 폼 초기화
+        if (tickerSelect) tickerSelect.selectedIndex = 0;
+        if (inputTicker) {
+            inputTicker.value = '';
+            inputTicker.style.display = 'none';
+        }
         const qtyField = document.getElementById('input-quantity');
         const priceField = document.getElementById('input-price');
 
-        if (tickerField) tickerField.value = '';
         if (qtyField) qtyField.value = '';
         if (priceField) priceField.value = '';
 

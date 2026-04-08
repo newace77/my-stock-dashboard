@@ -204,8 +204,12 @@
                             <input type="date" id="input-date" required>
                         </div>
                         <div class="input-group" id="ticker-group">
-                            <label for="input-ticker">종목명/티커</label>
-                            <input type="text" id="input-ticker" placeholder="예: AAPL, 삼성전자">
+                            <label for="ticker-select">종목 선택</label>
+                            <select id="ticker-select">
+                                <option value="">종목을 선택하세요</option>
+                                <option value="DIRECT">직접 입력 (신규 종목)</option>
+                            </select>
+                            <input type="text" id="input-ticker" placeholder="종목명 또는 티커 입력" style="display:none; margin-top: 8px;">
                         </div>
                         <div class="input-group">
                             <label for="input-quantity">수량 / 금액</label>

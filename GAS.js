@@ -53,18 +53,37 @@ function doPost(e) {
     var lastRow = sheet.getLastRow();
     var nextRow = lastRow + 1;
 
-    // 💡 1. 종목명/티커 자동 매칭 로직 (과거 기록 참조)
-    var stockName = data.ticker;
-    var stockCode = data.ticker;
+    // 💡 1. 종목명/티커 자동 매칭 로직
+    var stockName = data.stockName || data.ticker || "";
+    var stockCode = data.ticker || "";
 
-    if (lastRow > 1) {
-      // B열과 C열의 데이터를 가져와서 입력값과 대조
-      var history = sheet.getRange(2, 2, Math.min(lastRow - 1, 5000), 2).getValues();
-      for (var i = history.length - 1; i >= 0; i--) {
-        if (history[i][0] == data.ticker || history[i][1] == data.ticker) {
-          stockName = history[i][0];
-          stockCode = history[i][1];
-          break;
+    // 현금 입출금이 아닌 경우에만 티커 보완 로직 실행
+    if (data.type !== "현금입금" && data.type !== "현금출금") {
+      // 만약 티커가 이름과 동일하거나 부족한 경우, Holdings 시트나 과거 기록 참조
+      if (!stockCode || stockCode === stockName || !stockCode.includes(":")) {
+        // 1-A. 먼저 Holdings 시트에서 찾아보기
+        var holdingsSheet = ss.getSheetByName("Holdings");
+        if (holdingsSheet) {
+          var hData = holdingsSheet.getDataRange().getValues();
+          for (var i = 1; i < hData.length; i++) {
+            if (hData[i][0] == stockName || hData[i][1] == stockName) {
+              stockName = hData[i][0];
+              stockCode = hData[i][1];
+              break;
+            }
+          }
+        }
+
+        // 1-B. 여전히 못 찾았다면 과거 기록(record 시트) 참조
+        if ((!stockCode || stockCode === stockName) && lastRow > 1) {
+          var history = sheet.getRange(Math.max(2, lastRow - 500), 2, Math.min(lastRow - 1, 500), 2).getValues();
+          for (var i = history.length - 1; i >= 0; i--) {
+            if (history[i][0] == stockName || history[i][1] == stockName) {
+              stockName = history[i][0];
+              stockCode = history[i][1];
+              break;
+            }
+          }
         }
       }
     }
@@ -72,16 +91,16 @@ function doPost(e) {
     // 💡 2. 배당금, 현금성 거래 예외 처리
     var displayType = data.type; // 기본 거래 종류
     if (data.type === "현금입금" || data.type === "현금출금") {
-      stockName = "현금"; // B열에 "현금" 입력
-      stockCode = "현금"; // C열에 "현금" 입력
+      stockName = "현금"; 
+      stockCode = "현금"; 
       if (data.type === "현금출금") {
-        displayType = "현금인출"; // E열에 "현금인출" 입력
+        displayType = "현금인출"; 
       }
     } else if (data.type === "배당금") {
-      // 배당금은 입력된 티커가 있으면 유지, 없으면 "현금"
       stockName = stockName || "현금";
       stockCode = stockCode || "현금";
     }
+    // "매수", "매도"는 위 조건에 해당하지 않으므로 stockName/stockCode가 유지됨
 
     var price = parseFloat(data.price) || 0;
     var qty = parseFloat(data.quantity) || 0;
