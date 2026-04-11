@@ -255,25 +255,228 @@ tr:hover { background-color: #fafafa; }
     th, td { padding: 8px; font-size: 0.85rem; }
 }
 
-/* 🐾 플로팅 새로고침 버튼 스타일 */
+/* 📑 탭 네비게이션 스타일 */
+.tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 25px;
+    border-bottom: 2px solid #ddd;
+    padding-bottom: 0;
+}
+
+.tab-btn {
+    padding: 12px 25px;
+    border: none;
+    background: none;
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: 12px 12px 0 0;
+    transition: all 0.3s;
+    border-bottom: 3px solid transparent;
+}
+
+.tab-btn:hover {
+    background-color: rgba(74, 144, 226, 0.1);
+    color: var(--accent-color);
+}
+
+.tab-btn.active {
+    color: var(--accent-color);
+    border-bottom: 3px solid var(--accent-color);
+    background-color: white;
+}
+
+.tab-content {
+    display: none;
+    animation: fadeIn 0.4s ease-in-out;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 📉 MDD 분석 섹션 스타일 */
+.mdd-input-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    align-items: flex-end;
+}
+
+.flex-bottom {
+    display: flex;
+    align-items: flex-end;
+}
+
+.analyze-button {
+    width: 100%;
+    background: linear-gradient(135deg, #4a90e2, #357abd);
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.analyze-button:hover { transform: scale(1.02); }
+
+.mdd-result-layout {
+    display: flex;
+    gap: 25px;
+    margin-top: 25px;
+}
+
+.mdd-main-area { flex: 2; min-width: 0; }
+.mdd-sidebar { flex: 1; min-width: 300px; }
+
+.mdd-summary-content {
+    line-height: 2;
+    font-size: 1rem;
+}
+
+.mdd-summary-item {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px dashed #eee;
+    padding: 8px 0;
+}
+
+.mdd-summary-item .label { color: var(--text-secondary); }
+.mdd-summary-item .value { font-weight: bold; }
+
+.recovery-prob-high { color: #27ae60; font-weight: bold; }
+.recovery-prob-mid { color: #f39c12; font-weight: bold; }
+.recovery-prob-low { color: #e74c3c; font-weight: bold; }
+
+/* 📉 MDD 회복 통계 테이블 최적화 */
+.mdd-table-card table {
+    font-size: 0.85rem; /* 글씨 크기 축소 */
+}
+
+.mdd-table-card th, 
+.mdd-table-card td {
+    padding: 10px 6px; /* 좌우 패딩 축소 */
+    white-space: nowrap; /* 줄바꿈 방지 */
+}
+
+.mdd-table-card th {
+    text-align: center; /* 헤더 중앙 정렬로 공간 효율화 */
+}
+
+.mdd-table-card td {
+    text-align: center; /* 데이터도 중앙 정렬 */
+}
+
+/* 🇺🇸 S&P 500 탭 테이블 전용 스타일 */
+#sp500-table tr { cursor: pointer; transition: background 0.2s; }
+#sp500-table tr:hover { background-color: rgba(74, 144, 226, 0.05); }
+
+.drawdown-bar-container {
+    width: 100%;
+    height: 12px;
+    background-color: #eee;
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+    margin-top: 4px;
+}
+
+.drawdown-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #1e88e5, #e53935); /* 하락률이 클수록 빨간색 쪽으로 */
+    transition: width 0.5s ease-out;
+}
+
+.drawdown-text {
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: #444;
+}
+
+.rsi-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: white;
+}
+
+.rsi-overbought { background-color: #e53935; } /* RSI > 70 */
+.rsi-oversold { background-color: #27ae60; }   /* RSI < 30 */
+.rsi-neutral { background-color: #95a5a6; }     /* 보통 */
+
+/* 🔘 플로팅 새로고침 버튼 (FAB) 스타일 개선 ... (기존 코드) ... */
 .fab-button {
     position: fixed;
     bottom: 30px;
-    left: 20px;
-    width: 60px;
-    height: 60px;
-    background: linear-gradient(135deg, #ff9d00, #ff6a00);
+    right: 30px;
+    width: 65px;
+    height: 65px;
+    background: linear-gradient(135deg, #4a90e2, #357abd);
+    color: white;
     border: none;
     border-radius: 50%;
-    color: white;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
     cursor: pointer;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-    z-index: 1000;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    z-index: 1000;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    padding: 0;
 }
 
-.fab-icon { font-size: 20px; }
-.fab-text { font-size: 10px; font-weight: bold; }
+.fab-button:hover {
+    transform: scale(1.1) rotate(5deg);
+    box-shadow: 0 12px 20px rgba(0, 0, 0, 0.25);
+    background: linear-gradient(135deg, #357abd, #2c3e50);
+}
+
+.fab-button:active {
+    transform: scale(0.95);
+}
+
+.fab-icon {
+    font-size: 1.6rem;
+    margin-bottom: 2px;
+}
+
+.fab-text {
+    font-size: 0.7rem;
+    font-weight: bold;
+    letter-spacing: -0.5px;
+}
+
+/* 데이터 갱신 중 애니메이션 */
+.fab-button.loading .fab-icon {
+    animation: spin 1s infinite linear;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* 📱 모바일에서는 조금 작게 조정 */
+@media (max-width: 600px) {
+    .fab-button {
+        bottom: 20px;
+        right: 20px;
+        width: 55px;
+        height: 55px;
+    }
+    .fab-icon { font-size: 1.3rem; }
+    .fab-text { font-size: 0.6rem; }
+}

@@ -2,18 +2,21 @@ name: Auto Update Data Snapshot
 
 on:
   schedule:
-    - cron: '0 * * * *'  # 매 정시마다 실행 (1시간 간격)
+    - cron: '0 0 * * *'  # 매일 한국 시간 오전 9시 (UTC 00:00) 실행
   workflow_dispatch:      # 수동 실행 가능
+
+permissions:
+  contents: write
 
 jobs:
   update-data:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
 
