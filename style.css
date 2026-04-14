@@ -124,6 +124,77 @@ h1 {
 .card-gold { border-top-color: #f1c40f; }
 .card-btc { border-top-color: #f39c12; }
 
+/* 📑 탭 내비게이션 스타일 */
+.tabs {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 30px;
+}
+
+.tab-btn {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 25px;
+    padding: 10px 25px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text-secondary);
+    box-shadow: var(--shadow);
+}
+
+.tab-btn:hover {
+    background-color: #f0f0f0;
+    transform: translateY(-2px);
+}
+
+.tab-btn.active {
+    background-color: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+    font-weight: bold;
+}
+
+.tab-content {
+    display: none;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* 🔥 히트맵 그리드 스타일 */
+.heatmap-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 25px;
+    margin-bottom: 25px;
+}
+
+.heatmap-card {
+    padding: 15px;
+}
+
+.heatmap-card h2 {
+    margin-bottom: 15px;
+    font-size: 1.2rem;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 8px;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 800px) {
+    .heatmap-container {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* 🧱 메인 레이아웃 (2단 구성) */
 .main-layout {
     display: flex;

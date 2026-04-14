@@ -21,6 +21,7 @@
         <!-- 탭 네비게이션 -->
         <nav class="tabs">
             <button class="tab-btn active" onclick="openTab(event, 'portfolio-tab')">📊 포트폴리오</button>
+            <button class="tab-btn" onclick="openTab(event, 'heatmap-tab')">🔥 히트맵</button>
             <button class="tab-btn" onclick="openTab(event, 'mdd-tab')">📉 MDD 분석</button>
         </nav>
 
@@ -237,7 +238,112 @@
             </div>
         </div>
 
-        <!-- 2. MDD 분석 탭 -->
+        <!-- 2. 히트맵 탭 -->
+        <div id="heatmap-tab" class="tab-content">
+            <div class="heatmap-container">
+                <section class="card heatmap-card">
+                    <h2>🇺🇸 S&P 500 Heatmap</h2>
+                    <div class="tradingview-widget-container">
+                        <div class="tradingview-widget-container__widget"></div>
+                        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-stock-heatmap.js" async>
+                        {
+                          "exchanges": [],
+                          "dataSource": "S&P500",
+                          "grouping": "sector",
+                          "blockSize": "market_cap_basic",
+                          "blockColor": "change",
+                          "locale": "ko",
+                          "symbolUrl": "",
+                          "colorTheme": "light",
+                          "hasTopBar": false,
+                          "isDatasetEnabled": false,
+                          "isTransparent": false,
+                          "hasSymbolTooltip": true,
+                          "width": "100%",
+                          "height": "500"
+                        }
+                        </script>
+                    </div>
+                </section>
+
+                <section class="card heatmap-card">
+                    <h2>💻 NASDAQ 100 Heatmap</h2>
+                    <div class="tradingview-widget-container">
+                        <div class="tradingview-widget-container__widget"></div>
+                        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-stock-heatmap.js" async>
+                        {
+                          "exchanges": [],
+                          "dataSource": "NASDAQ100",
+                          "grouping": "sector",
+                          "blockSize": "market_cap_basic",
+                          "blockColor": "change",
+                          "locale": "ko",
+                          "symbolUrl": "",
+                          "colorTheme": "light",
+                          "hasTopBar": false,
+                          "isDatasetEnabled": false,
+                          "isTransparent": false,
+                          "hasSymbolTooltip": true,
+                          "width": "100%",
+                          "height": "500"
+                        }
+                        </script>
+                    </div>
+                </section>
+
+                <section class="card heatmap-card">
+                    <h2>🇰🇷 KOSPI 200 Heatmap</h2>
+                    <div class="tradingview-widget-container">
+                        <div class="tradingview-widget-container__widget"></div>
+                        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-stock-heatmap.js" async>
+                        {
+                          "exchanges": [],
+                          "dataSource": "KOSPI200",
+                          "grouping": "sector",
+                          "blockSize": "market_cap_basic",
+                          "blockColor": "change",
+                          "locale": "ko",
+                          "symbolUrl": "",
+                          "colorTheme": "light",
+                          "hasTopBar": false,
+                          "isDatasetEnabled": false,
+                          "isTransparent": false,
+                          "hasSymbolTooltip": true,
+                          "width": "100%",
+                          "height": "500"
+                        }
+                        </script>
+                    </div>
+                </section>
+
+                <section class="card heatmap-card">
+                    <h2>🇰🇷 KOSDAQ Heatmap</h2>
+                    <div class="tradingview-widget-container">
+                        <div class="tradingview-widget-container__widget"></div>
+                        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-stock-heatmap.js" async>
+                        {
+                          "exchanges": [],
+                          "dataSource": "KOSDAQ",
+                          "grouping": "sector",
+                          "blockSize": "market_cap_basic",
+                          "blockColor": "change",
+                          "locale": "ko",
+                          "symbolUrl": "",
+                          "colorTheme": "light",
+                          "hasTopBar": false,
+                          "isDatasetEnabled": false,
+                          "isTransparent": false,
+                          "hasSymbolTooltip": true,
+                          "width": "100%",
+                          "height": "500"
+                        }
+                        </script>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- 3. MDD 분석 탭 -->
         <div id="mdd-tab" class="tab-content">
             <section class="card mdd-input-section">
                 <h2>🔍 종목 MDD 및 회복 확률 분석</h2>
