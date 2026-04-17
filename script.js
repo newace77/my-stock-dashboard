@@ -27,6 +27,8 @@ const PROXIES = [
 ];
 
 let globalHoldings = [];
+let usdKrwRate = 1400; // USD/KRW 환율 (기본값, Summary 시트에서 갱신)
+
 let sortState = { column: 'weight', direction: 'desc' };
 let summaryChart = null;
 let historyChart = null;
@@ -676,6 +678,11 @@ function renderSummary(data, tableElement) {
                         changeElem.textContent = `(${row[17]})`;
                         changeElem.className = getColorClass(row[17]);
                     }
+                    // 환율 저장 (USD/KRW)
+                    if (m.id === 'ex-rate') {
+                        const rate = parseSafeFloat(row[15]);
+                        if (rate > 100) usdKrwRate = rate;
+                    }
                 }
             }
         });
@@ -961,16 +968,23 @@ function switchHoldingsView(view) {
     }
 }
 
+
 // ===== Stock Detail Modal =====
 async function openStockModal(item) {
     const overlay = document.getElementById('stock-modal-overlay');
     if (!overlay) return;
 
     const isPositive = item.dailyChange >= 0;
-    const posClass = isPositive ? 'positive' : 'negative';
+    const posClass   = isPositive ? 'positive' : 'negative';
     const changeSign = isPositive ? '+' : '';
     const currencyIsKRW = item.ticker && /^\d{6}/.test(item.ticker);
     const currencyLabel = currencyIsKRW ? 'KRW' : 'USD';
+
+    // 헬퍼 함수
+    const fmtKRW  = (n) => Math.round(n).toLocaleString('ko-KR') + '원';
+    const fmtUSD  = (n) => (n >= 0 ? '+$' : '-$') + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const fmtUSDabs = (n) => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const fmtKRWS = (n) => (n >= 0 ? '+' : '') + Math.round(n).toLocaleString('ko-KR') + '원';
 
     // Header
     const modalIcon = document.getElementById('modal-icon');
@@ -986,51 +1000,77 @@ async function openStockModal(item) {
     // Price Section
     document.getElementById('modal-current-price').textContent = item.display.evalKRW || '-';
     const diffElem = document.getElementById('modal-price-diff');
-    const pctElem = document.getElementById('modal-price-pct');
+    const pctElem  = document.getElementById('modal-price-pct');
 
-    // Estimate daily change amount from total value * dailyChange%
-    const evalNum = item.eval || 0;
-    const dailyChangeAmt = (evalNum * item.dailyChange / 100);
-    const dailyAmtFormatted = (dailyChangeAmt >= 0 ? '+' : '') + Math.round(dailyChangeAmt).toLocaleString('ko-KR');
+    const evalKRWNum   = item.eval || 0;
+    const dailyAmtKRW  = evalKRWNum * item.dailyChange / 100;
+    diffElem.textContent = fmtKRWS(dailyAmtKRW);
+    diffElem.className   = isPositive ? 'positive' : 'negative';
+    pctElem.textContent  = `(${changeSign}${item.dailyChange}%)`;
+    pctElem.className    = isPositive ? 'positive' : 'negative';
 
-    diffElem.textContent = `${dailyAmtFormatted}원`;
-    diffElem.className = isPositive ? 'positive' : 'negative';
-    pctElem.textContent = `(${changeSign}${item.dailyChange}%)`;
-    pctElem.className = isPositive ? 'positive' : 'negative';
-
-    // Stats
+    // --- Stats Cards ---
     document.getElementById('modal-shares').textContent = item.shares || '-';
-    document.getElementById('modal-avg-cost').textContent = item.avgCost || '-';
-    document.getElementById('modal-total-value').textContent = item.display.evalKRW || '-';
 
-    const todayPL = document.getElementById('modal-today-pl');
-    todayPL.textContent = `${dailyAmtFormatted}원`;
-    todayPL.className = isPositive ? 'value-up' : 'value-down';
+    const avgCostNum    = parseSafeFloat(item.avgCost);
+    const avgCostEl     = document.getElementById('modal-avg-cost');
+    const avgCostSubEl  = document.getElementById('modal-avg-cost-sub');
+    const totalValEl    = document.getElementById('modal-total-value');
+    const totalValSubEl = document.getElementById('modal-total-value-sub');
+    const todayPLEl     = document.getElementById('modal-today-pl');
+    const todayPLSubEl  = document.getElementById('modal-today-pl-sub');
 
-    const hlCard = document.getElementById('modal-today-pl').closest('.modal-stat-card');
-    if (hlCard) {
-        hlCard.classList.toggle('negative-pl', !isPositive);
+    if (!currencyIsKRW && usdKrwRate > 100) {
+        // USD 종목: 달러(메인) + 원화(보조)
+        const avgCostUSD = avgCostNum > 0 ? avgCostNum / usdKrwRate : 0;
+        avgCostEl.textContent    = avgCostUSD > 0 ? fmtUSDabs(avgCostUSD) : (item.avgCost || '-');
+        avgCostSubEl.textContent = avgCostNum  > 0 ? fmtKRW(avgCostNum)   : '';
+
+        const evalUSD = evalKRWNum / usdKrwRate;
+        totalValEl.textContent    = evalKRWNum > 0 ? fmtUSDabs(evalUSD)  : (item.display.evalKRW || '-');
+        totalValSubEl.textContent = evalKRWNum > 0 ? fmtKRW(evalKRWNum)  : '';
+
+        const todayUSD = dailyAmtKRW / usdKrwRate;
+        todayPLEl.textContent    = (todayUSD >= 0 ? '+$' : '-$') + Math.abs(todayUSD).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        todayPLEl.className      = isPositive ? 'value-up' : 'value-down';
+        todayPLSubEl.textContent = fmtKRWS(dailyAmtKRW);
+        todayPLSubEl.className   = isPositive ? 'sub-up' : 'sub-down';
+    } else {
+        // KRW 종목: 원화만
+        avgCostEl.textContent    = item.avgCost || '-';
+        avgCostSubEl.textContent = '';
+        totalValEl.textContent    = item.display.evalKRW || '-';
+        totalValSubEl.textContent = '';
+        todayPLEl.textContent    = fmtKRWS(dailyAmtKRW);
+        todayPLEl.className      = isPositive ? 'value-up' : 'value-down';
+        todayPLSubEl.textContent = '';
     }
 
-    // Trading Info (calculated from available data)
-    const currentPrice = item.eval && item.shares ? item.eval / (parseFloat(item.shares) || 1) : 0;
-    document.getElementById('modal-open').textContent = item.display.evalKRW || '-';
-    document.getElementById('modal-high').textContent = item.display.evalKRW || '-';
-    document.getElementById('modal-low').textContent = item.display.evalKRW || '-';
+    const hlCard = todayPLEl.closest('.modal-stat-card');
+    if (hlCard) hlCard.classList.toggle('negative-pl', !isPositive);
+
+    // Trading Info
+    document.getElementById('modal-open').textContent   = item.display.evalKRW || '-';
+    document.getElementById('modal-high').textContent   = item.display.evalKRW || '-';
+    document.getElementById('modal-low').textContent    = item.display.evalKRW || '-';
     document.getElementById('modal-volume').textContent = '-';
 
-    // Your Position
-    document.getElementById('modal-market-value').textContent = item.display.evalKRW || '-';
-    document.getElementById('modal-cost-basis').textContent = item.display.profitKRW ? 
-        (item.eval - parseSafeFloat(item.display.profitKRW)).toLocaleString('ko-KR', {style:'currency', currency:'KRW'}) : '-';
+    // Your Position — 모두 원화
+    const profitKRW    = parseSafeFloat(item.display.profitKRW);
+    const costBasisKRW = evalKRWNum - profitKRW;
+
+    document.getElementById('modal-market-value').textContent = evalKRWNum > 0 ? fmtKRW(evalKRWNum) : (item.display.evalKRW || '-');
+    document.getElementById('modal-cost-basis').textContent   = evalKRWNum > 0 ? fmtKRW(costBasisKRW) : '-';
 
     const totalGainElem = document.getElementById('modal-total-gain');
-    totalGainElem.textContent = item.display.profitKRW || '-';
+    totalGainElem.textContent = profitKRW !== 0
+        ? (profitKRW >= 0 ? '+' : '') + Math.round(profitKRW).toLocaleString('ko-KR') + '원'
+        : (item.display.profitKRW || '-');
     totalGainElem.className = getColorClass(item.display.profitKRW);
 
     const returnElem = document.getElementById('modal-return');
     returnElem.textContent = `${item.display.returnRate}%`;
-    returnElem.className = getColorClass(item.display.returnRate);
+    returnElem.className   = getColorClass(item.display.returnRate);
 
     // Show modal
     overlay.classList.add('active');
@@ -1044,6 +1084,8 @@ async function openStockModal(item) {
         fetchIntradayData(item);
     }
 }
+
+
 
 function closeStockModal(event) {
     // If called with a click event (overlay click), only close if clicking the overlay itself

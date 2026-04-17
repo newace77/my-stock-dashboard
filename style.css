@@ -342,3 +342,691 @@ select:focus, input:focus {
     .summary-cards { grid-template-columns: 1fr 1fr; }
     header { flex-direction: column; align-items: flex-start; gap: 1rem; }
 }
+
+/* ===== Holdings Header with View Toggle ===== */
+.holdings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.holdings-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.holdings-header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.holdings-header h2 {
+    margin-bottom: 0;
+}
+
+/* 상승/하락 카운터 뱃지 */
+.holdings-stat-badges {
+    display: flex;
+    gap: 0.4rem;
+}
+
+.holdings-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.holdings-badge.up {
+    background: rgba(52, 211, 153, 0.15);
+    color: #34d399;
+    border: 1px solid rgba(52, 211, 153, 0.3);
+}
+
+.holdings-badge.down {
+    background: rgba(185, 28, 28, 0.25);
+    color: #f87171;
+    border: 1px solid rgba(248, 113, 113, 0.3);
+}
+
+/* 정렬 버튼 그룹 */
+.holdings-sort-group {
+    display: flex;
+    gap: 0.3rem;
+    background: rgba(0,0,0,0.3);
+    border-radius: 10px;
+    padding: 0.25rem;
+}
+
+.sort-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    padding: 0.2rem 0.65rem;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    transition: var(--transition);
+    white-space: nowrap;
+}
+
+.sort-btn.active {
+    background: rgba(56, 189, 248, 0.2);
+    color: var(--primary);
+}
+
+.sort-btn:hover:not(.active) {
+    background: rgba(255,255,255,0.05);
+    color: var(--text-main);
+}
+
+.holdings-view-toggle {
+    display: flex;
+    gap: 0.4rem;
+    background: rgba(0,0,0,0.3);
+    border-radius: 10px;
+    padding: 0.25rem;
+}
+
+.view-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    width: 32px;
+    height: 32px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.view-btn.active {
+    background: rgba(56, 189, 248, 0.2);
+    color: var(--primary);
+}
+
+.view-btn:hover:not(.active) {
+    background: rgba(255,255,255,0.05);
+    color: var(--text-main);
+}
+
+/* 카드 비중 뱃지 */
+.card-weight-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.1rem 0.45rem;
+    border-radius: 20px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    background: rgba(148, 163, 184, 0.12);
+    color: var(--text-muted);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    letter-spacing: 0.01em;
+}
+
+
+
+/* ===== Holdings Cards Grid ===== */
+.holdings-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+/* ===== Stock Card (Default - Attachment 1) ===== */
+.stock-card {
+    background: rgba(22, 32, 50, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 1.4rem;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(12px);
+}
+
+.stock-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    border-radius: 20px;
+    pointer-events: none;
+}
+
+.stock-card.positive::before {
+    background: linear-gradient(135deg, rgba(0, 120, 80, 0.35) 0%, rgba(0, 80, 55, 0.25) 100%);
+}
+
+.stock-card.negative::before {
+    background: linear-gradient(135deg, rgba(140, 20, 40, 0.35) 0%, rgba(100, 15, 30, 0.25) 100%);
+}
+
+/* Hover State (Attachment 2) */
+.stock-card:hover {
+    transform: translateY(-4px) scale(1.01);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
+}
+
+.stock-card:hover::before {
+    opacity: 1;
+}
+
+.stock-card.positive:hover {
+    border-color: rgba(74, 222, 128, 0.3);
+    box-shadow: 0 20px 40px -10px rgba(0, 150, 80, 0.3);
+}
+
+.stock-card.negative:hover {
+    border-color: rgba(251, 113, 133, 0.3);
+    box-shadow: 0 20px 40px -10px rgba(200, 30, 60, 0.3);
+}
+
+.stock-card:active {
+    transform: translateY(-2px) scale(0.99);
+}
+
+/* Card Top Row */
+.card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    position: relative;
+    z-index: 1;
+}
+
+.card-ticker-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.card-ticker-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.card-ticker {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--text-main);
+    letter-spacing: -0.02em;
+}
+
+.card-currency-badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.2rem 0.55rem;
+    border-radius: 6px;
+    background: rgba(56, 189, 248, 0.15);
+    color: var(--primary);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    letter-spacing: 0.05em;
+}
+
+.card-currency-badge.krw {
+    background: rgba(251, 191, 36, 0.15);
+    color: #fbbf24;
+    border-color: rgba(251, 191, 36, 0.25);
+}
+
+.card-company {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 400;
+}
+
+/* Trend Icon */
+.card-trend-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: var(--transition);
+}
+
+.card-trend-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* 상승: 선명한 초록 배경 */
+.card-trend-icon.positive {
+    background: rgba(52, 211, 153, 0.25);
+    color: #34d399;
+    border: 1px solid rgba(52, 211, 153, 0.35);
+}
+
+/* 하락: 어두운 빨강 배경 (참조 이미지 스타일) */
+.card-trend-icon.negative {
+    background: rgba(185, 28, 28, 0.35);
+    color: #f87171;
+    border: 1px solid rgba(248, 113, 113, 0.3);
+}
+
+.stock-card:hover .card-trend-icon {
+    transform: scale(1.12);
+}
+
+.stock-card.positive:hover .card-trend-icon {
+    background: rgba(52, 211, 153, 0.4);
+}
+
+.stock-card.negative:hover .card-trend-icon {
+    background: rgba(185, 28, 28, 0.55);
+}
+
+
+/* Price Section */
+.card-price-section {
+    position: relative;
+    z-index: 1;
+    margin-bottom: 0.6rem;
+}
+
+.card-price {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--text-main);
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    transition: var(--transition);
+}
+
+.stock-card:hover .card-price {
+    font-size: 1.85rem;
+}
+
+.card-change {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-top: 0.3rem;
+}
+
+.card-change.positive { color: var(--positive); }
+.card-change.negative { color: var(--negative); }
+
+/* Mini Sparkline */
+.card-sparkline {
+    position: relative;
+    z-index: 1;
+    margin: 0.9rem 0;
+    height: 40px;
+}
+
+.card-sparkline canvas {
+    width: 100% !important;
+    height: 40px !important;
+}
+
+/* Card Bottom */
+.card-bottom {
+    position: relative;
+    z-index: 1;
+    border-top: 1px solid rgba(255,255,255,0.07);
+    padding-top: 0.9rem;
+    margin-top: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.card-bottom-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.82rem;
+}
+
+.card-bottom-row .label {
+    color: var(--text-muted);
+    font-weight: 400;
+}
+
+.card-bottom-row .value {
+    color: var(--text-main);
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+/* ===== Modal (Attachment 3) ===== */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 10, 25, 0.8);
+    backdrop-filter: blur(8px);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    animation: overlayFadeIn 0.2s ease;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+@keyframes overlayFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-container {
+    background: #111827;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 24px;
+    width: 100%;
+    max-width: 720px;
+    max-height: 92vh;
+    overflow-y: auto;
+    padding: 2rem;
+    position: relative;
+    animation: modalSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.modal-container::-webkit-scrollbar { width: 4px; }
+.modal-container::-webkit-scrollbar-track { background: transparent; }
+.modal-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+@keyframes modalSlideIn {
+    from { opacity: 0; transform: translateY(20px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Modal Header */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.modal-title-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.modal-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    flex-shrink: 0;
+}
+
+.modal-icon.positive {
+    background: rgba(74, 222, 128, 0.2);
+    border: 1px solid rgba(74, 222, 128, 0.3);
+}
+
+.modal-icon.negative {
+    background: rgba(251, 113, 133, 0.2);
+    border: 1px solid rgba(251, 113, 133, 0.3);
+}
+
+.modal-ticker-row {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+}
+
+.modal-ticker {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text-main);
+    letter-spacing: -0.02em;
+}
+
+.modal-currency-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.2rem 0.6rem;
+    border-radius: 7px;
+    background: rgba(56, 189, 248, 0.15);
+    color: var(--primary);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.modal-currency-badge.krw {
+    background: rgba(251, 191, 36, 0.15);
+    color: #fbbf24;
+    border-color: rgba(251, 191, 36, 0.3);
+}
+
+.modal-company {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-top: 0.2rem;
+}
+
+.modal-close {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text-muted);
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+    flex-shrink: 0;
+}
+
+.modal-close:hover {
+    background: rgba(255,255,255,0.12);
+    color: var(--text-main);
+}
+
+/* Modal Price Section */
+.modal-price-section {
+    margin-bottom: 1.5rem;
+}
+
+.modal-current-price {
+    font-size: 2.5rem;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    color: var(--text-main);
+    line-height: 1.1;
+}
+
+.modal-price-change {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    margin-top: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.modal-price-change span {
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.modal-market-badge {
+    font-size: 0.75rem !important;
+    font-weight: 500 !important;
+    color: var(--text-muted) !important;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 0.2rem 0.6rem;
+    border-radius: 6px;
+}
+
+/* Modal Stats Grid */
+.modal-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.8rem;
+    margin-bottom: 1.5rem;
+}
+
+@media (max-width: 600px) {
+    .modal-stats-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.modal-stat-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 14px;
+    padding: 1rem;
+}
+
+.modal-stat-card.highlight-card {
+    background: rgba(74, 222, 128, 0.05);
+    border-color: rgba(74, 222, 128, 0.2);
+}
+
+.modal-stat-card.highlight-card.negative-pl {
+    background: rgba(251, 113, 133, 0.05);
+    border-color: rgba(251, 113, 133, 0.2);
+}
+
+.modal-stat-label {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.stat-icon {
+    font-size: 0.8rem;
+    color: var(--primary);
+}
+
+.modal-stat-value {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+/* 보조 통화 표기 (KRW secondary under USD main) */
+.modal-stat-sub {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-top: 0.2rem;
+    min-height: 1em;
+}
+
+.modal-stat-sub.sub-up   { color: #34d399; }
+.modal-stat-sub.sub-down { color: #f87171; }
+
+
+/* Modal Chart */
+.modal-chart-section {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 16px;
+    padding: 1.2rem;
+    margin-bottom: 1rem;
+}
+
+.modal-chart-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+}
+
+.modal-chart-wrapper {
+    height: 220px;
+    position: relative;
+}
+
+/* Modal Bottom Grid */
+.modal-bottom-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+@media (max-width: 500px) {
+    .modal-bottom-grid { grid-template-columns: 1fr; }
+}
+
+.modal-info-card {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 16px;
+    padding: 1.2rem;
+}
+
+.modal-info-card h4 {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 0.9rem;
+}
+
+.modal-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.45rem 0;
+    font-size: 0.85rem;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.modal-info-row:last-child { border-bottom: none; }
+
+.modal-info-row > span:first-child {
+    color: var(--text-muted);
+}
+
+.modal-info-row > span:last-child {
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+/* Your Holdings section title */
+.your-holdings-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+
+/* Market status badge in modal header */
+.modal-price-change .positive { color: var(--positive); }
+.modal-price-change .negative { color: var(--negative); }

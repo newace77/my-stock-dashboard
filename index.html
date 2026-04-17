@@ -88,6 +88,11 @@
             <div class="main-layout">
                 <div class="content-area">
                     <section class="card">
+                        <h2>📈 자산 추이 (History)</h2>
+                        <div style="height:320px;"><canvas id="historyChart"></canvas></div>
+                    </section>
+
+                    <section class="card">
                         <h2>📊 계좌별 요약</h2>
                         <div style="height:300px; margin-bottom: 2rem;"><canvas id="summaryChart"></canvas></div>
                         <div class="table-wrapper">
@@ -101,13 +106,34 @@
                     </section>
 
                     <section class="card">
-                        <h2>📈 자산 추이 (History)</h2>
-                        <div style="height:320px;"><canvas id="historyChart"></canvas></div>
-                    </section>
+                        <div class="holdings-header">
+                            <div class="holdings-header-left">
+                                <h2>📋 보유 종목 (Holdings)</h2>
+                                <div class="holdings-stat-badges">
+                                    <span class="holdings-badge up" id="holdings-up-count" title="상승 종목">▲ 0</span>
+                                    <span class="holdings-badge down" id="holdings-down-count" title="하락 종목">▼ 0</span>
+                                </div>
+                            </div>
+                            <div class="holdings-header-right">
+                                <div class="holdings-sort-group">
+                                    <button class="sort-btn active" id="sort-btn-weight"   onclick="setHoldingsSort('weight')"    >비중</button>
+                                    <button class="sort-btn"        id="sort-btn-return"   onclick="setHoldingsSort('returnRate')" >수익률</button>
+                                    <button class="sort-btn"        id="sort-btn-profit"   onclick="setHoldingsSort('profit')"    >수익액</button>
+                                    <button class="sort-btn"        id="sort-btn-change"   onclick="setHoldingsSort('dailyChange')">변화율</button>
+                                </div>
+                                <div class="holdings-view-toggle">
+                                    <button class="view-btn active" id="view-cards-btn" onclick="switchHoldingsView('cards')" title="카드 뷰">⊞</button>
+                                    <button class="view-btn" id="view-table-btn" onclick="switchHoldingsView('table')" title="테이블 뷰">☰</button>
+                                </div>
+                            </div>
+                        </div>
 
-                    <section class="card">
-                        <h2>📋 보유 종목 (Holdings)</h2>
-                        <div class="table-wrapper">
+
+                        <!-- 카드 뷰 -->
+                        <div id="holdings-cards-view" class="holdings-cards-grid"></div>
+
+                        <!-- 테이블 뷰 -->
+                        <div id="holdings-table-view" class="table-wrapper" style="display:none">
                             <table id="holdings-table">
                                 <thead>
                                     <tr>
@@ -221,6 +247,81 @@
                     </aside>
                 </div>
             </section>
+        </div>
+    </div>
+
+    <!-- Stock Detail Modal -->
+    <div id="stock-modal-overlay" class="modal-overlay" onclick="closeStockModal(event)">
+        <div class="modal-container" id="stock-modal">
+            <div class="modal-header">
+                <div class="modal-title-row">
+                    <div class="modal-icon" id="modal-icon"></div>
+                    <div>
+                        <div class="modal-ticker-row">
+                            <span class="modal-ticker" id="modal-ticker"></span>
+                            <span class="modal-currency-badge" id="modal-currency"></span>
+                        </div>
+                        <div class="modal-company" id="modal-company"></div>
+                    </div>
+                </div>
+                <button class="modal-close" onclick="closeStockModal()">✕</button>
+            </div>
+
+            <div class="modal-price-section">
+                <div class="modal-current-price" id="modal-current-price"></div>
+                <div class="modal-price-change">
+                    <span id="modal-price-diff"></span>
+                    <span id="modal-price-pct"></span>
+                    <span class="modal-market-badge">🕐 시장 정보</span>
+                </div>
+            </div>
+
+            <div class="modal-stats-grid">
+                <div class="modal-stat-card">
+                    <div class="modal-stat-label"><span class="stat-icon">#</span> Shares</div>
+                    <div class="modal-stat-value" id="modal-shares"></div>
+                </div>
+                <div class="modal-stat-card">
+                    <div class="modal-stat-label"><span class="stat-icon">$</span> Avg Cost</div>
+                    <div class="modal-stat-value" id="modal-avg-cost"></div>
+                    <div class="modal-stat-sub" id="modal-avg-cost-sub"></div>
+                </div>
+                <div class="modal-stat-card">
+                    <div class="modal-stat-label"><span class="stat-icon">⊙</span> Total Value</div>
+                    <div class="modal-stat-value" id="modal-total-value"></div>
+                    <div class="modal-stat-sub" id="modal-total-value-sub"></div>
+                </div>
+                <div class="modal-stat-card highlight-card">
+                    <div class="modal-stat-label"><span class="stat-icon">↗</span> Today's P/L</div>
+                    <div class="modal-stat-value" id="modal-today-pl"></div>
+                    <div class="modal-stat-sub" id="modal-today-pl-sub"></div>
+                </div>
+            </div>
+
+
+            <div class="modal-chart-section">
+                <h3 class="modal-chart-title">Intraday Performance</h3>
+                <div class="modal-chart-wrapper">
+                    <canvas id="modal-intraday-chart"></canvas>
+                </div>
+            </div>
+
+            <div class="modal-bottom-grid">
+                <div class="modal-info-card">
+                    <h4>Trading Info</h4>
+                    <div class="modal-info-row"><span>Open</span><span id="modal-open"></span></div>
+                    <div class="modal-info-row"><span>High</span><span id="modal-high"></span></div>
+                    <div class="modal-info-row"><span>Low</span><span id="modal-low"></span></div>
+                    <div class="modal-info-row"><span>Volume</span><span id="modal-volume"></span></div>
+                </div>
+                <div class="modal-info-card">
+                    <h4>Your Position</h4>
+                    <div class="modal-info-row"><span>Market Value</span><span id="modal-market-value"></span></div>
+                    <div class="modal-info-row"><span>Cost Basis</span><span id="modal-cost-basis"></span></div>
+                    <div class="modal-info-row"><span>Total Gain/Loss</span><span id="modal-total-gain" class=""></span></div>
+                    <div class="modal-info-row"><span>Return</span><span id="modal-return" class=""></span></div>
+                </div>
+            </div>
         </div>
     </div>
 
