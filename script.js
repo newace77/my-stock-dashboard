@@ -711,11 +711,20 @@ function processHoldingsData(data) {
         }
         const weight = parseSafeFloat(row[9]), evalKRW = parseSafeFloat(row[8]);
         if (weight === 0 && evalKRW === 0) return;
+
+        // Normalize ticker: strip exchange prefix (e.g. "NYSEARCA:SPYM" → "SPYM")
+        const rawTicker = row[1] || '';
+        const ticker = rawTicker.includes(':') ? rawTicker.split(':').pop() : rawTicker;
+
         globalHoldings.push({
-            name: row[0], ticker: row[1], weight, returnRate: parseSafeFloat(row[7]), eval: evalKRW,
+            name: row[0], ticker: ticker, weight, returnRate: parseSafeFloat(row[7]), eval: evalKRW,
             profit: parseSafeFloat(row[14]), dailyChange: parseSafeFloat(row[10]),
-            display: { weight: row[9], returnRate: row[7], evalKRW: row[8], profitKRW: row[14], dailyChange: row[10] }
+            shares: row[3] || '-',       // 보유수량
+            avgCost: row[4] || '-',      // 평균단가
+            currentPriceKRW: row[5] || row[8] || '-',  // 현재가(원화)
+            display: { weight: row[9], returnRate: row[7], evalKRW: row[8], profitKRW: row[14], dailyChange: row[10], currentPrice: row[5] || row[8] }
         });
+
     });
     sortHoldings(sortState.column, false);
     renderBubbleChart(globalHoldings);
@@ -735,10 +744,481 @@ function renderHoldingsTable() {
     if (!tbody) return; tbody.innerHTML = '';
     globalHoldings.forEach(item => {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${item.name}</td><td>${item.display.weight}%</td><td class="${getColorClass(item.display.returnRate)}">${item.display.returnRate}%</td><td class="${getColorClass(item.display.profitKRW)}">${item.display.profitKRW}</td><td>${item.display.evalKRW}</td><td class="${getColorClass(item.display.dailyChange)}">${item.display.dailyChange}</td>`;
+        tr.style.cursor = 'pointer';
+        tr.onclick = () => openStockModal(item);
+        
+        // 한국 주식 여부 (6자리 숫자 티커)
+        const isKR = /^\d{6}/.test(item.ticker);
+        const formattedProfit = item.display.profitKRW + '원';
+        const formattedEval = item.display.evalKRW + '원';
+        
+        tr.innerHTML = `<td>${item.name}</td><td>${item.display.weight}%</td><td class="${getColorClass(item.display.returnRate)}">${item.display.returnRate}%</td><td class="${getColorClass(item.display.profitKRW)}">${formattedProfit}</td><td>${formattedEval}</td><td class="${getColorClass(item.display.dailyChange)}">${item.display.dailyChange}%</td>`;
         tbody.appendChild(tr);
     });
+
+    // Also render the card view
+    renderHoldingsCards();
 }
+
+// ===== Holdings Cards View =====
+
+// Store for mini sparkline chart instances (prevent duplicate canvas issues)
+const sparklineCharts = {};
+let intradayChart = null;
+
+// Current sort key for holdings cards (default: weight descending)
+let currentHoldingsSort = 'weight';
+
+function setHoldingsSort(key) {
+    currentHoldingsSort = key;
+    // Update button active states
+    document.querySelectorAll('.sort-btn').forEach(btn => btn.classList.remove('active'));
+    const map = { weight: 'sort-btn-weight', returnRate: 'sort-btn-return', profit: 'sort-btn-profit', dailyChange: 'sort-btn-change' };
+    if (map[key]) document.getElementById(map[key])?.classList.add('active');
+    renderHoldingsCards();
+}
+
+function renderHoldingsCards() {
+    const grid = document.getElementById('holdings-cards-view');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    // Destroy existing sparkline charts
+    Object.values(sparklineCharts).forEach(c => { try { c.destroy(); } catch(e) {} });
+
+    // --- 상승/하락 카운터 ---
+    const upCount   = globalHoldings.filter(h => h.dailyChange >= 0).length;
+    const downCount = globalHoldings.filter(h => h.dailyChange < 0).length;
+    const upEl   = document.getElementById('holdings-up-count');
+    const downEl = document.getElementById('holdings-down-count');
+    if (upEl)   upEl.textContent   = `▲ ${upCount}`;
+    if (downEl) downEl.textContent = `▼ ${downCount}`;
+
+    // --- 정렬 ---
+    const sortKey = currentHoldingsSort;
+    const sorted = [...globalHoldings].sort((a, b) => {
+        let va, vb;
+        if (sortKey === 'weight')      { va = a.weight;      vb = b.weight; }
+        else if (sortKey === 'returnRate') { va = a.returnRate;  vb = b.returnRate; }
+        else if (sortKey === 'profit')  { va = a.profit || 0; vb = b.profit || 0; }
+        else if (sortKey === 'dailyChange') { va = a.dailyChange; vb = b.dailyChange; }
+        else { va = a.weight; vb = b.weight; }
+        return vb - va; // 내림차순
+    });
+
+    sorted.forEach((item, idx) => {
+        const isPositive = item.dailyChange >= 0;
+        const posClass = isPositive ? 'positive' : 'negative';
+        const trendSvgUp = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>`;
+        const trendSvgDown = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="7" x2="17" y2="17"/><polyline points="17 7 17 17 7 17"/></svg>`;
+        const trendSvg = isPositive ? trendSvgUp : trendSvgDown;
+        const changeSign = isPositive ? '+' : '';
+        const currencyIsKRW = item.ticker && /^\d{6}/.test(item.ticker);
+        
+        // 현재가 포맷팅: 한국 주식은 소수점 제거 및 콤마 추가
+        let displayPrice = item.display.currentPrice;
+        if (currencyIsKRW) {
+            const priceNum = Math.round(parseSafeFloat(item.display.currentPrice));
+            displayPrice = priceNum.toLocaleString() + '원';
+        } else {
+            displayPrice = '$' + item.display.currentPrice;
+        }
+
+        const currencyLabel = currencyIsKRW ? 'KRW' : 'USD';
+        const currencyClass = currencyIsKRW ? 'krw' : '';
+
+        // 비중 표시
+        const weightText = item.weight != null && item.weight !== '' ? `${parseFloat(item.weight).toFixed(1)}%` : '';
+
+        const cardId = `stock-card-${idx}`;
+        const sparkId = `sparkline-${idx}`;
+
+        const card = document.createElement('div');
+        card.className = `stock-card ${posClass}`;
+        card.id = cardId;
+        card.setAttribute('role', 'button');
+        card.setAttribute('tabindex', '0');
+        card.setAttribute('aria-label', `${item.name} 상세보기`);
+
+        card.innerHTML = `
+            <div class="card-top">
+                <div class="card-ticker-section">
+                    <div class="card-ticker-row">
+                        <span class="card-ticker">${item.ticker || item.name}</span>
+                        <span class="card-currency-badge ${currencyClass}">${currencyLabel}</span>
+                        ${weightText ? `<span class="card-weight-badge">${weightText}</span>` : ''}
+                    </div>
+                    <div class="card-company">${item.name}</div>
+                </div>
+                <div class="card-trend-icon ${posClass}">${trendSvg}</div>
+            </div>
+
+            <div class="card-price-section">
+                <div class="card-price">${displayPrice}</div>
+                <div class="card-change ${posClass}">${changeSign}${item.display.dailyChange}%</div>
+            </div>
+
+            <div class="card-sparkline">
+                <canvas id="${sparkId}"></canvas>
+            </div>
+
+            <div class="card-bottom">
+                <div class="card-bottom-row">
+                    <span class="label">Shares</span>
+                    <span class="value">${item.shares || '-'}</span>
+                </div>
+                <div class="card-bottom-row">
+                    <span class="label">Total Value</span>
+                    <span class="value">${item.display.evalKRW || '-'}원</span>
+                </div>
+            </div>
+        `;
+
+        card.addEventListener('click', () => openStockModal(item));
+        card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') openStockModal(item); });
+        grid.appendChild(card);
+
+        // Draw mini sparkline after appending
+        requestAnimationFrame(() => drawSparkline(sparkId, item, isPositive));
+    });
+}
+
+
+function drawSparkline(canvasId, item, isPositive) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    // Generate a representative sparkline based on returnRate and dailyChange
+    const points = generateSparklineData(item.returnRate, item.dailyChange, 20);
+    const color = isPositive ? '#4ade80' : '#fb7185';
+
+    if (sparklineCharts[canvasId]) {
+        try { sparklineCharts[canvasId].destroy(); } catch(e) {}
+    }
+
+    const gradient = ctx.createLinearGradient(0, 0, 0, 40);
+    gradient.addColorStop(0, isPositive ? 'rgba(74,222,128,0.25)' : 'rgba(251,113,133,0.25)');
+    gradient.addColorStop(1, 'rgba(0,0,0,0)');
+
+    sparklineCharts[canvasId] = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: Array(points.length).fill(''),
+            datasets: [{
+                data: points,
+                borderColor: color,
+                borderWidth: 1.5,
+                fill: true,
+                backgroundColor: gradient,
+                tension: 0.4,
+                pointRadius: 0
+            }]
+        },
+        options: {
+            responsive: false,
+            maintainAspectRatio: false,
+            animation: { duration: 600 },
+            scales: {
+                x: { display: false },
+                y: { display: false }
+            },
+            plugins: { legend: { display: false }, tooltip: { enabled: false } }
+        }
+    });
+}
+
+function generateSparklineData(returnRate, dailyChange, count = 20) {
+    const points = [];
+    let val = 100;
+    // Simulate a rough path ending at today's change direction
+    for (let i = 0; i < count; i++) {
+        const noise = (Math.random() - 0.48) * 1.2;
+        const trend = dailyChange / count;
+        val += trend + noise;
+        points.push(val);
+    }
+    return points;
+}
+
+// ===== View Toggle =====
+function switchHoldingsView(view) {
+    const cardsView = document.getElementById('holdings-cards-view');
+    const tableView = document.getElementById('holdings-table-view');
+    const cardsBtn = document.getElementById('view-cards-btn');
+    const tableBtn = document.getElementById('view-table-btn');
+
+    if (view === 'cards') {
+        cardsView.style.display = 'grid';
+        tableView.style.display = 'none';
+        cardsBtn.classList.add('active');
+        tableBtn.classList.remove('active');
+    } else {
+        cardsView.style.display = 'none';
+        tableView.style.display = 'block';
+        cardsBtn.classList.remove('active');
+        tableBtn.classList.add('active');
+    }
+}
+
+// ===== Stock Detail Modal =====
+async function openStockModal(item) {
+    const overlay = document.getElementById('stock-modal-overlay');
+    if (!overlay) return;
+
+    const isPositive = item.dailyChange >= 0;
+    const posClass = isPositive ? 'positive' : 'negative';
+    const changeSign = isPositive ? '+' : '';
+    const currencyIsKRW = item.ticker && /^\d{6}/.test(item.ticker);
+    const currencyLabel = currencyIsKRW ? 'KRW' : 'USD';
+
+    // Header
+    const modalIcon = document.getElementById('modal-icon');
+    modalIcon.className = `modal-icon ${posClass}`;
+    modalIcon.textContent = isPositive ? '↗' : '↘';
+
+    document.getElementById('modal-ticker').textContent = item.ticker || item.name;
+    const currBadge = document.getElementById('modal-currency');
+    currBadge.textContent = currencyLabel;
+    currBadge.className = `modal-currency-badge ${currencyIsKRW ? 'krw' : ''}`;
+    document.getElementById('modal-company').textContent = item.name;
+
+    // Price Section
+    document.getElementById('modal-current-price').textContent = item.display.evalKRW || '-';
+    const diffElem = document.getElementById('modal-price-diff');
+    const pctElem = document.getElementById('modal-price-pct');
+
+    // Estimate daily change amount from total value * dailyChange%
+    const evalNum = item.eval || 0;
+    const dailyChangeAmt = (evalNum * item.dailyChange / 100);
+    const dailyAmtFormatted = (dailyChangeAmt >= 0 ? '+' : '') + Math.round(dailyChangeAmt).toLocaleString('ko-KR');
+
+    diffElem.textContent = `${dailyAmtFormatted}원`;
+    diffElem.className = isPositive ? 'positive' : 'negative';
+    pctElem.textContent = `(${changeSign}${item.dailyChange}%)`;
+    pctElem.className = isPositive ? 'positive' : 'negative';
+
+    // Stats
+    document.getElementById('modal-shares').textContent = item.shares || '-';
+    document.getElementById('modal-avg-cost').textContent = item.avgCost || '-';
+    document.getElementById('modal-total-value').textContent = item.display.evalKRW || '-';
+
+    const todayPL = document.getElementById('modal-today-pl');
+    todayPL.textContent = `${dailyAmtFormatted}원`;
+    todayPL.className = isPositive ? 'value-up' : 'value-down';
+
+    const hlCard = document.getElementById('modal-today-pl').closest('.modal-stat-card');
+    if (hlCard) {
+        hlCard.classList.toggle('negative-pl', !isPositive);
+    }
+
+    // Trading Info (calculated from available data)
+    const currentPrice = item.eval && item.shares ? item.eval / (parseFloat(item.shares) || 1) : 0;
+    document.getElementById('modal-open').textContent = item.display.evalKRW || '-';
+    document.getElementById('modal-high').textContent = item.display.evalKRW || '-';
+    document.getElementById('modal-low').textContent = item.display.evalKRW || '-';
+    document.getElementById('modal-volume').textContent = '-';
+
+    // Your Position
+    document.getElementById('modal-market-value').textContent = item.display.evalKRW || '-';
+    document.getElementById('modal-cost-basis').textContent = item.display.profitKRW ? 
+        (item.eval - parseSafeFloat(item.display.profitKRW)).toLocaleString('ko-KR', {style:'currency', currency:'KRW'}) : '-';
+
+    const totalGainElem = document.getElementById('modal-total-gain');
+    totalGainElem.textContent = item.display.profitKRW || '-';
+    totalGainElem.className = getColorClass(item.display.profitKRW);
+
+    const returnElem = document.getElementById('modal-return');
+    returnElem.textContent = `${item.display.returnRate}%`;
+    returnElem.className = getColorClass(item.display.returnRate);
+
+    // Show modal
+    overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+
+    // Draw intraday chart
+    drawIntradayChart(item);
+
+    // Fetch real intraday data if available
+    if (item.ticker) {
+        fetchIntradayData(item);
+    }
+}
+
+function closeStockModal(event) {
+    // If called with a click event (overlay click), only close if clicking the overlay itself
+    if (event instanceof Event && event.target !== document.getElementById('stock-modal-overlay')) return;
+    const overlay = document.getElementById('stock-modal-overlay');
+    if (overlay) overlay.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+// ESC key to close
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const overlay = document.getElementById('stock-modal-overlay');
+        if (overlay && overlay.classList.contains('active')) {
+            overlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+    }
+});
+
+function drawIntradayChart(item, labels = null, prices = null) {
+    const canvas = document.getElementById('modal-intraday-chart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    if (intradayChart) { try { intradayChart.destroy(); } catch(e) {} }
+
+    const isPositive = item.dailyChange >= 0;
+    const color = isPositive ? '#4ade80' : '#fb7185';
+
+    // Use real data if provided, otherwise simulate
+    const chartLabels = labels || generateIntradayLabels();
+    const chartPrices = prices || generateIntradayPrices(item.dailyChange, chartLabels.length);
+
+    const gradient = ctx.createLinearGradient(0, 0, 0, 220);
+    gradient.addColorStop(0, isPositive ? 'rgba(74,222,128,0.25)' : 'rgba(251,113,133,0.25)');
+    gradient.addColorStop(0.6, isPositive ? 'rgba(74,222,128,0.05)' : 'rgba(251,113,133,0.05)');
+    gradient.addColorStop(1, 'rgba(0,0,0,0)');
+
+    intradayChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: chartLabels,
+            datasets: [{
+                data: chartPrices,
+                borderColor: color,
+                borderWidth: 2,
+                fill: true,
+                backgroundColor: gradient,
+                tension: 0.3,
+                pointRadius: 0,
+                pointHoverRadius: 5,
+                pointHoverBackgroundColor: color
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#64748b', font: { size: 10 }, maxTicksLimit: 7, autoSkip: true }
+                },
+                y: {
+                    position: 'left',
+                    grid: { color: 'rgba(255,255,255,0.04)' },
+                    ticks: { color: '#64748b', font: { size: 10 }, callback: v => v.toFixed(0) }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(15,23,42,0.95)',
+                    titleColor: '#f1f5f9',
+                    bodyColor: '#94a3b8',
+                    padding: 10,
+                    borderColor: 'rgba(255,255,255,0.08)',
+                    borderWidth: 1,
+                    callbacks: {
+                        label: ctx => ` ${ctx.parsed.y.toFixed(2)}`
+                    }
+                }
+            }
+        }
+    });
+}
+
+function generateIntradayLabels() {
+    const labels = [];
+    for (let h = 9; h <= 16; h++) {
+        for (let m = 0; m < 60; m += 15) {
+            if (h === 16 && m > 0) break;
+            labels.push(`${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`);
+        }
+    }
+    return labels;
+}
+
+function generateIntradayPrices(dailyChange, count) {
+    const prices = [];
+    let price = 100;
+    const totalChange = dailyChange / 100;
+    for (let i = 0; i < count; i++) {
+        const progress = i / (count - 1);
+        const trend = totalChange * progress;
+        const noise = (Math.random() - 0.48) * 0.4;
+        price = 100 + (trend * 100) + noise;
+        prices.push(parseFloat(price.toFixed(2)));
+    }
+    return prices;
+}
+
+async function fetchIntradayData(item) {
+    try {
+        let ticker = item.ticker;
+        if (/^\d{6}$/.test(ticker)) ticker += '.KS';
+
+        const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=15m&range=1d`;
+        const result = await fetchWithFallback(url, true);
+
+        if (!result || result.type !== 'json') return;
+
+        const chart = result.data.chart;
+        if (!chart || !chart.result || chart.result.length === 0) return;
+
+        const chartResult = chart.result[0];
+        const timestamps = chartResult.timestamp;
+        const closes = chartResult.indicators.quote[0].close;
+        const opens = chartResult.indicators.quote[0].open;
+        const highs = chartResult.indicators.quote[0].high;
+        const lows = chartResult.indicators.quote[0].low;
+        const volumes = chartResult.indicators.quote[0].volume;
+        const meta = chartResult.meta;
+
+        if (!timestamps || !closes) return;
+
+        const labels = timestamps.map(ts => {
+            const d = new Date(ts * 1000);
+            return d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+        });
+
+        const prices = closes.map((c, i) => c || closes[i-1] || closes[0]);
+        const validPrices = prices.filter(p => p !== null && !isNaN(p));
+        if (validPrices.length < 2) return;
+
+        // Update intraday chart with real data
+        drawIntradayChart(item, labels, prices);
+
+        // Update trading info with real Yahoo data
+        const currentPrice = meta.regularMarketPrice;
+        const openPrice = meta.regularMarketOpen || meta.chartPreviousClose;
+        const highPrice = meta.regularMarketDayHigh;
+        const lowPrice = meta.regularMarketDayLow;
+        const volume = meta.regularMarketVolume;
+
+        const formatter = val => val ? val.toFixed(2) : '-';
+        document.getElementById('modal-open').textContent = openPrice ? formatter(openPrice) : '-';
+        document.getElementById('modal-high').textContent = highPrice ? formatter(highPrice) : '-';
+        document.getElementById('modal-low').textContent = lowPrice ? formatter(lowPrice) : '-';
+        document.getElementById('modal-volume').textContent = volume ? formatVolume(volume) : '-';
+
+    } catch(e) {
+        console.warn('Intraday data fetch failed:', e);
+    }
+}
+
+function formatVolume(vol) {
+    if (vol >= 1e9) return (vol / 1e9).toFixed(1) + 'B';
+    if (vol >= 1e6) return (vol / 1e6).toFixed(1) + 'M';
+    if (vol >= 1e3) return (vol / 1e3).toFixed(1) + 'K';
+    return vol.toLocaleString();
+}
+
+
 
 function renderSummaryChart(labels, investData, evalData) {
     const canvas = document.getElementById('summaryChart'); if (!canvas) return;
