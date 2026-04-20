@@ -93,22 +93,44 @@
         sheet.getRange(nextRow, 1, 1, 12).setValues([rowData]);
 
         if (data.currency == "USD") {
-        var rateCell = sheet.getRange(nextRow, 12);
-        rateCell.setFormula('=GOOGLEFINANCE("CURRENCY:USDKRW")');
-        SpreadsheetApp.flush();
-        rateCell.setValue(rateCell.getValue());
-        }
+          var rateCell = sheet.getRange(nextRow, 12);
+          // 해당 날짜(data.date)의 환율을 가져오는 수식으로 변경 (실패 시 현재 환율 시도)
+          var formula = '=IFERROR(INDEX(GOOGLEFINANCE("CURRENCY:USDKRW", "' + data.date + '"), 2, 2), GOOGLEFINANCE("CURRENCY:USDKRW"))';
+          rateCell.setFormula(formula);
 
+          // 즉시 값으로 변환하기 전 계산이 완료되었는지 확인
+          SpreadsheetApp.flush();
+          var val = rateCell.getValue();
+          if (typeof val === "number" && val > 0) {
+            rateCell.setValue(val); // 숫자로 정상 계산되었을 때만 값으로 고정
+          }
+          // 만약 #N/A나 #ERROR인 경우 수식 상태로 두어, 사용자가 시트를 열었을 때 계산되도록 함
+        }
         if (lastRow > 1) {
-        sheet.getRange(lastRow, 11).copyTo(sheet.getRange(nextRow, 11));
-        var maxCols = sheet.getMaxColumns();
-        if (maxCols >= 13) {
-            sheet.getRange(lastRow, 13, 1, maxCols - 12).copyTo(sheet.getRange(nextRow, 13));
-        }
-        if (data.currency == "USD") {
-            sheet.getRange(lastRow, 6).copyTo(sheet.getRange(nextRow, 6));
-            sheet.getRange(lastRow, 9).copyTo(sheet.getRange(nextRow, 9));
-        }
+          // 1. K열(보유수량) 및 M열 이후 복사 (연속성을 위해 바로 윗행 lastRow에서 가져옴)
+          sheet.getRange(lastRow, 11).copyTo(sheet.getRange(nextRow, 11));
+          var maxCols = sheet.getMaxColumns();
+          if (maxCols >= 13) {
+              sheet.getRange(lastRow, 13, 1, maxCols - 12).copyTo(sheet.getRange(nextRow, 13));
+          }
+          
+          // 2. F열(가격원)과 I열(총액원) 수식 복사 (사용자 요청: 동일 종류의 이전 행 탐색)
+          var typeValues = sheet.getRange(1, 5, lastRow, 1).getValues(); // E열(종류) 전체 가져오기
+          var sourceRow = -1;
+          
+          // 아래에서 위로 올라가며 동일한 종류(type)를 가진 행 찾기
+          for (var r = lastRow - 1; r >= 1; r--) { // r은 0부터 시작, 헤더 제외하고 r=1까지
+            if (typeValues[r][0] === type) {
+              sourceRow = r + 1; // 1-based index로 변환
+              break;
+            }
+          }
+          
+          // 만약 동일한 종류의 이전 기록이 없다면, 기본적으로 바로 윗행(lastRow)을 참조
+          if (sourceRow === -1) sourceRow = lastRow;
+          
+          sheet.getRange(sourceRow, 6).copyTo(sheet.getRange(nextRow, 6));
+          sheet.getRange(sourceRow, 9).copyTo(sheet.getRange(nextRow, 9));
         }
 
         SpreadsheetApp.flush();

@@ -214,12 +214,15 @@
                             </div>
                             <div class="input-group"><label>날짜</label><input type="date" id="date-input" required></div>
                             <div class="input-group" id="stock-group">
-                                <label>종목명</label>
+                                <label>종목명 / 티커</label>
                                 <select id="stock-name-select">
                                     <option value="">보유 종목 선택</option>
                                     <option value="DIRECT">직접 입력 (신규)</option>
                                 </select>
-                                <input type="text" id="stock-name-input" placeholder="신규 종목명 입력" style="display:none; margin-top:0.5rem;">
+                                <div id="direct-input-container" style="display:none; flex-direction:column; gap:0.5rem; margin-top:0.5rem;">
+                                    <input type="text" id="stock-name-input" placeholder="신규 종목명 (예: 삼성전자)">
+                                    <input type="text" id="stock-ticker-input" placeholder="티커 (예: 005930 또는 AAPL)">
+                                </div>
                             </div>
                             <div class="input-group" id="price-group"><label>단가</label><input type="number" step="any" id="price-input"></div>
                             <div class="input-group"><label id="qty-label">수량/금액</label><input type="number" step="any" id="quantity-input" required></div>
