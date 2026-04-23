@@ -53,85 +53,6 @@ header {
     margin-bottom: 2.5rem;
 }
 
-.header-right {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0.8rem;
-}
-
-.privacy-toggle-container {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    background: var(--bg-card);
-    padding: 0.4rem 0.8rem;
-    border-radius: 99px;
-    border: 1px solid var(--border-color);
-}
-
-.privacy-label {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--text-muted);
-}
-
-/* Switch UI */
-.switch {
-    position: relative;
-    display: inline-block;
-    width: 36px;
-    height: 20px;
-}
-
-.switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(255, 255, 255, 0.1);
-    transition: .4s;
-}
-
-.slider:before {
-    position: absolute;
-    content: "";
-    height: 14px;
-    width: 14px;
-    left: 3px;
-    bottom: 3px;
-    background-color: white;
-    transition: .4s;
-}
-
-input:checked + .slider {
-    background-color: var(--primary);
-}
-
-input:focus + .slider {
-    box-shadow: 0 0 1px var(--primary);
-}
-
-input:checked + .slider:before {
-    transform: translateX(16px);
-}
-
-.slider.round {
-    border-radius: 34px;
-}
-
-.slider.round:before {
-    border-radius: 50%;
-}
-
 header h1 {
     font-size: 1.8rem;
     font-weight: 800;
@@ -249,21 +170,6 @@ header h1 {
     gap: 1.5rem;
 }
 
-/* Tablet & Mobile Layout Adjustment */
-@media (max-width: 1024px) {
-    .main-layout {
-        grid-template-columns: 1fr;
-    }
-    
-    .sidebar-area {
-        order: 2; /* 사이드바를 아래로 보냄 */
-    }
-    
-    .content-area {
-        order: 1;
-    }
-}
-
 .card {
     background: var(--bg-card);
     backdrop-filter: var(--glass-blur);
@@ -280,15 +186,6 @@ header h1 {
     align-items: center;
     gap: 0.5rem;
     color: var(--text-main);
-}
-
-/* Chart Containers */
-.chart-container-sm { height: 300px; }
-.chart-container-md { height: 400px; }
-
-@media (max-width: 768px) {
-    .chart-container-sm { height: 250px; }
-    .chart-container-md { height: 300px; }
 }
 
 /* Tables */
@@ -428,145 +325,15 @@ select:focus, input:focus {
     font-weight: 700;
 }
 
-/* General Responsive Styles */
+/* Responsive MDD */
 @media (max-width: 1024px) {
     .mdd-grid { grid-template-columns: 1fr; }
 }
 
-@media (max-width: 768px) {
-    .container {
-        padding: 0.8rem;
-    }
-    
-    header {
-        margin-bottom: 1.5rem;
-    }
-    
-    header h1 {
-        font-size: 1.4rem;
-    }
 
-    .summary-cards {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 0.6rem;
-    }
-    
-    .summary-card {
-        padding: 1rem 0.8rem;
-    }
-    
-    .summary-card .label {
-        font-size: 0.75rem;
-    }
-
-    .summary-card .value {
-        font-size: 1rem;
-    }
-
-    /* 표를 모바일 카드 리스트로 변환 */
-    .table-wrapper table, 
-    .table-wrapper thead, 
-    .table-wrapper tbody, 
-    .table-wrapper th, 
-    .table-wrapper td, 
-    .table-wrapper tr { 
-        display: block; 
-    }
-
-    .table-wrapper thead tr { 
-        position: absolute;
-        top: -9999px;
-        left: -9999px;
-    }
-
-    .table-wrapper tr {
-        background: rgba(255, 255, 255, 0.03);
-        margin-bottom: 0.8rem;
-        border-radius: 12px;
-        padding: 0.8rem;
-        border: 1px solid var(--border-color);
-    }
-
-    .table-wrapper td { 
-        border: none;
-        padding: 0.3rem 0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 0.85rem;
-    }
-
-    .table-wrapper td::before { 
-        content: attr(data-label);
-        font-weight: 600;
-        color: var(--text-muted);
-        font-size: 0.75rem;
-    }
-
-    /* 계좌 요약 전용 모바일 라벨 */
-    #summary-table td:nth-of-type(1)::before { content: "계좌명"; }
-    #summary-table td:nth-of-type(2)::before { content: "평가금"; }
-    #summary-table td:nth-of-type(3)::before { content: "투자금"; }
-    #summary-table td:nth-of-type(4)::before { content: "수입액"; }
-    #summary-table td:nth-of-type(5)::before { content: "수익률"; }
-    #summary-table td:nth-of-type(6)::before { content: "일일변동"; }
-
-    /* 보유 종목 테이블 전용 모바일 라벨 */
-    #holdings-table td:nth-of-type(1)::before { content: "종목명"; }
-    #holdings-table td:nth-of-type(2)::before { content: "비중"; }
-    #holdings-table td:nth-of-type(3)::before { content: "수익률"; }
-    #holdings-table td:nth-of-type(4)::before { content: "수익액"; }
-    #holdings-table td:nth-of-type(5)::before { content: "평가금"; }
-    #holdings-table td:nth-of-type(6)::before { content: "일일변동"; }
-
-    .slide {
-        height: 300px !important;
-    }
-
-    .holdings-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .holdings-header-right {
-        width: 100%;
-        justify-content: space-between;
-        margin-top: 0.5rem;
-    }
-
-    .holdings-cards-grid {
-        grid-template-columns: 1fr; /* 모바일에서는 1열로 큼직하게 */
-    }
-
-    .stock-card {
-        padding: 1rem;
-    }
-}
-
-@media (max-width: 480px) {
-    .summary-cards {
-        grid-template-columns: 1fr;
-    }
-    
-    .market-cards {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    
-    .tab-btn {
-        flex: 1;
-        padding: 0.6rem 0.5rem;
-        font-size: 0.75rem;
-        text-align: center;
-    }
-    
-    .tabs {
-        width: 100%;
-        display: flex;
-    }
-    
-    header h1 {
-        font-size: 1.2rem;
-    }
+@media (max-width: 640px) {
+    .summary-cards { grid-template-columns: 1fr 1fr; }
+    header { flex-direction: column; align-items: flex-start; gap: 1rem; }
 }
 
 /* ===== Holdings Header with View Toggle ===== */
@@ -711,7 +478,7 @@ select:focus, input:focus {
 /* ===== Holdings Cards Grid ===== */
 .holdings-cards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 1rem;
 }
 
@@ -1362,25 +1129,12 @@ select:focus, input:focus {
     100% { transform: scale(1); opacity: 0.7; }
 }
 
-/* Skeleton UI */
-.skeleton {
-    background: linear-gradient(90deg, 
-        rgba(255, 255, 255, 0.03) 25%, 
-        rgba(255, 255, 255, 0.08) 50%, 
-        rgba(255, 255, 255, 0.03) 75%);
-    background-size: 200% 100%;
-    animation: skeleton-loading 1.5s infinite;
-    border-radius: 8px;
-    color: transparent !important;
-}
-
-@keyframes skeleton-loading {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-}
-
-.summary-card.loading .value {
-    width: 80%;
-    height: 1.8rem;
-    display: inline-block;
+@media (max-width: 640px) {
+    .refresh-fab {
+        right: 1rem;
+        bottom: 1rem;
+        height: 42px;
+        padding: 0 1.2rem;
+        font-size: 0.85rem;
+    }
 }
