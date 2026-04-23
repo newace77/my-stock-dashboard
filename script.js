@@ -96,50 +96,10 @@ function openTab(evt, tabName) {
     window.dispatchEvent(new Event('resize'));
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
-    // 뷰 모드 표시기 초기 업데이트
-    updateViewModeIndicator();
-    window.addEventListener('resize', updateViewModeIndicator);
-
-    // 모바일 기기 감지 시 카드 뷰를 기본으로 설정
-    if (window.innerWidth < 768) {
-        switchHoldingsView('cards');
-    }
-
-    // 페이지 로드 시 구글 시트 데이터 강제 갱신 요청
-    const refreshFab = document.getElementById('refresh-fab');
-    if (refreshFab) refreshFab.classList.add('loading');
-    
-    console.log("🔄 페이지 로드: 구글 시트 데이터 갱신 요청 중...");
-    await requestMarketRefresh();
-    
-    // 약간의 대기 후 데이터 로드 (GAS 처리가 시작될 시간을 벌어줌)
-    setTimeout(() => {
-        fetchData();
-    }, 1500);
-});
-
 /**
- * 현재 화면 너비를 기준으로 PC/Mobile 모드 표시기 업데이트
+ * 대시보드 초기 설정 및 이벤트 리스너 등록
  */
-function updateViewModeIndicator() {
-    const textEl = document.getElementById('view-mode-text');
-    const iconEl = document.getElementById('view-mode-icon');
-    if (!textEl || !iconEl) return;
-
-    if (window.innerWidth <= 768) {
-        textEl.textContent = 'Mobile mode';
-        iconEl.textContent = '📱';
-        document.getElementById('view-mode-indicator').style.color = 'var(--secondary)';
-    } else {
-        textEl.textContent = 'PC mode';
-        iconEl.textContent = '💻';
-        document.getElementById('view-mode-indicator').style.color = 'var(--primary)';
-    }
-}
-
-async function fetchData() {
-
+function initDashboard() {
     // 🔒 Privacy Mode 초기화
     const privacyToggle = document.getElementById('privacy-toggle');
     if (privacyToggle) {
@@ -173,33 +133,28 @@ async function fetchData() {
     // 🔄 거래 종류에 따라 입력 필드 토글
     document.getElementById('type-select')?.addEventListener('change', (e) => {
         const type = e.target.value;
-        const tickerGroup = document.getElementById('ticker-group');
+        const tickerGroup = document.getElementById('stock-group'); // 종목 그룹 ID 확인 필요 (stock-group 또는 ticker-group)
         const priceGroup = document.getElementById('price-group');
-        const tickerLabel = tickerGroup?.querySelector('label');
-        const tickerInput = document.getElementById('input-ticker');
+        const qtyLabel = document.getElementById('qty-label');
 
         if (['현금입금', '현금출금'].includes(type)) {
-            tickerGroup.style.display = 'none';
-            priceGroup.style.display = 'none';
+            if (tickerGroup) tickerGroup.style.display = 'none';
+            if (priceGroup) priceGroup.style.display = 'none';
+            if (qtyLabel) qtyLabel.textContent = '금액';
         } else if (type === '배당금') {
-            tickerGroup.style.display = 'flex';
-            priceGroup.style.display = 'none';
-            if (tickerLabel) tickerLabel.textContent = '배당 종목 선택';
-            if (tickerInput) tickerInput.placeholder = '배당 종목 티커 (예: QQQM)';
+            if (tickerGroup) tickerGroup.style.display = 'flex';
+            if (priceGroup) priceGroup.style.display = 'none';
+            if (qtyLabel) qtyLabel.textContent = '배당금액';
         } else {
             // 매수 / 매도
-            tickerGroup.style.display = 'flex';
-            priceGroup.style.display = 'flex';
-            if (tickerLabel) tickerLabel.textContent = '종목 선택';
-            if (tickerInput) tickerInput.placeholder = '종목명 입력 (예: SCHD)';
+            if (tickerGroup) tickerGroup.style.display = 'flex';
+            if (priceGroup) priceGroup.style.display = 'flex';
+            if (qtyLabel) qtyLabel.textContent = '수량';
         }
     });
 
     // 폼 제출 이벤트
     document.getElementById('transaction-form')?.addEventListener('submit', handleTransactionSubmit);
-
-    // MDD 분석 버튼
-    document.getElementById('mdd-analyze-btn')?.addEventListener('click', analyzeMDD);
 
     // 10분마다 자동 새로고침
     setInterval(() => {
@@ -214,7 +169,53 @@ async function fetchData() {
             setTimeout(() => refreshBtn.classList.remove('loading'), 1000);
         });
     });
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    // 뷰 모드 표시기 초기 업데이트
+    updateViewModeIndicator();
+    window.addEventListener('resize', updateViewModeIndicator);
+
+    // 초기화 로직 실행
+    initDashboard();
+
+    // 모바일 기기 감지 시 카드 뷰를 기본으로 설정
+    if (window.innerWidth < 768) {
+        switchHoldingsView('cards');
+    }
+
+    // 페이지 로드 시 구글 시트 데이터 강제 갱신 요청
+    const refreshFab = document.getElementById('refresh-fab');
+    if (refreshFab) refreshFab.classList.add('loading');
+    
+    console.log("🔄 페이지 로드: 구글 시트 데이터 갱신 요청 중...");
+    await requestMarketRefresh();
+    
+    // 약간의 대기 후 데이터 로드 (GAS 처리가 시작될 시간을 벌어줌)
+    setTimeout(() => {
+        fetchData();
+    }, 1500);
 });
+
+/**
+ * 현재 화면 너비를 기준으로 PC/Mobile 모드 표시기 업데이트
+ */
+function updateViewModeIndicator() {
+    const textEl = document.getElementById('view-mode-text');
+    const iconEl = document.getElementById('view-mode-icon');
+    const indicatorEl = document.getElementById('view-mode-indicator');
+    if (!textEl || !iconEl || !indicatorEl) return;
+
+    if (window.innerWidth <= 768) {
+        textEl.textContent = 'Mobile mode';
+        iconEl.textContent = '📱';
+        indicatorEl.style.color = 'var(--secondary)';
+    } else {
+        textEl.textContent = 'PC mode';
+        iconEl.textContent = '💻';
+        indicatorEl.style.color = 'var(--primary)';
+    }
+}
 
 async function fetchData(shouldRefreshMarket = true) {
     const CACHE_KEY = 'dashboard_data_cache';
