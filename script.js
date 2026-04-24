@@ -18,7 +18,7 @@ const CONFIG = {
     holdingsURL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyAvQcej4ON8V6_bjKeqDwbYP9SQL7gGWf9JPREaA5xzoFK3xrwqb4u1IL6lJYjUz5e0IZ9hGRkCKn/pub?gid=58859590&single=true&output=csv",
     historyURL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyAvQcej4ON8V6_bjKeqDwbYP9SQL7gGWf9JPREaA5xzoFK3xrwqb4u1IL6lJYjUz5e0IZ9hGRkCKn/pub?gid=1345768416&single=true&output=csv",
     snapshotURL: "data_snapshot.json",
-    gasURL: "https://script.google.com/macros/s/AKfycbz2IzdkoAhdjS9NPp5bjr1ZtxtAmAnV6SucovX51jANyVqayvwi6H2URKucD6iuZVo7Vw/exec",
+    gasURL: "https://script.google.com/macros/s/AKfycbxw91Dsk1hyInzxt5qreyDbjKsWFgpSZAwx9C4G-tt0B7BpkQs2N3FJRQD1xupVofBSiQ/exec",
     supabaseURL: "", // 사용자 제공 필요
     supabaseKey: ""  // 사용자 제공 필요
 };
@@ -154,6 +154,36 @@ function initDashboard() {
         }
     });
 
+    // 💰 통화 변경 시 종목 리스트 필터링
+    document.getElementById('currency-select')?.addEventListener('change', (e) => {
+        const selectedCurrency = e.target.value;
+        const stockSelect = document.getElementById('stock-name-select');
+        if (!stockSelect) return;
+
+        Array.from(stockSelect.options).forEach(option => {
+            if (option.value === "" || option.value === "DIRECT") {
+                option.style.display = "block";
+            } else {
+                option.style.display = option.dataset.currency === selectedCurrency ? "block" : "none";
+            }
+        });
+        
+        // 필터링 후 현재 선택된 종목이 숨겨진 경우 초기화
+        const selectedOption = stockSelect.options[stockSelect.selectedIndex];
+        if (selectedOption && selectedOption.style.display === "none") {
+            stockSelect.value = "";
+        }
+    });
+
+    // 📈 종목 선택 시 통화 자동 변경
+    document.getElementById('stock-name-select')?.addEventListener('change', (e) => {
+        const selectedOption = e.target.options[e.target.selectedIndex];
+        const currencySelect = document.getElementById('currency-select');
+        if (selectedOption && selectedOption.dataset.currency && currencySelect) {
+            currencySelect.value = selectedOption.dataset.currency;
+        }
+    });
+
     // 폼 제출 이벤트
     document.getElementById('transaction-form')?.addEventListener('submit', handleTransactionSubmit);
 
@@ -188,9 +218,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // 페이지 로드 시 구글 시트 데이터 갱신 요청 (Non-blocking)
     const refreshFab = document.getElementById('refresh-fab');
     if (refreshFab) refreshFab.classList.add('loading');
-    
+
     console.log("🔄 대시보드 로드 시작...");
-    
+
     // 시장 데이터 갱신을 백그라운드에서 요청하고 바로 데이터 로딩 시작
     requestMarketRefresh().finally(() => {
         // GAS 처리가 시작될 시간을 약간 벌어준 후 데이터 페치
@@ -211,7 +241,7 @@ function updateViewModeIndicator() {
 
     // 1. 클래스 초기화
     document.body.classList.remove('force-mobile', 'force-pc');
-    
+
     // 2. 현재 모드 판정
     let currentDisplayMode = '';
     let labelPrefix = '';
@@ -255,10 +285,10 @@ function cycleViewMode() {
 
     localStorage.setItem('user_view_mode', userViewMode);
     updateViewModeIndicator();
-    
+
     // 차트 크기 재조정을 위해 리사이즈 이벤트 발생
     window.dispatchEvent(new Event('resize'));
-    
+
     // 보유 종목 뷰 자동 전환 (모바일 모드일 때 카드 뷰)
     if (userViewMode === 'mobile' || (userViewMode === 'auto' && window.innerWidth <= 768)) {
         switchHoldingsView('cards');
@@ -307,7 +337,7 @@ async function fetchData(shouldRefreshMarket = true) {
 
     } catch (err) {
         console.warn("실시간 로드 실패, 스냅샷 시도:", err);
-        
+
         try {
             const snapshotRes = await fetch(CONFIG.snapshotURL + "?v=" + new Date().getTime());
             if (snapshotRes.ok) {
@@ -478,30 +508,31 @@ function calculateRSIValue(closes, period = 14) {
 }
 
 async function fetchWithFallback(targetUrl, isYahoo = false) {
-    // 1. [우선순위] GAS 프록시 사용 (Google Sheets CSV 및 Yahoo Finance 데이터 모두에 적용)
+    // 1. [우선순위] GAS 프록시 사용
     if (CONFIG.gasURL && CONFIG.gasURL.startsWith('https://script.google.com')) {
         try {
             console.log("GAS 프록시 시도 중: " + targetUrl);
             const response = await fetch(CONFIG.gasURL, {
                 method: 'POST',
-                // GAS.js의 proxy_yahoo 명령은 범용 URL 프록시로 동작합니다.
+                // redirect: 'follow'는 기본값이지만 명시적으로 설정
+                redirect: 'follow',
                 body: JSON.stringify({ command: "proxy_yahoo", url: targetUrl })
             });
 
             if (response.ok) {
                 const text = await response.text();
+                console.log("GAS 프록시 응답 수신 (길이):", text.length);
 
-                if (text.startsWith("GAS Error:")) {
-                    console.warn("GAS 내부 오류:", text);
-                } else if (text.includes('"chart"') || text.includes('"result"')) {
-                    // JSON 형식 (Yahoo Finance 등)
-                    return { type: 'json', data: JSON.parse(text) };
-                } else if (text.length > 20 && !text.includes("<!DOCTYPE") && !text.includes("<html")) {
-                    // CSV 또는 텍스트 형식 (Google Sheets 데이터 등)
-                    const result = Papa.parse(text, { header: false, skipEmptyLines: true });
-                    if (result.data && result.data.length > 0) {
-                        console.log("GAS 프록시를 통해 데이터 로드 성공!");
-                        return { type: 'csv', data: result.data };
+                if (text.startsWith("GAS Error:") || text.length < 5) {
+                    console.warn("GAS 응답 부적절:", text);
+                } else {
+                    if (text.includes('"chart"') || text.includes('"result"')) {
+                        return { type: 'json', data: JSON.parse(text) };
+                    } else {
+                        const result = Papa.parse(text, { header: false, skipEmptyLines: true });
+                        if (result.data && result.data.length > 0) {
+                            return { type: 'csv', data: result.data };
+                        }
                     }
                 }
             }
@@ -899,11 +930,17 @@ function processHoldingsData(data) {
     data.forEach((row, i) => {
         if (i === 0 || !row[0] || ["종목명", "환율"].includes(row[0])) return;
 
+        // 한국 주식 여부 (6자리 숫자 티커)
+        const tickerValue = row[1] || '';
+        const isKRW = /^\d{6}$/.test(tickerValue.replace('KRX:', ''));
+        const currency = isKRW ? 'KRW' : 'USD';
+
         // 드롭다운에 추가
         if (stockSelect && row[0]) {
             const opt = document.createElement('option');
             opt.value = row[0]; // 종목명
-            opt.dataset.ticker = row[1]; // 티커
+            opt.dataset.ticker = tickerValue; // 티커
+            opt.dataset.currency = currency; // 통화 정보 추가
             opt.textContent = row[0];
             stockSelect.appendChild(opt);
         }
@@ -1509,22 +1546,22 @@ function renderSummaryChart(labels, investData, evalData) {
                 y: {
                     grid: { color: 'rgba(255, 255, 255, 0.05)' },
                     display: !isPrivacyMode,
-                    ticks: { 
+                    ticks: {
                         display: !isPrivacyMode,
                         font: { size: window.innerWidth < 768 ? 10 : 12 }
                     }
                 },
-                x: { 
+                x: {
                     grid: { display: false },
                     ticks: { font: { size: window.innerWidth < 768 ? 10 : 12 } }
                 }
             },
             plugins: {
-                legend: { 
+                legend: {
                     display: window.innerWidth > 480, // 아주 작은 화면에서는 범례 숨김
-                    position: 'top', 
-                    align: 'end', 
-                    labels: { boxWidth: 10, padding: 10, font: { size: 11 } } 
+                    position: 'top',
+                    align: 'end',
+                    labels: { boxWidth: 10, padding: 10, font: { size: 11 } }
                 },
                 tooltip: {
                     enabled: !isPrivacyMode
@@ -1619,20 +1656,20 @@ function renderHistoryChart(data) {
                 },
                 x: {
                     grid: { display: false },
-                    ticks: { 
-                        maxRotation: 0, 
-                        autoSkip: true, 
+                    ticks: {
+                        maxRotation: 0,
+                        autoSkip: true,
                         maxTicksLimit: window.innerWidth < 768 ? 5 : 8,
                         font: { size: window.innerWidth < 768 ? 10 : 12 }
                     }
                 }
             },
             plugins: {
-                legend: { 
+                legend: {
                     display: window.innerWidth > 480,
-                    position: 'top', 
-                    align: 'end', 
-                    labels: { usePointStyle: true, boxWidth: 6, padding: 10, font: { size: 10 } } 
+                    position: 'top',
+                    align: 'end',
+                    labels: { usePointStyle: true, boxWidth: 6, padding: 10, font: { size: 10 } }
                 },
                 tooltip: {
                     enabled: !isPrivacyMode, // Privacy 모드 시 툴팁 비활성화

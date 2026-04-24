@@ -58,10 +58,12 @@
         var price = parseFloat(data.price) || 0;
         var qty = parseFloat(data.quantity) || 0;
 
-        if (type === "현금입금" || type === "현금출금") {
-        stockName = "현금"; stockCode = "현금";
+        if (type === "현금입금" || type === "현금출금" || type === "배당금") {
+          // 사용자 요청: B열(stockName)은 "현금", C열(stockCode)은 종목명 기록
+          var originalName = stockName;
+          stockName = "현금"; 
+          stockCode = (type === "배당금" ? originalName : "현금");
         }
-
         if (type.includes("매도") || type.includes("출금")) {
         qty = -Math.abs(qty);
         }
