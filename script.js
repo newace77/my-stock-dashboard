@@ -1699,32 +1699,40 @@ function renderBubbleChart(holdings) {
     // 수익액 절대값 중 최대값 찾기 (색상 농도 계산용)
     const maxAbsProfit = Math.max(...holdings.map(h => Math.abs(h.profit || 0)), 1);
 
-    const bubbleData = holdings.map(item => {
+    const bubbleData = holdings.map((item, idx) => {
         const profit = item.profit || 0;
         const absProfit = Math.abs(profit);
 
         // 농도 계산 (최소 0.3에서 최대 0.9까지)
         const intensity = 0.3 + (absProfit / maxAbsProfit) * 0.6;
 
-        // 색상 결정 (수익: 빨강, 손실: 파랑)
-        const color = profit >= 0
-            ? `rgba(251, 113, 133, ${intensity})` // Reddish
-            : `rgba(56, 189, 248, ${intensity})`; // Bluish
-
-        const borderColor = profit >= 0 ? '#fb7185' : '#38bdf8';
+        let backgroundColor, borderColor;
+        
+        if (profit >= 0) {
+            // 수익: 빨강~주황 계열 (0 ~ 30도 사이에서 종목별로 Hue 분산)
+            const hue = (idx * 137.5) % 30; // 황금각을 활용한 고른 분산
+            backgroundColor = `hsla(${hue}, 80%, 60%, ${intensity})`;
+            borderColor = `hsla(${hue}, 80%, 45%, 0.8)`;
+        } else {
+            // 손실: 파랑~보라 계열 (200 ~ 250도 사이에서 종목별로 Hue 분산)
+            const hue = 200 + ((idx * 137.5) % 50);
+            backgroundColor = `hsla(${hue}, 80%, 60%, ${intensity})`;
+            borderColor = `hsla(${hue}, 80%, 45%, 0.8)`;
+        }
 
         return {
             label: item.name,
             data: [{
                 x: item.dailyChange,
                 y: item.returnRate,
-                r: Math.min(40, Math.sqrt(item.eval / 500000) * 2), // 크기 약간 조정
+                r: Math.min(45, Math.sqrt(item.eval / 400000) * 2.5), // 크기 약간 확대
                 eval: item.eval,
-                name: item.name // 플러그인에서 사용
+                profit: profit,
+                name: item.name
             }],
-            backgroundColor: color,
+            backgroundColor: backgroundColor,
             borderColor: borderColor,
-            borderWidth: 1
+            borderWidth: 1.5 // 테두리 두께 강화
         };
     });
 
@@ -1735,6 +1743,7 @@ function renderBubbleChart(holdings) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            layout: { padding: 20 },
             scales: {
                 x: {
                     title: { display: window.innerWidth > 768, text: '일일 변동률 (%)', color: '#94a3b8' },
@@ -1760,7 +1769,8 @@ function renderBubbleChart(holdings) {
                         label: (context) => {
                             const name = context.dataset.label;
                             const d = context.raw;
-                            return `${name}: 수익률 ${d.y.toFixed(2)}%, 일변동 ${d.x.toFixed(2)}%`;
+                            const profitStr = d.profit ? ` / 수익: ${maskValue(d.profit.toLocaleString())}원` : '';
+                            return `${maskValue(name, true)}: 수익률 ${d.y.toFixed(2)}%, 일변동 ${d.x.toFixed(2)}%${profitStr}`;
                         }
                     }
                 }
@@ -1778,16 +1788,19 @@ function renderBubbleChart(holdings) {
                             const data = dataset.data[index];
                             const radius = element.options.radius;
 
-                            // 버블이 일정 크기 이상일 때만 이름 표시
-                            if (radius > 10) {
+                            // 버블이 아주 작지 않으면 이름 표시
+                            if (radius > 8) {
+                                const displayName = maskValue(data.name, true);
                                 ctx.fillStyle = '#ffffff';
-                                ctx.font = `bold ${Math.min(radius / 2, 12)}px Pretendard`;
+                                const fontSize = Math.max(Math.min(radius / 2.2, 13), 8);
+                                ctx.font = `bold ${fontSize}px Pretendard`;
                                 ctx.textAlign = 'center';
                                 ctx.textBaseline = 'middle';
-                                // 텍스트 그림자 효과 (가독성 증대)
-                                ctx.shadowBlur = 4;
-                                ctx.shadowColor = 'rgba(0,0,0,0.5)';
-                                ctx.fillText(data.name, x, y);
+                                
+                                // 가독성을 위한 강한 그림자
+                                ctx.shadowBlur = 6;
+                                ctx.shadowColor = 'rgba(0,0,0,0.8)';
+                                ctx.fillText(displayName, x, y);
                                 ctx.shadowBlur = 0;
                             }
                         });
