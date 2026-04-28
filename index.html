@@ -67,36 +67,37 @@
                 </div>
             </section>
 
-            <section class="summary-cards market-cards">
-                <div class="summary-card">
-                    <span class="label">🇺🇸 S&P 500</span>
-                    <div id="card-snp-val" class="value">-</div>
-                    <div class="market-change"><span id="card-snp-diff">-</span> <span id="card-snp-change">(-)</span></div>
+            <section class="market-cards">
+                <!-- 지수 및 환율 -->
+                <div class="summary-card market-card" id="card-snp">
+                    <span class="label">S&P 500</span>
+                    <div id="card-snp-val" class="value">7,165.08</div>
+                    <div class="market-change"><span id="card-snp-change" class="value-up">+0.80%</span></div>
                 </div>
-                <div class="summary-card">
-                    <span class="label">💻 NASDAQ</span>
-                    <div id="card-nasdaq-val" class="value">-</div>
-                    <div class="market-change"><span id="card-nasdaq-diff">-</span> <span id="card-nasdaq-change">(-)</span></div>
+                <div class="summary-card market-card" id="card-nasdaq">
+                    <span class="label">Nasdaq</span>
+                    <div id="card-nasdaq-val" class="value">24,836.60</div>
+                    <div class="market-change"><span id="card-nasdaq-change" class="value-up">+1.63%</span></div>
                 </div>
-                <div class="summary-card">
-                    <span class="label">🇰🇷 KOSPI</span>
-                    <div id="card-kospi-val" class="value">-</div>
-                    <div class="market-change"><span id="card-kospi-diff">-</span> <span id="card-kospi-change">(-)</span></div>
+                <div class="summary-card market-card" id="card-dow">
+                    <span class="label">Dow Jones</span>
+                    <div id="card-dow-val" class="value">49,230.71</div>
+                    <div class="market-change"><span id="card-dow-change" class="value-down">-0.16%</span></div>
                 </div>
-                <div class="summary-card">
-                    <span class="label">💵 환율 (USD)</span>
-                    <div id="card-ex-rate-val" class="value">-</div>
-                    <div class="market-change"><span id="card-ex-rate-diff">-</span> <span id="card-ex-rate-change">(-)</span></div>
+                <div class="summary-card market-card" id="card-kospi">
+                    <span class="label">KOSPI</span>
+                    <div id="card-kospi-val" class="value">6,615.03</div>
+                    <div class="market-change"><span id="card-kospi-change" class="value-up">+2.15%</span></div>
                 </div>
-                <div class="summary-card">
-                    <span class="label">🌕 금 (KRW/g)</span>
-                    <div id="card-gold-val" class="value">-</div>
-                    <div class="market-change"><span id="card-gold-diff">-</span> <span id="card-gold-change">(-)</span></div>
+                <div class="summary-card market-card" id="card-kosdaq">
+                    <span class="label">KOSDAQ</span>
+                    <div id="card-kosdaq-val" class="value">1,226.18</div>
+                    <div class="market-change"><span id="card-kosdaq-change" class="value-up">+1.86%</span></div>
                 </div>
-                <div class="summary-card">
-                    <span class="label">₿ 비트코인</span>
-                    <div id="card-btc-val" class="value">-</div>
-                    <div class="market-change"><span id="card-btc-diff">-</span> <span id="card-btc-change">(-)</span></div>
+                <div class="summary-card market-card" id="card-fx">
+                    <span class="label">USD/KRW</span>
+                    <div id="card-fx-val" class="value">1,476.40</div>
+                    <div class="market-change"><span id="card-fx-change">(-)</span></div>
                 </div>
             </section>
 
@@ -112,6 +113,13 @@
                                 </div>
                                 <!-- 슬라이드 2: 리스크 분석 -->
                                 <div class="slide">
+                                    <div class="chart-filter-container">
+                                        <div class="holdings-sort-group" id="bubble-filter-group">
+                                            <button class="sort-btn active" onclick="filterBubbleChart('ALL', this)">전체</button>
+                                            <button class="sort-btn" onclick="filterBubbleChart('KRW', this)">원화</button>
+                                            <button class="sort-btn" onclick="filterBubbleChart('USD', this)">달러</button>
+                                        </div>
+                                    </div>
                                     <canvas id="bubbleChart"></canvas>
                                 </div>
                             </div>

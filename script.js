@@ -311,8 +311,12 @@ async function fetchData(shouldRefreshMarket = true) {
     }
 
     try {
-        // 2. 실시간 데이터 병렬 로드
+        // 2. 실시간 데이터 및 마켓 차트 병렬 로드
         console.log("실시간 데이터 페칭 시작...");
+        
+        // 마켓 차트 업데이트를 즉시 시작 (await 하지 않음)
+        const marketPromise = updateMarketCharts();
+
         const [summaryRes, holdingsRes, historyRes] = await Promise.all([
             fetchWithFallback(CONFIG.summaryURL),
             fetchWithFallback(CONFIG.holdingsURL),
@@ -334,6 +338,9 @@ async function fetchData(shouldRefreshMarket = true) {
         } else {
             throw new Error("Empty response from all proxies");
         }
+        
+        // 시트 데이터 로드 후 마켓 차트 로드 완료 대기 (이미 끝났을 가능성이 높음)
+        await marketPromise;
 
     } catch (err) {
         console.warn("실시간 로드 실패, 스냅샷 시도:", err);
@@ -356,7 +363,9 @@ async function fetchData(shouldRefreshMarket = true) {
         if (refreshBtn) refreshBtn.classList.remove('loading');
     }
 
-    if (shouldRefreshMarket) fetchSP500Data();
+    if (shouldRefreshMarket) {
+        fetchSP500Data();
+    }
 }
 
 // 데이터를 받아서 각 컴포넌트에 뿌려주는 통합 함수
@@ -586,12 +595,19 @@ function parseYahooData(result, ticker) {
             if (!chart || !chart.result || chart.result.length === 0) return [];
             const item = chart.result[0];
             const timestamps = item.timestamp;
-            const closes = item.indicators.quote[0].close;
+            const indicators = item.indicators.quote[0];
+            const closes = indicators.close || [];
+            
+            if (!timestamps || closes.length === 0) return [];
+
             return timestamps.map((ts, i) => ({
                 date: formatDate(new Date(ts * 1000)),
                 close: closes[i]
-            })).filter(d => d.close !== null && !isNaN(d.close));
-        } catch (e) { return []; }
+            })).filter(d => d.close !== null && d.close !== undefined && !isNaN(d.close));
+        } catch (e) { 
+            console.error("JSON 파싱 에러:", e);
+            return []; 
+        }
     } else if (result.type === 'csv') {
         return result.data.slice(1).map(row => ({
             date: formatDate(row[0]),
@@ -833,6 +849,107 @@ function getColorClass(value) {
     return num > 0 ? "value-up" : (num < 0 ? "value-down" : "");
 }
 
+async function updateMarketCharts() {
+    const markets = [
+        { id: 'snp', ticker: '^GSPC' },
+        { id: 'nasdaq', ticker: '^IXIC' },
+        { id: 'dow', ticker: '^DJI' },
+        { id: 'kospi', ticker: '^KS11' },
+        { id: 'kosdaq', ticker: '^KQ11' },
+        { id: 'fx', ticker: 'KRW=X' }
+    ];
+
+    console.log("📊 지수 데이터 업데이트 시작...");
+
+    await Promise.all(markets.map(async (m) => {
+        try {
+            const valEl = document.getElementById(`card-${m.id}-val`);
+            const chgEl = document.getElementById(`card-${m.id}-change`);
+            
+            // 티커 인코딩 처리 (^ 기호 등 대응) 및 범위를 1일로 변경
+            const encodedTicker = encodeURIComponent(m.ticker);
+            const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodedTicker}?interval=15m&range=1d`;
+            
+            // 1. GAS 프록시 시도
+            let result = await fetchViaGASProxy(targetUrl);
+            
+            // 2. GAS 실패 시 공용 프록시 시도
+            if (!result) {
+                console.warn(`${m.id} GAS 프록시 실패, 공용 프록시 시도...`);
+                result = await fetchViaPublicProxy(targetUrl);
+            }
+
+            const history = parseYahooData(result, m.ticker);
+
+            if (history && history.length >= 2) {
+                // 가장 최근 데이터와 그 이전 데이터 (영업일 기준)
+                const last = history[history.length - 1];
+                const prev = history[history.length - 2];
+                const changePercent = ((last.close / prev.close - 1) * 100).toFixed(2);
+                const isPositive = parseFloat(changePercent) >= 0;
+
+                if (valEl) {
+                    if (m.id === 'fx') {
+                        valEl.textContent = last.close.toFixed(2);
+                        usdKrwRate = last.close;
+                    } else {
+                        // 지수는 소수점 둘째자리까지 표시
+                        valEl.textContent = last.close.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    }
+                }
+                
+                if (chgEl) {
+                    chgEl.textContent = `${isPositive ? '+' : ''}${changePercent}%`;
+                    chgEl.className = `market-change ${isPositive ? 'value-up' : 'value-down'}`;
+                }
+            } else if (history && history.length === 1) {
+                // 데이터가 하나뿐일 경우 현재가만 표시
+                const last = history[0];
+                if (valEl) valEl.textContent = last.close.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                if (chgEl) chgEl.textContent = "-";
+            } else {
+                if (valEl) valEl.textContent = "Error";
+                console.error(`❌ ${m.id} 모든 경로 시도 실패`);
+            }
+        } catch (e) {
+            console.error(`🚨 ${m.id} 업데이트 오류:`, e);
+        }
+    }));
+}
+
+// 시장 데이터 전용 프록시 함수들
+async function fetchViaGASProxy(url) {
+    if (!CONFIG.gasURL) return null;
+    try {
+        const response = await fetch(CONFIG.gasURL, {
+            method: 'POST',
+            body: JSON.stringify({ command: "proxy_yahoo", url: url })
+        });
+        if (response.ok) {
+            const text = await response.text();
+            if (text.includes('"chart"')) return { type: 'json', data: JSON.parse(text) };
+        }
+    } catch (e) { return null; }
+    return null;
+}
+
+async function fetchViaPublicProxy(url) {
+    const proxies = [
+        `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+        `https://corsproxy.io/?${encodeURIComponent(url)}`
+    ];
+    for (const p of proxies) {
+        try {
+            const response = await fetch(p);
+            if (response.ok) {
+                const text = await response.text();
+                if (text.includes('"chart"')) return { type: 'json', data: JSON.parse(text) };
+            }
+        } catch (e) {}
+    }
+    return null;
+}
+
 function renderSummary(data, tableElement) {
     if (!tableElement || !data) return;
     tableElement.innerHTML = '';
@@ -861,38 +978,7 @@ function renderSummary(data, tableElement) {
             document.getElementById('card-dividend-val').textContent = maskValue(row9[11]) || "0";
         }
 
-        const marketMappings = [
-            { id: 'snp', row: 13 },
-            { id: 'nasdaq', row: 14 },
-            { id: 'kospi', row: 15 },
-            { id: 'ex-rate', row: 16 },
-            { id: 'gold', row: 17 },
-            { id: 'btc', row: 18 }
-        ];
-        marketMappings.forEach(m => {
-            if (data && data.length > m.row) {
-                const row = data[m.row];
-                if (row && row.length > 17) { // 데이터가 충분히 있는지 확인 (R열까지)
-                    document.getElementById(`card-${m.id}-val`).textContent = row[15] || "-";
-                    const diffElem = document.getElementById(`card-${m.id}-diff`);
-                    if (diffElem) {
-                        const val = row[16];
-                        diffElem.textContent = (parseFloat(val) > 0 ? "+" : "") + val;
-                        diffElem.className = getColorClass(val);
-                    }
-                    const changeElem = document.getElementById(`card-${m.id}-change`);
-                    if (changeElem) {
-                        changeElem.textContent = `(${row[17]})`;
-                        changeElem.className = getColorClass(row[17]);
-                    }
-                    // 환율 저장 (USD/KRW)
-                    if (m.id === 'ex-rate') {
-                        const rate = parseSafeFloat(row[15]);
-                        if (rate > 100) usdKrwRate = rate;
-                    }
-                }
-            }
-        });
+        // 상단 마켓 카드는 updateMarketCharts()에서 통합 관리하므로 여기서는 처리하지 않음
     } catch (e) { console.warn("Summary parsing error", e); }
 
     const labels = [], invests = [], evals = [];
@@ -930,9 +1016,10 @@ function processHoldingsData(data) {
     data.forEach((row, i) => {
         if (i === 0 || !row[0] || ["종목명", "환율"].includes(row[0])) return;
 
-        // 한국 주식 여부 (6자리 숫자 티커)
+        // 한국 주식 여부 (6자리 숫자 티커 또는 특정 종목명)
+        const nameValue = row[0] || '';
         const tickerValue = row[1] || '';
-        const isKRW = /^\d{6}$/.test(tickerValue.replace('KRX:', ''));
+        const isKRW = /^\d{6}$/.test(tickerValue.replace('KRX:', '')) || nameValue.toLowerCase().includes('plus50');
         const currency = isKRW ? 'KRW' : 'USD';
 
         // 드롭다운에 추가
@@ -952,7 +1039,7 @@ function processHoldingsData(data) {
         const ticker = rawTicker.includes(':') ? rawTicker.split(':').pop() : rawTicker;
 
         globalHoldings.push({
-            name: row[0], ticker: ticker, weight, returnRate: parseSafeFloat(row[7]), eval: evalKRW,
+            name: row[0], ticker: ticker, currency, weight, returnRate: parseSafeFloat(row[7]), eval: evalKRW,
             profit: parseSafeFloat(row[14]), dailyChange: parseSafeFloat(row[10]),
             shares: row[3] || '-',
             avgCost: row[4] || '-',
@@ -960,6 +1047,13 @@ function processHoldingsData(data) {
             display: { weight: row[9], returnRate: row[7], evalKRW: row[8], profitKRW: row[14], dailyChange: row[10], currentPrice: row[5] || row[8] }
         });
     });
+    // 리스크 분석 필터 초기화 (전체로 리셋)
+    const bubbleFilters = document.querySelectorAll('#bubble-filter-group .sort-btn');
+    bubbleFilters.forEach((btn, idx) => {
+        if (idx === 0) btn.classList.add('active');
+        else btn.classList.remove('active');
+    });
+
     sortHoldings(sortState.column, false);
     renderBubbleChart(globalHoldings);
 }
@@ -997,8 +1091,16 @@ function renderHoldingsTable() {
         const formattedProfit = maskValue(item.display.profitKRW + '원');
         const formattedEval = maskValue(item.display.evalKRW + '원');
 
+        const currencyLabel = item.currency === 'KRW' ? 'KRW' : 'USD';
+        const currencyClass = item.currency === 'KRW' ? 'krw' : '';
+
         tr.innerHTML = `
-            <td data-label="종목명">${maskValue(item.name, true)}</td>
+            <td data-label="종목명">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    ${maskValue(item.name, true)}
+                    <span class="card-currency-badge ${currencyClass}" style="font-size: 0.6rem; padding: 1px 4px;">${currencyLabel}</span>
+                </div>
+            </td>
             <td data-label="비중">${item.display.weight}%</td>
             <td data-label="수익률" class="${getColorClass(item.display.returnRate)}">${item.display.returnRate}%</td>
             <td data-label="수익액" class="${getColorClass(item.display.profitKRW)}">${formattedProfit}</td>
@@ -1065,7 +1167,7 @@ function renderHoldingsCards() {
         const trendSvgDown = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="7" x2="17" y2="17"/><polyline points="17 7 17 17 7 17"/></svg>`;
         const trendSvg = isPositive ? trendSvgUp : trendSvgDown;
         const changeSign = isPositive ? '+' : '';
-        const currencyIsKRW = item.ticker && /^\d{6}/.test(item.ticker);
+        const currencyIsKRW = item.currency === 'KRW';
 
         // 현재가 포맷팅: 한국 주식은 소수점 제거 및 콤마 추가
         let displayPrice = item.display.currentPrice;
@@ -1079,8 +1181,8 @@ function renderHoldingsCards() {
         // Privacy Mode 적용
         displayPrice = maskValue(displayPrice);
 
-        const currencyLabel = currencyIsKRW ? 'KRW' : 'USD';
-        const currencyClass = currencyIsKRW ? 'krw' : '';
+        const currencyLabel = item.currency === 'KRW' ? 'KRW' : 'USD';
+        const currencyClass = item.currency === 'KRW' ? 'krw' : '';
 
         // 비중 표시
         const weightText = item.weight != null && item.weight !== '' ? `${parseFloat(item.weight).toFixed(1)}%` : '';
@@ -1690,6 +1792,22 @@ function renderHistoryChart(data) {
             }
         }
     });
+}
+
+function filterBubbleChart(currency, btn) {
+    // 버튼 활성화 상태 변경
+    const buttons = document.querySelectorAll('#bubble-filter-group .sort-btn');
+    buttons.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    // 데이터 필터링
+    let filtered = globalHoldings;
+    if (currency !== 'ALL') {
+        filtered = globalHoldings.filter(h => h.currency === currency);
+    }
+
+    // 차트 다시 그리기
+    renderBubbleChart(filtered);
 }
 
 function renderBubbleChart(holdings) {

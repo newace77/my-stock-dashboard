@@ -232,8 +232,77 @@ header h1 {
 }
 
 .market-cards {
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    display: grid !important;
+    grid-template-columns: repeat(6, 1fr) !important;
+    gap: 0.5rem;
     margin-bottom: 2.5rem;
+    width: 100%;
+}
+
+.market-card {
+    background: var(--bg-card);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 0.8rem 0.3rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-width: 0;
+    overflow: hidden;
+    min-height: 80px;
+}
+
+.market-card .label {
+    font-size: 0.65rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    color: #cbd5e1 !important;
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+}
+
+.market-card .value {
+    font-size: 1rem;
+    margin: 0.1rem 0;
+    font-weight: 800;
+    color: #ffffff !important;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.market-card .market-change {
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+@media (max-width: 768px), body.force-mobile {
+    body:not(.force-pc) .market-cards {
+        grid-template-columns: repeat(6, 1fr) !important;
+        gap: 0.2rem !important;
+        margin-bottom: 1.5rem;
+    }
+    
+    body:not(.force-pc) .market-card {
+        padding: 0.5rem 0.1rem;
+        border-radius: 8px;
+        min-height: 60px;
+    }
+
+    body:not(.force-pc) .market-card .label {
+        font-size: 0.5rem;
+    }
+
+    body:not(.force-pc) .market-card .value {
+        font-size: 0.75rem;
+    }
+    
+    body:not(.force-pc) .market-card .market-change {
+        font-size: 0.6rem;
+    }
 }
 
 .summary-card {
@@ -480,16 +549,6 @@ body.force-pc .container {
     body:not(.force-pc) .summary-card {
         padding: 1rem 0.8rem;
     }
-    
-    body:not(.force-pc) .summary-card .label {
-        font-size: 0.75rem;
-    }
-
-    body:not(.force-pc) .summary-card .value {
-        font-size: 1rem;
-    }
-
-    /* 표를 모바일 카드 리스트로 변환 */
     body:not(.force-pc) .table-wrapper table, 
     body:not(.force-pc) .table-wrapper thead, 
     body:not(.force-pc) .table-wrapper tbody, 
@@ -573,13 +632,8 @@ body.force-pc .container {
     body:not(.force-pc) .summary-cards {
         grid-template-columns: 1fr;
     }
-    
-    body:not(.force-pc) .market-cards {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    
-    body:not(.force-pc) .tab-btn {
-        flex: 1;
+
+    body:not(.force-pc) .tab-btn {        flex: 1;
         padding: 0.6rem 0.5rem;
         font-size: 0.75rem;
         text-align: center;
@@ -1262,6 +1316,14 @@ body.force-pc .container {
 
 .modal-info-row > span:first-child {
     color: var(--text-muted);
+}
+
+.chart-filter-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 12px;
+    position: relative;
+    z-index: 10;
 }
 
 /* Slider Section - Robust Update */
