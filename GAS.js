@@ -191,24 +191,24 @@
 
     /**
      * 주기적으로 실행될 트리거를 수동으로 생성하는 함수입니다.
-     * Apps Script 에디터에서 이 함수를 한 번 실행해주세요.
      */
     function createTimeDrivenTriggers() {
       // 기존 트리거 삭제
       var triggers = ScriptApp.getProjectTriggers();
       for (var i = 0; i < triggers.length; i++) {
-        if (triggers[i].getHandlerFunction() === 'refreshAllAccounts') {
+        var handler = triggers[i].getHandlerFunction();
+        if (handler === 'refreshAllAccounts') {
           ScriptApp.deleteTrigger(triggers[i]);
         }
       }
       
-      // 30분마다 자동 갱신 트리거 생성
+      // 30분마다 시장 데이터 자동 갱신
       ScriptApp.newTrigger('refreshAllAccounts')
           .timeBased()
           .everyMinutes(30)
           .create();
           
-      Logger.log("자동 갱신 트리거가 설정되었습니다. (30분 주기)");
+      Logger.log("트리거 설정 완료: 시장 데이터(30분)");
     }
 
     function updateMarketData(ss) {

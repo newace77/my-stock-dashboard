@@ -1120,11 +1120,23 @@ function renderSummary(data, tableElement) {
     document.querySelectorAll('.skeleton').forEach(el => el.classList.remove('skeleton'));
 
     try {
-        // "합계" 또는 "합산"이 포함된 행 찾기 (동적 행 탐색)
-        let totalRow = data.find(row => row[0] && (row[0].includes("합계") || row[0].includes("합산")));
+        // "합계" 또는 "합산"이 포함된 행 중 평가액(index 1)이 숫자인 행 찾기
+        let totalRow = data.find(row => {
+            if (!row[0]) return false;
+            const name = String(row[0]);
+            const evalVal = parseSafeFloat(row[1]);
+            return (name.includes("합계") || name.includes("합산")) && evalVal !== 0;
+        });
         
-        // 만약 못 찾으면 기본값으로 9번째 행(index 8) 사용
-        if (!totalRow && data.length >= 9) totalRow = data[8];
+        // 만약 못 찾으면 데이터 구조를 분석하여 가장 큰 평가액을 가진 행을 후보로 선택
+        if (!totalRow) {
+            const candidates = data.filter(row => row[0] && parseSafeFloat(row[1]) > 0);
+            if (candidates.length > 0) {
+                totalRow = candidates.reduce((prev, curr) => 
+                    parseSafeFloat(curr[1]) > parseSafeFloat(prev[1]) ? curr : prev
+                );
+            }
+        }
 
         if (totalRow) {
             const evalKRW = parseSafeFloat(totalRow[1]);
@@ -1134,7 +1146,7 @@ function renderSummary(data, tableElement) {
             const evalValEl = document.getElementById('card-eval-val');
             if (evalValEl) {
                 let evalText = maskValue(totalRow[1]);
-                if (usdKrwRate > 0 && evalKRW > 10000) { // 원화로 판단될 경우 달러 환산 추가
+                if (usdKrwRate > 0 && evalKRW > 10000) { 
                     const evalUSD = evalKRW / usdKrwRate;
                     evalText += ` <span class="value-sub">($${evalUSD.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0})})</span>`;
                 }
@@ -2010,23 +2022,30 @@ function renderHistoryChartWithRange() {
         return;
     }
 
-    // 헬퍼: YY.MM.DD 형식을 안전하게 Date 객체로 변환
+    // 헬퍼: 다양한 날짜 형식을 안전하게 Date 객체로 변환
     const parseDate = (str) => {
         if (!str) return new Date(NaN);
-        // 점(.)으로 분리하여 년, 월, 일 추출
-        const parts = str.trim().replace(/\.$/, '').split('.');
-        if (parts.length === 3) {
-            let y = parseInt(parts[0].trim());
-            let m = parseInt(parts[1].trim()) - 1; // 월은 0부터 시작
-            let d = parseInt(parts[2].trim());
-            
-            // 2자리 연도(YY) 처리 (예: 26 -> 2026)
+        const cleanStr = str.trim().replace(/\.$/, '');
+        
+        // 1. 점(.)으로 분리 (YY.MM.DD 또는 YYYY.MM.DD)
+        const dots = cleanStr.split('.');
+        if (dots.length === 3) {
+            let y = parseInt(dots[0]);
+            let m = parseInt(dots[1]) - 1;
+            let d = parseInt(dots[2]);
             if (y < 100) y += 2000;
-            
-            const dateObj = new Date(y, m, d);
-            if (!isNaN(dateObj.getTime())) return dateObj;
+            return new Date(y, m, d);
         }
-        return new Date(NaN);
+        
+        // 2. 대시(-)로 분리 (YYYY-MM-DD)
+        const dashes = cleanStr.split('-');
+        if (dashes.length === 3) {
+            return new Date(cleanStr);
+        }
+
+        // 3. 기타 표준 형식
+        const fallback = new Date(cleanStr);
+        return isNaN(fallback.getTime()) ? new Date(NaN) : fallback;
     };
 
     // 모든 데이터를 Date 객체와 함께 매핑
