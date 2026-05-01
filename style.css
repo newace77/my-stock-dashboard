@@ -332,6 +332,13 @@ header h1 {
     letter-spacing: -0.01em;
 }
 
+.summary-card .value-sub {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-left: 0.3rem;
+}
+
 /* Main Layout */
 .main-layout {
     display: grid;

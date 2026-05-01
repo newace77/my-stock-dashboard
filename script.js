@@ -1108,38 +1108,63 @@ function renderSummary(data, tableElement) {
     document.querySelectorAll('.skeleton').forEach(el => el.classList.remove('skeleton'));
 
     try {
-        if (data.length >= 9) {
-            const row9 = data[8];
-            document.getElementById('card-eval-val').textContent = maskValue(row9[1]) || "-";
-            document.getElementById('card-invest-val').textContent = maskValue(row9[2]) || "-";
+        // "합계" 또는 "합산"이 포함된 행 찾기 (동적 행 탐색)
+        let totalRow = data.find(row => row[0] && (row[0].includes("합계") || row[0].includes("합산")));
+        
+        // 만약 못 찾으면 기본값으로 9번째 행(index 8) 사용
+        if (!totalRow && data.length >= 9) totalRow = data[8];
+
+        if (totalRow) {
+            const evalKRW = parseSafeFloat(totalRow[1]);
+            const investKRW = parseSafeFloat(totalRow[2]);
+            
+            // 현재 평가액 카드 업데이트 (KRW + USD 병기)
+            const evalValEl = document.getElementById('card-eval-val');
+            if (evalValEl) {
+                let evalText = maskValue(totalRow[1]);
+                if (usdKrwRate > 0 && evalKRW > 10000) { // 원화로 판단될 경우 달러 환산 추가
+                    const evalUSD = evalKRW / usdKrwRate;
+                    evalText += ` <span class="value-sub">($${evalUSD.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0})})</span>`;
+                }
+                evalValEl.innerHTML = evalText || "-";
+            }
+
+            document.getElementById('card-invest-val').textContent = maskValue(totalRow[2]) || "-";
+            
             const profitElem = document.getElementById('card-profit-val');
-            profitElem.textContent = maskValue(row9[3]) || "0";
-            profitElem.className = 'value ' + getColorClass(row9[3]);
+            profitElem.textContent = maskValue(totalRow[3]) || "0";
+            profitElem.className = 'value ' + getColorClass(totalRow[3]);
+            
             const rateElem = document.getElementById('card-rate-val');
-            rateElem.textContent = row9[4] || "0%";
-            rateElem.className = 'value ' + getColorClass(row9[4]);
+            rateElem.textContent = totalRow[4] || "0%";
+            rateElem.className = 'value ' + getColorClass(totalRow[4]);
 
             const dailyElem = document.getElementById('card-daily-val');
             if (dailyElem) {
-                dailyElem.textContent = maskValue(row9[6]) || "0";
-                dailyElem.className = 'value ' + getColorClass(row9[6]);
+                dailyElem.textContent = maskValue(totalRow[6]) || "0";
+                dailyElem.className = 'value ' + getColorClass(totalRow[6]);
             }
 
-            document.getElementById('card-dividend-val').textContent = maskValue(row9[11]) || "0";
+            document.getElementById('card-dividend-val').textContent = maskValue(totalRow[11]) || "0";
         }
-
-        // 상단 마켓 카드는 updateMarketCharts()에서 통합 관리하므로 여기서는 처리하지 않음
     } catch (e) { console.warn("Summary parsing error", e); }
 
     const labels = [], invests = [], evals = [];
+    const headerIndex = data.findIndex(row => row[0] && row[0].includes("계좌명"));
+    const startIndex = headerIndex !== -1 ? headerIndex + 1 : 0;
+
     data.forEach((row, i) => {
-        if (i >= 9 || !row[0] || row[0].includes("계좌명") || row[0].includes("합산")) return;
-        const name = row[0].trim(); if (name === "") return;
-        const isTotal = name.includes("합계");
+        if (i < startIndex || !row[0] || row[0].includes("계좌명") || row[0].includes("합산") || row[0].includes("합계")) return;
+        
+        const name = row[0].trim(); 
+        if (name === "") return;
+        
         const evalNum = parseSafeFloat(row[1]), investNum = parseSafeFloat(row[2]);
-        if (!isTotal) { labels.push(maskValue(name, true)); invests.push(investNum); evals.push(evalNum); }
+        labels.push(maskValue(name, true)); 
+        invests.push(investNum); 
+        evals.push(evalNum);
+
         const tr = document.createElement('tr');
-        if (isTotal) tr.classList.add("account-total");
         tr.innerHTML = `
             <td data-label="계좌명">${maskValue(name, true)}</td>
             <td data-label="평가금">${maskValue(row[1])}</td>
