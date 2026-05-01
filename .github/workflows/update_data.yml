@@ -2,7 +2,7 @@ name: Auto Update Data Snapshot
 
 on:
   schedule:
-    - cron: '0 * * * *'  # 매시간 정각 실행 (UTC 기준)
+    - cron: '*/15 * * * *'  # 15분마다 실행
   workflow_dispatch:      # 수동 실행 가능
 
 permissions:
@@ -81,15 +81,27 @@ jobs:
                       fetchCSV(CONFIG.history)
                   ]);
                   
+                  const summaryData = parseCSV(s);
+                  const holdingsData = parseCSV(h);
+                  const historyData = parseCSV(hist);
+
+                  // 데이터 유효성 검사: 최소한의 행이 있는지 확인
+                  if (summaryData.length < 5 || holdingsData.length < 2) {
+                      console.error('Fetched data looks incomplete or empty. Skipping update.');
+                      console.log('Summary rows:', summaryData.length);
+                      console.log('Holdings rows:', holdingsData.length);
+                      process.exit(1); 
+                  }
+                  
                   const snapshot = {
-                      summary: parseCSV(s),
-                      holdings: parseCSV(h),
-                      history: parseCSV(hist),
+                      summary: summaryData,
+                      holdings: holdingsData,
+                      history: historyData,
                       updatedAt: new Date().toISOString()
                   };
                   
                   fs.writeFileSync('data_snapshot.json', JSON.stringify(snapshot, null, 2));
-                  console.log('Successfully updated data_snapshot.json');
+                  console.log('Successfully updated data_snapshot.json with ' + summaryData.length + ' summary rows');
               } catch (e) {
                   console.error('Update failed:', e);
                   process.exit(1);

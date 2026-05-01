@@ -175,6 +175,42 @@
     return ContentService.createTextOutput(msg).setMimeType(ContentService.MimeType.TEXT);
     }
 
+    /**
+     * 모든 계좌의 시장 데이터를 갱신합니다.
+     */
+    function refreshAllAccounts() {
+      for (var acc in ACCOUNT_MAP) {
+        try {
+          var ss = SpreadsheetApp.openById(ACCOUNT_MAP[acc]);
+          updateMarketData(ss);
+        } catch(e) { 
+          Logger.log("Error refreshing " + acc + ": " + e.toString());
+        }
+      }
+    }
+
+    /**
+     * 주기적으로 실행될 트리거를 수동으로 생성하는 함수입니다.
+     * Apps Script 에디터에서 이 함수를 한 번 실행해주세요.
+     */
+    function createTimeDrivenTriggers() {
+      // 기존 트리거 삭제
+      var triggers = ScriptApp.getProjectTriggers();
+      for (var i = 0; i < triggers.length; i++) {
+        if (triggers[i].getHandlerFunction() === 'refreshAllAccounts') {
+          ScriptApp.deleteTrigger(triggers[i]);
+        }
+      }
+      
+      // 30분마다 자동 갱신 트리거 생성
+      ScriptApp.newTrigger('refreshAllAccounts')
+          .timeBased()
+          .everyMinutes(30)
+          .create();
+          
+      Logger.log("자동 갱신 트리거가 설정되었습니다. (30분 주기)");
+    }
+
     function updateMarketData(ss) {
     var sheet = ss.getSheetByName("Summary");
     if (!sheet) return;

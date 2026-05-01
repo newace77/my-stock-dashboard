@@ -200,12 +200,31 @@ function initDashboard() {
     // 폼 제출 이벤트
     document.getElementById('transaction-form')?.addEventListener('submit', handleTransactionSubmit);
 
-    // 10분마다 자동 새로고침 (활성 탭일 때만)
+    // 1분마다 자동 새로고침 (활성 탭일 때만)
     setInterval(() => {
         if (document.visibilityState === 'visible') {
+            console.log("🔄 1분 주기 자동 새로고침 시작...");
             fetchData(false); // 자동 새로고침 시에는 구글 시트 강제 갱신 안 함
         }
-    }, 10 * 60 * 1000);
+    }, 1 * 60 * 1000);
+
+    // 탭 가시성 변경 시 자동 새로고침 (1분 이상 경과 시)
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            const CACHE_KEY = 'dashboard_data_cache';
+            const cachedData = localStorage.getItem(CACHE_KEY);
+            if (cachedData) {
+                const cache = JSON.parse(cachedData);
+                const lastUpdate = cache.timestamp || 0;
+                const now = new Date().getTime();
+                // 1분(60,000ms) 이상 경과했으면 자동 새로고침
+                if (now - lastUpdate > 1 * 60 * 1000) {
+                    console.log("🔄 탭 활성화: 데이터가 1분 이상 경과하여 새로고침을 시작합니다.");
+                    fetchData(false);
+                }
+            }
+        }
+    });
 
     const refreshBtn = document.getElementById('refresh-fab');
     if (refreshBtn) refreshBtn.addEventListener('click', async () => {
