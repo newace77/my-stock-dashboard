@@ -328,13 +328,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     console.log("🔄 대시보드 로드 시작...");
 
-    // 시장 데이터 갱신을 백그라운드에서 요청하고 바로 데이터 로딩 시작
-    requestMarketRefresh().finally(() => {
-        // GAS 처리가 시작될 시간을 약간 벌어준 후 데이터 페치
-        setTimeout(() => {
-            fetchData();
-        }, 1500);
-    });
+    // 시장 데이터 갱신을 백그라운드에서 요청
+    requestMarketRefresh();
+
+    // 즉시 데이터 페치 시작 (내부적으로 캐시를 먼저 보여주고 실시간 데이터를 가져옴)
+    fetchData();
 });
 
 /**
@@ -442,13 +440,21 @@ function showToast(message, type = 'info', duration = 5000) {
 async function fetchData(shouldRefreshMarket = true) {
     const CACHE_KEY = 'dashboard_data_cache';
 
-    // 1. 캐시된 데이터가 있으면 즉시 렌더링
+    // 1. 캐시된 데이터가 있으면 즉시 렌더링 (빈 화면 방지용)
     const cachedData = localStorage.getItem(CACHE_KEY);
     if (cachedData) {
         try {
             const cache = JSON.parse(cachedData);
             renderFromData(cache);
-            updateTimestamp(false, "Cache");
+            
+            // 캐시가 1분 이내라면 최신으로 간주하고 업데이트 문구 조정
+            const now = new Date().getTime();
+            const cacheAge = (now - (cache.timestamp || 0)) / 1000;
+            if (cacheAge < 60) {
+                updateTimestamp(true, "Cache");
+            } else {
+                updateTimestamp(false, "Cache (Old)");
+            }
         } catch (e) { console.warn("Cache fail", e); }
     } else {
         updateTimestamp(null, "⏳ 데이터 로드 중...");
@@ -461,10 +467,14 @@ async function fetchData(shouldRefreshMarket = true) {
         // 마켓 차트 업데이트를 즉시 시작 (await 하지 않음)
         const marketPromise = updateMarketCharts();
 
+        // 구글 시트 캐시 방지를 위해 타임스탬프 추가
+        const ts = new Date().getTime();
+        const addTs = (url) => url ? (url + (url.includes('?') ? '&' : '?') + 't=' + ts) : url;
+
         const [summaryRes, holdingsRes, historyRes] = await Promise.all([
-            fetchWithFallback(CONFIG.summaryURL),
-            fetchWithFallback(CONFIG.holdingsURL),
-            fetchWithFallback(CONFIG.historyURL)
+            fetchWithFallback(addTs(CONFIG.summaryURL)),
+            fetchWithFallback(addTs(CONFIG.holdingsURL)),
+            fetchWithFallback(addTs(CONFIG.historyURL))
         ]);
 
         if (summaryRes?.data || holdingsRes?.data) {
@@ -483,7 +493,7 @@ async function fetchData(shouldRefreshMarket = true) {
             throw new Error("Empty response from all proxies");
         }
         
-        // 시트 데이터 로드 후 마켓 차트 로드 완료 대기 (이미 끝났을 가능성이 높음)
+        // 시트 데이터 로드 후 마켓 차트 로드 완료 대기
         await marketPromise;
 
     } catch (err) {
@@ -671,66 +681,68 @@ function calculateRSIValue(closes, period = 14) {
     return 100 - (100 / (1 + rs));
 }
 
+/**
+ * 프록시 레이싱(Racing) 기법을 사용하여 가장 빠른 응답을 반환하는 패치 함수
+ */
 async function fetchWithFallback(targetUrl, isYahoo = false) {
     if (!targetUrl) return null;
-    // 1. [우선순위] GAS 프록시 사용
-    if (CONFIG.gasURL && CONFIG.gasURL.startsWith('https://script.google.com')) {
-        try {
-            console.log("GAS 프록시 시도 중: " + targetUrl);
-            const response = await fetch(CONFIG.gasURL, {
-                method: 'POST',
-                // redirect: 'follow'는 기본값이지만 명시적으로 설정
-                redirect: 'follow',
-                body: JSON.stringify({ command: "proxy_yahoo", url: targetUrl })
-            });
 
-            if (response.ok) {
-                const text = await response.text();
-                console.log("GAS 프록시 응답 수신 (길이):", text.length);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 전체 타임아웃 10초
 
-                if (text.startsWith("GAS Error:") || text.length < 5) {
-                    console.warn("GAS 응답 부적절:", text);
-                } else {
-                    if (text.includes('"chart"') || text.includes('"result"')) {
-                        return { type: 'json', data: JSON.parse(text) };
-                    } else {
-                        const result = Papa.parse(text, { header: false, skipEmptyLines: true });
-                        if (result.data && result.data.length > 0) {
-                            return { type: 'csv', data: result.data };
-                        }
-                    }
-                }
-            }
-        } catch (e) {
-            console.error("GAS 프록시 호출 실패:", e);
+    const fetchTask = async (url, options = {}) => {
+        const response = await fetch(url, { ...options, signal: controller.signal });
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const text = await response.text();
+        
+        // 유효성 검사
+        if (!text || text.length < 20 || text.includes("<!DOCTYPE") || text.includes("<html")) {
+            throw new Error("Invalid data received");
         }
+
+        if (text.includes('"chart"') || text.includes('"result"')) {
+            return { type: 'json', data: JSON.parse(text) };
+        }
+        
+        const result = Papa.parse(text, { header: false, skipEmptyLines: true });
+        if (result.data && result.data.length > 0) {
+            return { type: 'csv', data: result.data };
+        }
+        throw new Error("Parsing failed");
+    };
+
+    const tasks = [];
+
+    // 1. 직접 시도 (CORS 허용된 경우 가장 빠름)
+    tasks.push(fetchTask(targetUrl).catch(() => new Promise(() => {})));
+
+    // 2. GAS 프록시 시도
+    if (CONFIG.gasURL) {
+        tasks.push(fetchTask(CONFIG.gasURL, {
+            method: 'POST',
+            body: JSON.stringify({ command: "proxy_yahoo", url: targetUrl })
+        }).catch(() => new Promise(() => {})));
     }
 
-    // 2. 공용 프록시 (GAS 실패 시 백업)
-    console.log("백업용 공용 프록시 시도 중...");
-    const backupProxies = [
+    // 3. 공용 프록시 시도
+    const publicProxies = [
         `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`,
         `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`
     ];
+    publicProxies.forEach(proxy => {
+        tasks.push(fetchTask(proxy).catch(() => new Promise(() => {})));
+    });
 
-    for (const proxyUrl of backupProxies) {
-        try {
-            const response = await fetch(proxyUrl);
-            if (response.ok) {
-                const text = await response.text();
-                if (text && text.length > 20 && !text.includes("<!DOCTYPE") && !text.includes("<html")) {
-                    if (text.includes('"chart"') || text.includes('"result"')) {
-                        return { type: 'json', data: JSON.parse(text) };
-                    }
-                    const result = Papa.parse(text, { header: false, skipEmptyLines: true });
-                    if (result.data && result.data.length > 0) return { type: 'csv', data: result.data };
-                }
-            }
-        } catch (e) {
-            console.warn("공용 프록시 실패: " + proxyUrl);
-        }
+    try {
+        // 가장 빨리 성공하는 작업 결과 반환
+        const fastestResult = await Promise.any(tasks);
+        clearTimeout(timeoutId);
+        return fastestResult;
+    } catch (e) {
+        console.error("All fetch attempts failed", e);
+        clearTimeout(timeoutId);
+        return null;
     }
-    return null;
 }
 
 // Yahoo Finance v8 JSON 또는 구형 CSV 데이터를 통일된 형식으로 파싱
