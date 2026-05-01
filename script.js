@@ -14,6 +14,16 @@ if (window.Chart) {
 }
 
 // 💡 설정(CONFIG)은 외부 config.js 파일에서 로드됩니다.
+if (typeof CONFIG === 'undefined') {
+    console.warn("CONFIG is not defined. Using default values for snapshot.");
+    window.CONFIG = {
+        snapshotURL: "data_snapshot.json",
+        summaryURL: "",
+        holdingsURL: "",
+        historyURL: "",
+        gasURL: ""
+    };
+}
 
 // Supabase 데이터 로드 예시 함수
 async function fetchFromSupabase(table) {
@@ -523,6 +533,7 @@ function calculateRSIValue(closes, period = 14) {
 }
 
 async function fetchWithFallback(targetUrl, isYahoo = false) {
+    if (!targetUrl) return null;
     // 1. [우선순위] GAS 프록시 사용
     if (CONFIG.gasURL && CONFIG.gasURL.startsWith('https://script.google.com')) {
         try {
