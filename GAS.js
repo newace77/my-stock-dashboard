@@ -18,9 +18,30 @@
         }
         
         if (data.command === "refresh_market") {
-        var ss = SpreadsheetApp.openById("1YNMIqwg6mJjUFGtWEMRSPKNCJGcPMfKgyg_S0gkEVFw"); 
-        updateMarketData(ss);
-        return createResponse("Market Data Refreshed");
+        var accountMap = {
+          "AJM": "1YNMIqwg6mJjUFGtWEMRSPKNCJGcPMfKgyg_S0gkEVFw",
+          "AJMjr": "1aN52-xHUQm5ZmQOk6I9HLTVxCKMeMuYQoGcNlxCEIEI",
+          "JJG-w-AJM": "1vdWQhHIEHk2mZHPCDzDnbDhYoqYCFE7m8LRk8xaXOUs",
+          "JJG-w-KKO": "1Q0q2v60zcf-mfuQS8MiO1pBfSFo3YxVIZ7yo2TWBX3s",
+          "JJG-w-AJMjr": "1m2zurh2hmMgYOWMo-t7BNagu2AkyK2EoygdMS594mj0",
+          "JJG-w-AJM-ISA": "1Q1Sw-Z2doUvJNw1bAh351b8ZR9UFVbtnAsg5M6Js7sg",
+          "JJG-w-KKO-ISA": "1GRz4BgS0SF5bsl7D2oo9z0BNkvqob9b2Mzd3QYVrVjY"
+        };
+
+        if (data.account && accountMap[data.account]) {
+          var ss = SpreadsheetApp.openById(accountMap[data.account]);
+          updateMarketData(ss);
+          return createResponse("Refreshed: " + data.account);
+        } else {
+          // 모든 계정 순회하며 갱신
+          for (var acc in accountMap) {
+            try {
+              var ss = SpreadsheetApp.openById(accountMap[acc]);
+              updateMarketData(ss);
+            } catch(e) { /* ignore error for single account */ }
+          }
+          return createResponse("All Accounts Refreshed");
+        }
         }
 
         if (data.url) {

@@ -1580,6 +1580,31 @@ body.force-pc .container {
     flex: 1;
 }
 
+.toast-progress-list {
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 0.5rem;
+}
+
+.toast-progress-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.toast-progress-status {
+    font-weight: 700;
+}
+
+.toast-progress-status.pending { color: var(--text-muted); }
+.toast-progress-status.loading { color: var(--primary); }
+.toast-progress-status.done { color: var(--positive); }
+.toast-progress-status.fail { color: var(--negative); }
+
 .toast-close {
     background: transparent;
     border: none;

@@ -208,12 +208,85 @@ function initDashboard() {
     }, 10 * 60 * 1000);
 
     const refreshBtn = document.getElementById('refresh-fab');
-    if (refreshBtn) refreshBtn.addEventListener('click', () => {
+    if (refreshBtn) refreshBtn.addEventListener('click', async () => {
+        if (refreshBtn.classList.contains('loading')) return;
+        
         refreshBtn.classList.add('loading');
-        // 수동 갱신 시에는 시장 데이터 갱신 요청 포함
-        requestMarketRefresh().then(() => {
-            setTimeout(() => fetchData(), 1000);
-        });
+        
+        const accounts = [
+            "AJM", "AJMjr", "JJG-w-AJM", "JJG-w-KKO", 
+            "JJG-w-AJMjr", "JJG-w-AJM-ISA", "JJG-w-KKO-ISA"
+        ];
+        
+        // 진행 상태 표시용 토스트 생성
+        let container = document.getElementById('toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toast-container';
+            document.body.appendChild(container);
+        }
+        
+        const toast = document.createElement('div');
+        toast.className = 'toast toast-info show';
+        
+        toast.innerHTML = `
+            <span class="toast-icon">⏳</span>
+            <div style="display:flex; flex-direction:column; flex:1;">
+                <span class="toast-message">실시간 데이터 업데이트 중...</span>
+                <div class="toast-progress-list">
+                    ${accounts.map(acc => `
+                        <div class="toast-progress-item">
+                            <span>${acc}</span>
+                            <span class="toast-progress-status pending" data-account="${acc}">대기 중</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+        container.appendChild(toast);
+
+        // 각 계정별 순차 업데이트
+        for (const acc of accounts) {
+            const statusEl = toast.querySelector(`[data-account="${acc}"]`);
+            if (statusEl) {
+                statusEl.textContent = '갱신 중...';
+                statusEl.className = 'toast-progress-status loading';
+            }
+            
+            try {
+                await requestMarketRefresh(acc);
+                if (statusEl) {
+                    statusEl.textContent = '완료';
+                    statusEl.className = 'toast-progress-status done';
+                }
+            } catch (e) {
+                if (statusEl) {
+                    statusEl.textContent = '실패';
+                    statusEl.className = 'toast-progress-status fail';
+                }
+            }
+        }
+
+        toast.querySelector('.toast-message').textContent = '데이터 동기화 중 (3초)...';
+        toast.querySelector('.toast-icon').textContent = '🔄';
+
+        // 시트간 데이터 동기화 시간 대기
+        await new Promise(resolve => setTimeout(resolve, 3000));
+
+        toast.querySelector('.toast-message').textContent = '최신 데이터 불러오기 완료!';
+        toast.querySelector('.toast-icon').textContent = '✅';
+        toast.className = 'toast toast-success show';
+
+        // 데이터 페치 (강제 갱신)
+        await fetchData(true);
+        
+        refreshBtn.classList.remove('loading');
+        
+        // 5초 후 토스트 제거
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 5000);
     });
 }
 
@@ -2160,12 +2233,18 @@ async function handleTransactionSubmit(e) {
     }
 }
 
-async function requestMarketRefresh() {
+async function requestMarketRefresh(account = null) {
     try {
-        const params = new URLSearchParams({ command: "refresh_market" });
-        console.log("시트 데이터 갱신 요청 중...");
+        const payload = { command: "refresh_market" };
+        if (account) payload.account = account;
+        
+        console.log(`${account || '전체'} 시트 데이터 갱신 요청 중...`);
         // fetch promise를 반환하여 await 가능하게 함
-        return fetch(CONFIG.gasURL, { method: 'POST', mode: 'no-cors', body: params });
+        return fetch(CONFIG.gasURL, { 
+            method: 'POST', 
+            mode: 'no-cors', 
+            body: JSON.stringify(payload) 
+        });
     } catch (e) {
         console.warn('Market refresh request failed:', e);
         return Promise.resolve();
