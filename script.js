@@ -155,13 +155,24 @@ let holdingsAnalysisSortState = { column: 'eval', direction: 'desc' };
 function calculateRSIValue(closes, period = 14) {
     if (closes.length <= period) return 50;
     let gains = 0, losses = 0;
-    for (let i = closes.length - period; i < closes.length; i++) {
+    for (let i = 1; i <= period; i++) {
         const diff = closes[i] - closes[i - 1];
         if (diff >= 0) gains += diff;
         else losses -= diff;
     }
-    if (losses === 0) return 100;
-    const rs = (gains / period) / (losses / period);
+    let avgGain = gains / period;
+    let avgLoss = losses / period;
+
+    for (let i = period + 1; i < closes.length; i++) {
+        const diff = closes[i] - closes[i - 1];
+        const gain = diff >= 0 ? diff : 0;
+        const loss = diff < 0 ? -diff : 0;
+        avgGain = (avgGain * (period - 1) + gain) / period;
+        avgLoss = (avgLoss * (period - 1) + loss) / period;
+    }
+
+    if (avgLoss === 0) return 100;
+    const rs = avgGain / avgLoss;
     return 100 - (100 / (1 + rs));
 }
 
@@ -178,7 +189,9 @@ function calculateMDDAndRecovery(closes) {
         drawdowns.push(drawdown);
     }
     const currentDrawdown = drawdowns[drawdowns.length - 1];
-    const currentLevel = Math.ceil(Math.abs(currentDrawdown * 100) / 5) * 5;
+    let currentLevel = Math.ceil(Math.abs(currentDrawdown * 100) / 5) * 5;
+    if (currentLevel === 0) currentLevel = 5;
+
     const threshold = -(currentLevel / 100);
     const count = drawdowns.filter(d => d >= threshold).length;
     const prob = closes.length > 0 ? ((count / closes.length) * 100).toFixed(1) : "0.0";
@@ -221,24 +234,53 @@ async function fetchHoldingsAnalysisData() {
         await Promise.all(batch.map(async (item) => {
             try {
                 const ticker = formatTicker(item.ticker);
+                let divYield = "-";
                 
-                // 1. 기본 정보 및 히스토리 (10년치)
-                const historyUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=10y`;
+                const sp500Item = sp500Data.find(d => formatTicker(d.ticker) === ticker);
+                const kospiItem = kospi200Data.find(d => formatTicker(d.ticker) === ticker);
+                
+                if (sp500Item) {
+                    item.marketCap = sp500Item.marketCap;
+                    divYield = sp500Item.dividendYield;
+                } else if (kospiItem) {
+                    item.marketCap = kospiItem.marketCap;
+                    divYield = kospiItem.dividendYield;
+                } else {
+                    // Attempt fallback to v7/finance/quote via proxy
+                    try {
+                        const quoteUrl = `https://query2.finance.yahoo.com/v7/finance/quote?symbols=${ticker}`;
+                        const quoteRes = await fetchWithFallback(quoteUrl, true);
+                        if (quoteRes && quoteRes.type === 'json' && quoteRes.data.quoteResponse && quoteRes.data.quoteResponse.result.length > 0) {
+                            const q = quoteRes.data.quoteResponse.result[0];
+                            item.marketCap = q.marketCap || 0;
+                            if (q.dividendYield !== undefined) divYield = q.dividendYield.toFixed(2);
+                            else if (q.trailingAnnualDividendYield !== undefined) divYield = (q.trailingAnnualDividendYield * 100).toFixed(2);
+                        }
+                    } catch (e) {}
+                }
+                
+                // 1. 기본 정보 및 히스토리 (10년치 + 배당 정보)
+                const historyUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=10y&events=div`;
                 const historyRes = await fetchWithFallback(historyUrl, true);
                 
                 if (historyRes && historyRes.type === 'json') {
                     const meta = historyRes.data.chart.result[0].meta;
                     item.price = meta.regularMarketPrice;
-                    item.marketCap = meta.marketCap || 0;
-                    const prevClose = meta.chartPreviousClose || meta.previousClose;
-                    item.change = prevClose ? ((item.price / prevClose - 1) * 100).toFixed(2) : 0;
                     
-                    // 배당률/분배율 정보 (meta 정보가 있으면 사용)
-                    if (meta.dividendYield !== undefined) {
-                        item.dividendYield = meta.dividendYield.toFixed(2);
-                    } else if (meta.trailingAnnualDividendYield !== undefined) {
-                        item.dividendYield = (meta.trailingAnnualDividendYield * 100).toFixed(2);
+                    // Use daily change directly from user's Google Sheet (Holdings / Summary)
+                    item.change = item.display.dailyChange && item.display.dailyChange !== '-' ? item.display.dailyChange : (meta.chartPreviousClose ? ((item.price / meta.chartPreviousClose - 1) * 100).toFixed(2) : 0);
+                    
+                    // Calculate trailing 12 months dividend yield if missing
+                    if (divYield === "-" && historyRes.data.chart.result[0].events && historyRes.data.chart.result[0].events.dividends) {
+                        const divs = historyRes.data.chart.result[0].events.dividends;
+                        const oneYearAgo = (Date.now() / 1000) - (365 * 24 * 60 * 60);
+                        let totalDiv = 0;
+                        for (const key in divs) {
+                            if (divs[key].date >= oneYearAgo) totalDiv += divs[key].amount;
+                        }
+                        if (totalDiv > 0 && item.price > 0) divYield = ((totalDiv / item.price) * 100).toFixed(2);
                     }
+                    item.dividendYield = divYield;
 
                     const history = parseYahooData(historyRes, ticker);
                     if (history && history.length > 0) {

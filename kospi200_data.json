@@ -7,7 +7,7 @@
     "marketCap": 1447927159455744,
     "mdd": "-45.16",
     "recoveryProb": "21.2",
-    "rsi": "62.2",
+    "rsi": "58.6",
     "dividendYield": "1.03",
     "rank": 1
   },
@@ -19,7 +19,7 @@
     "marketCap": 1044516316381184,
     "mdd": "-48.40",
     "recoveryProb": "20.0",
-    "rsi": "71.1",
+    "rsi": "62.9",
     "dividendYield": "1.43",
     "rank": 2
   },
@@ -31,7 +31,7 @@
     "marketCap": 911379376635904,
     "mdd": "-49.49",
     "recoveryProb": "23.8",
-    "rsi": "87.1",
+    "rsi": "70.4",
     "dividendYield": "0.23",
     "rank": 3
   },
@@ -43,7 +43,7 @@
     "marketCap": 139033896288256,
     "mdd": "-61.24",
     "recoveryProb": "56.7",
-    "rsi": "60.3",
+    "rsi": "53.2",
     "dividendYield": "1.88",
     "rank": 4
   },
@@ -54,8 +54,8 @@
     "change": "1.33",
     "marketCap": 110850656436224,
     "mdd": "-57.89",
-    "recoveryProb": "6.8",
-    "rsi": "96.3",
+    "recoveryProb": "15.7",
+    "rsi": "78.4",
     "dividendYield": "0.00",
     "rank": 5
   },
@@ -67,7 +67,7 @@
     "marketCap": 107756996526080,
     "mdd": "-57.05",
     "recoveryProb": "44.1",
-    "rsi": "64.5",
+    "rsi": "58.9",
     "dividendYield": "0.00",
     "rank": 6
   },
@@ -79,7 +79,7 @@
     "marketCap": 81233778311168,
     "mdd": "-90.77",
     "recoveryProb": "6.5",
-    "rsi": "83.9",
+    "rsi": "70.2",
     "dividendYield": "0.00",
     "rank": 7
   },
@@ -91,7 +91,7 @@
     "marketCap": 72902934265856,
     "mdd": "-77.84",
     "recoveryProb": "26.2",
-    "rsi": "37.3",
+    "rsi": "49.3",
     "dividendYield": "0.49",
     "rank": 8
   },
@@ -103,7 +103,7 @@
     "marketCap": 71898440400896,
     "mdd": "-38.89",
     "recoveryProb": "22.3",
-    "rsi": "89.6",
+    "rsi": "75.0",
     "dividendYield": "1.13",
     "rank": 9
   },
@@ -115,7 +115,7 @@
     "marketCap": 68047700230144,
     "mdd": "-57.28",
     "recoveryProb": "86.1",
-    "rsi": "33.0",
+    "rsi": "35.7",
     "dividendYield": "0.00",
     "rank": 10
   },
@@ -127,7 +127,7 @@
     "marketCap": 64934851379200,
     "mdd": "-61.69",
     "recoveryProb": "67.3",
-    "rsi": "55.4",
+    "rsi": "48.1",
     "dividendYield": "4.07",
     "rank": 11
   },
@@ -139,7 +139,7 @@
     "marketCap": 62855311261696,
     "mdd": "-51.34",
     "recoveryProb": "15.8",
-    "rsi": "86.4",
+    "rsi": "79.8",
     "dividendYield": "0.28",
     "rank": 12
   },
@@ -151,7 +151,7 @@
     "marketCap": 58997986033664,
     "mdd": "-54.78",
     "recoveryProb": "82.3",
-    "rsi": "54.0",
+    "rsi": "45.2",
     "dividendYield": "4.48",
     "rank": 13
   },
@@ -163,7 +163,7 @@
     "marketCap": 56927383977984,
     "mdd": "-62.03",
     "recoveryProb": "23.0",
-    "rsi": "56.0",
+    "rsi": "58.7",
     "dividendYield": "2.86",
     "rank": 14
   },
@@ -175,7 +175,7 @@
     "marketCap": 54692075798528,
     "mdd": "-80.39",
     "recoveryProb": "47.5",
-    "rsi": "81.6",
+    "rsi": "78.0",
     "dividendYield": "0.36",
     "rank": 15
   },
@@ -187,7 +187,7 @@
     "marketCap": 48845098582016,
     "mdd": "-55.92",
     "recoveryProb": "27.8",
-    "rsi": "47.7",
+    "rsi": "50.0",
     "dividendYield": "0.94",
     "rank": 16
   },
@@ -199,7 +199,7 @@
     "marketCap": 47417969868800,
     "mdd": "-59.93",
     "recoveryProb": "27.5",
-    "rsi": "59.7",
+    "rsi": "59.8",
     "dividendYield": "2.76",
     "rank": 17
   },
@@ -211,7 +211,7 @@
     "marketCap": 45062863978496,
     "mdd": "-93.06",
     "recoveryProb": "14.2",
-    "rsi": "76.1",
+    "rsi": "68.7",
     "dividendYield": "0.67",
     "rank": 18
   },
@@ -223,7 +223,7 @@
     "marketCap": 44803907649536,
     "mdd": "-76.80",
     "recoveryProb": "12.4",
-    "rsi": "61.0",
+    "rsi": "56.2",
     "dividendYield": "2.12",
     "rank": 19
   },
@@ -235,7 +235,7 @@
     "marketCap": 43851712561152,
     "mdd": "-64.66",
     "recoveryProb": "49.7",
-    "rsi": "50.9",
+    "rsi": "46.1",
     "dividendYield": "0.37",
     "rank": 20
   },
@@ -246,8 +246,8 @@
     "change": "1.83",
     "marketCap": 41336501698560,
     "mdd": "-67.66",
-    "recoveryProb": "4.7",
-    "rsi": "96.6",
+    "recoveryProb": "15.4",
+    "rsi": "87.8",
     "dividendYield": "0.22",
     "rank": 21
   },
@@ -259,7 +259,7 @@
     "marketCap": 40377956433920,
     "mdd": "-79.26",
     "recoveryProb": "11.2",
-    "rsi": "64.2",
+    "rsi": "53.1",
     "dividendYield": "0.00",
     "rank": 22
   },
@@ -271,7 +271,7 @@
     "marketCap": 37901748404224,
     "mdd": "-55.21",
     "recoveryProb": "38.8",
-    "rsi": "56.6",
+    "rsi": "50.8",
     "dividendYield": "1.53",
     "rank": 23
   },
@@ -283,7 +283,7 @@
     "marketCap": 37700241457152,
     "mdd": "-68.74",
     "recoveryProb": "27.1",
-    "rsi": "46.4",
+    "rsi": "46.1",
     "dividendYield": "0.46",
     "rank": 24
   },
@@ -295,7 +295,7 @@
     "marketCap": 36427530240000,
     "mdd": "-86.22",
     "recoveryProb": "15.9",
-    "rsi": "86.4",
+    "rsi": "77.0",
     "dividendYield": "0.19",
     "rank": 25
   },
@@ -307,7 +307,7 @@
     "marketCap": 34936799100928,
     "mdd": "-65.06",
     "recoveryProb": "44.2",
-    "rsi": "81.6",
+    "rsi": "76.0",
     "dividendYield": "2.16",
     "rank": 26
   },
@@ -319,7 +319,7 @@
     "marketCap": 34905903857664,
     "mdd": "-68.15",
     "recoveryProb": "14.8",
-    "rsi": "76.8",
+    "rsi": "71.0",
     "dividendYield": "0.22",
     "rank": 27
   },
@@ -331,7 +331,7 @@
     "marketCap": 34312659402752,
     "mdd": "-66.76",
     "recoveryProb": "18.7",
-    "rsi": "74.7",
+    "rsi": "68.7",
     "dividendYield": "3.58",
     "rank": 28
   },
@@ -343,7 +343,7 @@
     "marketCap": 32634803585024,
     "mdd": "-62.71",
     "recoveryProb": "11.4",
-    "rsi": "74.5",
+    "rsi": "62.9",
     "dividendYield": "1.97",
     "rank": 29
   },
@@ -355,7 +355,7 @@
     "marketCap": 31541296103424,
     "mdd": "-65.86",
     "recoveryProb": "81.1",
-    "rsi": "59.0",
+    "rsi": "47.1",
     "dividendYield": "1.25",
     "rank": 30
   },
@@ -367,7 +367,7 @@
     "marketCap": 31075216654336,
     "mdd": "-82.26",
     "recoveryProb": "83.8",
-    "rsi": "67.2",
+    "rsi": "64.2",
     "dividendYield": "0.50",
     "rank": 31
   },
@@ -378,8 +378,8 @@
     "change": "1.70",
     "marketCap": 29304706564096,
     "mdd": "-78.18",
-    "recoveryProb": "3.7",
-    "rsi": "86.3",
+    "recoveryProb": "10.4",
+    "rsi": "76.2",
     "dividendYield": "0.22",
     "rank": 32
   },
@@ -391,7 +391,7 @@
     "marketCap": 28711772487680,
     "mdd": "-67.35",
     "recoveryProb": "78.1",
-    "rsi": "49.7",
+    "rsi": "45.4",
     "dividendYield": "1.27",
     "rank": 33
   },
@@ -403,7 +403,7 @@
     "marketCap": 27957535965184,
     "mdd": "-74.30",
     "recoveryProb": "22.8",
-    "rsi": "50.9",
+    "rsi": "41.5",
     "dividendYield": "3.54",
     "rank": 34
   },
@@ -415,7 +415,7 @@
     "marketCap": 27631766470656,
     "mdd": "-74.35",
     "recoveryProb": "20.8",
-    "rsi": "67.6",
+    "rsi": "61.1",
     "dividendYield": "0.00",
     "rank": 35
   },
@@ -426,8 +426,8 @@
     "change": "1.53",
     "marketCap": 27191261790208,
     "mdd": "-83.66",
-    "recoveryProb": "3.8",
-    "rsi": "87.8",
+    "recoveryProb": "11.2",
+    "rsi": "73.1",
     "dividendYield": "0.31",
     "rank": 36
   },
@@ -439,7 +439,7 @@
     "marketCap": 25371290370048,
     "mdd": "-65.03",
     "recoveryProb": "32.7",
-    "rsi": "71.9",
+    "rsi": "67.0",
     "dividendYield": "0.96",
     "rank": 37
   },
@@ -451,7 +451,7 @@
     "marketCap": 24431682387968,
     "mdd": "-74.59",
     "recoveryProb": "74.6",
-    "rsi": "78.9",
+    "rsi": "70.2",
     "dividendYield": "1.84",
     "rank": 38
   },
@@ -463,7 +463,7 @@
     "marketCap": 24380144877568,
     "mdd": "-56.56",
     "recoveryProb": "49.4",
-    "rsi": "42.2",
+    "rsi": "45.3",
     "dividendYield": "4.14",
     "rank": 39
   },
@@ -474,8 +474,8 @@
     "change": "0.00",
     "marketCap": 23171851878400,
     "mdd": "-67.49",
-    "recoveryProb": "1.6",
-    "rsi": "87.4",
+    "recoveryProb": "8.7",
+    "rsi": "72.8",
     "dividendYield": "1.88",
     "rank": 40
   },
@@ -487,7 +487,7 @@
     "marketCap": 22414438170624,
     "mdd": "-83.26",
     "recoveryProb": "83.7",
-    "rsi": "68.4",
+    "rsi": "61.4",
     "dividendYield": "0.10",
     "rank": 41
   },
@@ -498,8 +498,8 @@
     "change": "3.16",
     "marketCap": 21942547513344,
     "mdd": "-67.11",
-    "recoveryProb": "2.2",
-    "rsi": "79.7",
+    "recoveryProb": "6.1",
+    "rsi": "71.4",
     "dividendYield": "1.67",
     "rank": 42
   },
@@ -511,7 +511,7 @@
     "marketCap": 21934309900288,
     "mdd": "-61.23",
     "recoveryProb": "82.3",
-    "rsi": "22.2",
+    "rsi": "38.8",
     "dividendYield": "0.43",
     "rank": 43
   },
@@ -523,7 +523,7 @@
     "marketCap": 20844346605568,
     "mdd": "-80.65",
     "recoveryProb": "91.5",
-    "rsi": "47.9",
+    "rsi": "43.1",
     "dividendYield": "0.16",
     "rank": 44
   },
@@ -535,7 +535,7 @@
     "marketCap": 20556380372992,
     "mdd": "-84.81",
     "recoveryProb": "14.2",
-    "rsi": "52.3",
+    "rsi": "57.6",
     "dividendYield": "0.31",
     "rank": 45
   },
@@ -547,7 +547,7 @@
     "marketCap": 20256384876544,
     "mdd": "-42.83",
     "recoveryProb": "30.0",
-    "rsi": "54.3",
+    "rsi": "57.6",
     "dividendYield": "2.62",
     "rank": 46
   },
@@ -559,7 +559,7 @@
     "marketCap": 19596887195648,
     "mdd": "-59.22",
     "recoveryProb": "71.9",
-    "rsi": "46.3",
+    "rsi": "46.2",
     "dividendYield": "4.23",
     "rank": 47
   },
@@ -571,7 +571,7 @@
     "marketCap": 19336378974208,
     "mdd": "-86.80",
     "recoveryProb": "45.4",
-    "rsi": "26.5",
+    "rsi": "45.4",
     "dividendYield": "3.41",
     "rank": 48
   },
@@ -583,7 +583,7 @@
     "marketCap": 18789921980416,
     "mdd": "-53.58",
     "recoveryProb": "5.7",
-    "rsi": "83.3",
+    "rsi": "70.3",
     "dividendYield": "3.37",
     "rank": 49
   },
@@ -595,7 +595,7 @@
     "marketCap": 18422253486080,
     "mdd": "-65.32",
     "recoveryProb": "69.5",
-    "rsi": "40.7",
+    "rsi": "43.0",
     "dividendYield": "1.03",
     "rank": 50
   },
@@ -607,7 +607,7 @@
     "marketCap": 18188012093440,
     "mdd": "-75.60",
     "recoveryProb": "19.7",
-    "rsi": "29.0",
+    "rsi": "46.5",
     "dividendYield": "0.49",
     "rank": 51
   },
@@ -619,7 +619,7 @@
     "marketCap": 18021825380352,
     "mdd": "-65.87",
     "recoveryProb": "55.0",
-    "rsi": "56.4",
+    "rsi": "51.0",
     "dividendYield": "4.64",
     "rank": 52
   },
@@ -631,7 +631,7 @@
     "marketCap": 17024999751680,
     "mdd": "-61.92",
     "recoveryProb": "70.1",
-    "rsi": "55.6",
+    "rsi": "49.9",
     "dividendYield": "2.56",
     "rank": 53
   },
@@ -643,7 +643,7 @@
     "marketCap": 16473292537856,
     "mdd": "-81.08",
     "recoveryProb": "16.7",
-    "rsi": "15.7",
+    "rsi": "39.8",
     "dividendYield": "0.30",
     "rank": 54
   },
@@ -655,7 +655,7 @@
     "marketCap": 15892496777216,
     "mdd": "-49.07",
     "recoveryProb": "46.0",
-    "rsi": "60.6",
+    "rsi": "59.3",
     "dividendYield": "1.20",
     "rank": 55
   },
@@ -667,7 +667,7 @@
     "marketCap": 15658576248832,
     "mdd": "-64.73",
     "recoveryProb": "8.0",
-    "rsi": "66.6",
+    "rsi": "66.7",
     "dividendYield": "0.25",
     "rank": 56
   },
@@ -679,7 +679,7 @@
     "marketCap": 15281536630784,
     "mdd": "-57.84",
     "recoveryProb": "50.3",
-    "rsi": "68.5",
+    "rsi": "62.3",
     "dividendYield": "3.13",
     "rank": 57
   },
@@ -691,7 +691,7 @@
     "marketCap": 14879803047936,
     "mdd": "-70.05",
     "recoveryProb": "5.3",
-    "rsi": "80.7",
+    "rsi": "68.5",
     "dividendYield": "2.12",
     "rank": 58
   },
@@ -703,7 +703,7 @@
     "marketCap": 14665478307840,
     "mdd": "-50.14",
     "recoveryProb": "56.2",
-    "rsi": "42.1",
+    "rsi": "47.2",
     "dividendYield": "3.94",
     "rank": 59
   },
@@ -715,7 +715,7 @@
     "marketCap": 14381000687616,
     "mdd": "-72.22",
     "recoveryProb": "12.1",
-    "rsi": "77.7",
+    "rsi": "74.1",
     "dividendYield": "0.00",
     "rank": 60
   },
@@ -727,7 +727,7 @@
     "marketCap": 14015223824384,
     "mdd": "-67.38",
     "recoveryProb": "37.8",
-    "rsi": "48.6",
+    "rsi": "47.3",
     "dividendYield": "3.62",
     "rank": 61
   },
@@ -739,7 +739,7 @@
     "marketCap": 13559763304448,
     "mdd": "-70.35",
     "recoveryProb": "11.2",
-    "rsi": "83.5",
+    "rsi": "79.0",
     "dividendYield": "0.33",
     "rank": 62
   },
@@ -751,7 +751,7 @@
     "marketCap": 12855600480256,
     "mdd": "-58.48",
     "recoveryProb": "64.3",
-    "rsi": "61.9",
+    "rsi": "48.8",
     "dividendYield": "1.92",
     "rank": 63
   },
@@ -763,7 +763,7 @@
     "marketCap": 12625995890688,
     "mdd": "-62.99",
     "recoveryProb": "29.8",
-    "rsi": "46.6",
+    "rsi": "48.6",
     "dividendYield": "3.86",
     "rank": 64
   },
@@ -774,8 +774,8 @@
     "change": "8.24",
     "marketCap": 12563911802880,
     "mdd": "-73.25",
-    "recoveryProb": "3.4",
-    "rsi": "84.0",
+    "recoveryProb": "13.9",
+    "rsi": "77.9",
     "dividendYield": "0.55",
     "rank": 65
   },
@@ -787,7 +787,7 @@
     "marketCap": 12354113765376,
     "mdd": "-75.53",
     "recoveryProb": "24.8",
-    "rsi": "66.5",
+    "rsi": "56.6",
     "dividendYield": "0.42",
     "rank": 66
   },
@@ -799,7 +799,7 @@
     "marketCap": 11902719623168,
     "mdd": "-51.29",
     "recoveryProb": "22.0",
-    "rsi": "80.6",
+    "rsi": "72.9",
     "dividendYield": "1.56",
     "rank": 67
   },
@@ -811,7 +811,7 @@
     "marketCap": 11869793288192,
     "mdd": "-76.83",
     "recoveryProb": "7.5",
-    "rsi": "62.2",
+    "rsi": "60.3",
     "dividendYield": "0.82",
     "rank": 68
   },
@@ -823,7 +823,7 @@
     "marketCap": 11612623732736,
     "mdd": "-74.16",
     "recoveryProb": "51.8",
-    "rsi": "65.9",
+    "rsi": "55.3",
     "dividendYield": "0.85",
     "rank": 69
   },
@@ -835,7 +835,7 @@
     "marketCap": 11601755242496,
     "mdd": "-82.77",
     "recoveryProb": "71.8",
-    "rsi": "37.5",
+    "rsi": "44.9",
     "dividendYield": "1.89",
     "rank": 70
   },
@@ -847,7 +847,7 @@
     "marketCap": 11194309017600,
     "mdd": "-73.55",
     "recoveryProb": "52.8",
-    "rsi": "55.8",
+    "rsi": "44.9",
     "dividendYield": "0.19",
     "rank": 71
   },
@@ -859,7 +859,7 @@
     "marketCap": 11033405030400,
     "mdd": "-74.75",
     "recoveryProb": "20.1",
-    "rsi": "70.7",
+    "rsi": "62.3",
     "dividendYield": "0.15",
     "rank": 72
   },
@@ -870,8 +870,8 @@
     "change": "9.96",
     "marketCap": 10458997194752,
     "mdd": "-86.18",
-    "recoveryProb": "0.5",
-    "rsi": "88.9",
+    "recoveryProb": "1.0",
+    "rsi": "83.5",
     "dividendYield": "0.00",
     "rank": 73
   },
@@ -883,7 +883,7 @@
     "marketCap": 10407600193536,
     "mdd": "-65.00",
     "recoveryProb": "25.1",
-    "rsi": "54.6",
+    "rsi": "63.6",
     "dividendYield": "1.49",
     "rank": 74
   },
@@ -895,7 +895,7 @@
     "marketCap": 10305467842560,
     "mdd": "-59.38",
     "recoveryProb": "40.7",
-    "rsi": "30.9",
+    "rsi": "38.5",
     "dividendYield": "2.89",
     "rank": 75
   },
@@ -907,7 +907,7 @@
     "marketCap": 10163845070848,
     "mdd": "-71.60",
     "recoveryProb": "54.4",
-    "rsi": "47.9",
+    "rsi": "46.2",
     "dividendYield": "4.53",
     "rank": 76
   },
@@ -919,7 +919,7 @@
     "marketCap": 10001349345280,
     "mdd": "-57.89",
     "recoveryProb": "51.7",
-    "rsi": "63.5",
+    "rsi": "58.9",
     "dividendYield": "0.39",
     "rank": 77
   },
@@ -931,7 +931,7 @@
     "marketCap": 9599749980160,
     "mdd": "-52.62",
     "recoveryProb": "31.8",
-    "rsi": "51.8",
+    "rsi": "53.2",
     "dividendYield": "3.72",
     "rank": 78
   },
@@ -943,7 +943,7 @@
     "marketCap": 9324286967808,
     "mdd": "-79.66",
     "recoveryProb": "73.8",
-    "rsi": "53.8",
+    "rsi": "48.9",
     "dividendYield": "0.92",
     "rank": 79
   },
@@ -955,7 +955,7 @@
     "marketCap": 9067085955072,
     "mdd": "-64.90",
     "recoveryProb": "58.7",
-    "rsi": "48.6",
+    "rsi": "49.1",
     "dividendYield": "3.05",
     "rank": 80
   },
@@ -967,7 +967,7 @@
     "marketCap": 8822008578048,
     "mdd": "-89.52",
     "recoveryProb": "9.8",
-    "rsi": "67.5",
+    "rsi": "63.8",
     "dividendYield": "0.30",
     "rank": 81
   },
@@ -979,7 +979,7 @@
     "marketCap": 8714969939968,
     "mdd": "-76.54",
     "recoveryProb": "29.9",
-    "rsi": "72.8",
+    "rsi": "62.9",
     "dividendYield": "1.13",
     "rank": 82
   },
@@ -990,8 +990,8 @@
     "change": "20.36",
     "marketCap": 8127655706624,
     "mdd": "-46.58",
-    "recoveryProb": "10.8",
-    "rsi": "88.8",
+    "recoveryProb": "21.4",
+    "rsi": "79.6",
     "dividendYield": "0.47",
     "rank": 83
   },
@@ -1003,7 +1003,7 @@
     "marketCap": 7823493693440,
     "mdd": "-76.13",
     "recoveryProb": "49.4",
-    "rsi": "53.9",
+    "rsi": "46.5",
     "dividendYield": "0.00",
     "rank": 84
   },
@@ -1015,7 +1015,7 @@
     "marketCap": 7753896034304,
     "mdd": "-60.50",
     "recoveryProb": "7.6",
-    "rsi": "76.8",
+    "rsi": "71.3",
     "dividendYield": "3.66",
     "rank": 85
   },
@@ -1027,7 +1027,7 @@
     "marketCap": 7583873105920,
     "mdd": "-67.85",
     "recoveryProb": "58.2",
-    "rsi": "40.4",
+    "rsi": "45.6",
     "dividendYield": "0.32",
     "rank": 86
   },
@@ -1039,7 +1039,7 @@
     "marketCap": 7531990089728,
     "mdd": "-90.90",
     "recoveryProb": "58.8",
-    "rsi": "60.3",
+    "rsi": "51.5",
     "dividendYield": "0.00",
     "rank": 87
   },
@@ -1051,7 +1051,7 @@
     "marketCap": 7341447053312,
     "mdd": "-73.93",
     "recoveryProb": "13.9",
-    "rsi": "84.4",
+    "rsi": "77.6",
     "dividendYield": "0.00",
     "rank": 88
   },
@@ -1063,7 +1063,7 @@
     "marketCap": 7333120835584,
     "mdd": "-85.82",
     "recoveryProb": "64.4",
-    "rsi": "54.7",
+    "rsi": "61.4",
     "dividendYield": "0.00",
     "rank": 89
   },
@@ -1075,7 +1075,7 @@
     "marketCap": 7221734277120,
     "mdd": "-76.61",
     "recoveryProb": "28.5",
-    "rsi": "31.4",
+    "rsi": "46.4",
     "dividendYield": "3.89",
     "rank": 90
   },
@@ -1087,21 +1087,9 @@
     "marketCap": 6848393510912,
     "mdd": "-44.17",
     "recoveryProb": "100.0",
-    "rsi": "44.9",
+    "rsi": "37.9",
     "dividendYield": "0.66",
     "rank": 91
-  },
-  {
-    "ticker": "396500.KS",
-    "name": "TIGER 반도체TOP10",
-    "price": 40115,
-    "change": "-0.59",
-    "marketCap": 0,
-    "mdd": "-41.51",
-    "recoveryProb": "23.8",
-    "rsi": "89.9",
-    "dividendYield": "0.00",
-    "rank": 92
   },
   {
     "ticker": "360750.KS",
@@ -1111,7 +1099,19 @@
     "marketCap": 0,
     "mdd": "-19.32",
     "recoveryProb": "68.1",
-    "rsi": "89.5",
+    "rsi": "73.6",
+    "dividendYield": "0.00",
+    "rank": 92
+  },
+  {
+    "ticker": "396500.KS",
+    "name": "TIGER 반도체TOP10",
+    "price": 40115,
+    "change": "-0.59",
+    "marketCap": 0,
+    "mdd": "-41.51",
+    "recoveryProb": "23.8",
+    "rsi": "71.1",
     "dividendYield": "0.00",
     "rank": 93
   },
@@ -1123,21 +1123,9 @@
     "marketCap": 0,
     "mdd": "-40.65",
     "recoveryProb": "31.3",
-    "rsi": "82.9",
+    "rsi": "67.6",
     "dividendYield": "0.00",
     "rank": 94
-  },
-  {
-    "ticker": "379800.KS",
-    "name": "KODEX 미국S&P500",
-    "price": 23870,
-    "change": "-0.06",
-    "marketCap": 0,
-    "mdd": "-19.16",
-    "recoveryProb": "71.9",
-    "rsi": "85.7",
-    "dividendYield": "0.00",
-    "rank": 95
   },
   {
     "ticker": "459580.KS",
@@ -1147,7 +1135,19 @@
     "marketCap": 0,
     "mdd": "-0.24",
     "recoveryProb": "100.0",
-    "rsi": "41.8",
+    "rsi": "38.2",
+    "dividendYield": "0.00",
+    "rank": 95
+  },
+  {
+    "ticker": "379800.KS",
+    "name": "KODEX 미국S&P500",
+    "price": 23870,
+    "change": "-0.06",
+    "marketCap": 0,
+    "mdd": "-19.16",
+    "recoveryProb": "71.9",
+    "rsi": "71.9",
     "dividendYield": "0.00",
     "rank": 96
   },
@@ -1159,7 +1159,7 @@
     "marketCap": 0,
     "mdd": "-1.41",
     "recoveryProb": "100.0",
-    "rsi": "100.0",
+    "rsi": "99.2",
     "dividendYield": "0.00",
     "rank": 97
   },
@@ -1171,7 +1171,7 @@
     "marketCap": 0,
     "mdd": "-31.29",
     "recoveryProb": "67.6",
-    "rsi": "95.6",
+    "rsi": "80.5",
     "dividendYield": "0.00",
     "rank": 98
   },
@@ -1183,7 +1183,7 @@
     "marketCap": 0,
     "mdd": "-40.69",
     "recoveryProb": "31.0",
-    "rsi": "82.8",
+    "rsi": "67.8",
     "dividendYield": "0.00",
     "rank": 99
   }
