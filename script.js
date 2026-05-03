@@ -139,7 +139,205 @@ function openTab(evt, tabName) {
     document.getElementById(tabName).classList.add("active");
     evt.currentTarget.classList.add("active");
 
+    if (tabName === 'holdings-analysis-tab') {
+        fetchHoldingsAnalysisData();
+    }
+
     window.dispatchEvent(new Event('resize'));
+}
+
+/**
+ * 💼 내 보유 종목 상세 분석 (실시간 데이터 연동)
+ */
+let holdingsAnalysisData = [];
+let holdingsAnalysisSortState = { column: 'eval', direction: 'desc' };
+
+function calculateRSIValue(closes, period = 14) {
+    if (closes.length <= period) return 50;
+    let gains = 0, losses = 0;
+    for (let i = closes.length - period; i < closes.length; i++) {
+        const diff = closes[i] - closes[i - 1];
+        if (diff >= 0) gains += diff;
+        else losses -= diff;
+    }
+    if (losses === 0) return 100;
+    const rs = (gains / period) / (losses / period);
+    return 100 - (100 / (1 + rs));
+}
+
+function calculateMDDAndRecovery(closes) {
+    if (closes.length === 0) return { mdd: "0.00", recoveryProb: "0.0" };
+    let runningMax = -Infinity;
+    let mdd = 0;
+    const drawdowns = [];
+
+    for (let i = 0; i < closes.length; i++) {
+        if (closes[i] > runningMax) runningMax = closes[i];
+        const drawdown = runningMax > 0 ? (closes[i] / runningMax - 1) : 0;
+        if (drawdown < mdd) mdd = drawdown;
+        drawdowns.push(drawdown);
+    }
+    const currentDrawdown = drawdowns[drawdowns.length - 1];
+    const currentLevel = Math.ceil(Math.abs(currentDrawdown * 100) / 5) * 5;
+    const threshold = -(currentLevel / 100);
+    const count = drawdowns.filter(d => d >= threshold).length;
+    const prob = closes.length > 0 ? ((count / closes.length) * 100).toFixed(1) : "0.0";
+
+    return { mdd: (mdd * 100).toFixed(2), recoveryProb: prob };
+}
+
+async function fetchHoldingsAnalysisData() {
+    const tableBody = document.querySelector('#holdings-analysis-table tbody');
+    const statusText = document.getElementById('holdings-analysis-status');
+    if (!tableBody || !globalHoldings || globalHoldings.length === 0) return;
+
+    // 이미 데이터가 있고 분석이 완료된 상태라면 재분석하지 않음 (수동 새로고침 시에만 갱신)
+    if (holdingsAnalysisData.length > 0 && holdingsAnalysisData.every(d => d.rsi !== "-")) {
+        renderHoldingsAnalysisTable();
+        return;
+    }
+
+    statusText.textContent = "⏳ 보유 종목 데이터를 실시간으로 분석 중입니다...";
+    tableBody.innerHTML = '';
+
+    // 초기 리스트 렌더링 (구글 시트 기반 기본 정보)
+    holdingsAnalysisData = globalHoldings.map(h => ({
+        ...h,
+        marketCap: 0,
+        price: 0,
+        change: 0,
+        mdd: "-",
+        recoveryProb: "-",
+        rsi: "-",
+        dividendYield: "-"
+    }));
+
+    renderHoldingsAnalysisTable();
+
+    // 병렬로 데이터 수집 (안정성을 위해 배치 처리)
+    const batchSize = 3;
+    for (let i = 0; i < holdingsAnalysisData.length; i += batchSize) {
+        const batch = holdingsAnalysisData.slice(i, i + batchSize);
+        await Promise.all(batch.map(async (item) => {
+            try {
+                const ticker = formatTicker(item.ticker);
+                
+                // 1. 기본 정보 및 히스토리 (10년치)
+                const historyUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=10y`;
+                const historyRes = await fetchWithFallback(historyUrl, true);
+                
+                if (historyRes && historyRes.type === 'json') {
+                    const meta = historyRes.data.chart.result[0].meta;
+                    item.price = meta.regularMarketPrice;
+                    item.marketCap = meta.marketCap || 0;
+                    const prevClose = meta.chartPreviousClose || meta.previousClose;
+                    item.change = prevClose ? ((item.price / prevClose - 1) * 100).toFixed(2) : 0;
+                    
+                    // 배당률/분배율 정보 (meta 정보가 있으면 사용)
+                    if (meta.dividendYield !== undefined) {
+                        item.dividendYield = meta.dividendYield.toFixed(2);
+                    } else if (meta.trailingAnnualDividendYield !== undefined) {
+                        item.dividendYield = (meta.trailingAnnualDividendYield * 100).toFixed(2);
+                    }
+
+                    const history = parseYahooData(historyRes, ticker);
+                    if (history && history.length > 0) {
+                        const closes = history.map(h => h.close);
+                        const mddInfo = calculateMDDAndRecovery(closes);
+                        item.mdd = mddInfo.mdd;
+                        item.recoveryProb = mddInfo.recoveryProb;
+                        item.rsi = calculateRSIValue(closes).toFixed(1);
+                    }
+                }
+            } catch (e) {
+                console.warn(`Analysis failed for ${item.ticker}`, e);
+            }
+        }));
+        
+        renderHoldingsAnalysisTable();
+        statusText.textContent = `⏳ 분석 중... (${Math.min(i + batchSize, holdingsAnalysisData.length)}/${holdingsAnalysisData.length})`;
+        
+        // API 차단 방지를 위한 미세한 지연
+        if (i + batchSize < holdingsAnalysisData.length) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+    }
+    
+    statusText.textContent = `✅ 분석 완료 (${new Date().toLocaleTimeString()})`;
+}
+
+function sortHoldingsAnalysis(column) {
+    if (holdingsAnalysisSortState.column === column) {
+        holdingsAnalysisSortState.direction = holdingsAnalysisSortState.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        holdingsAnalysisSortState.column = column;
+        // 숫자가 큰게 위로 오게 기본 설정 (MDD는 절대값이 큰게 위험하므로 desc)
+        holdingsAnalysisSortState.direction = (column === 'name' || column === 'ticker') ? 'asc' : 'desc';
+    }
+
+    holdingsAnalysisData.sort((a, b) => {
+        let valA = a[column];
+        let valB = b[column];
+
+        if (column === 'mdd' || column === 'rsi' || column === 'dividendYield' || column === 'recoveryProb' || column === 'change') {
+            valA = parseFloat(valA);
+            valB = parseFloat(valB);
+            if (isNaN(valA)) valA = -999;
+            if (isNaN(valB)) valB = -999;
+        }
+
+        if (typeof valA === 'string' && typeof valB === 'string') {
+            return holdingsAnalysisSortState.direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        }
+
+        return holdingsAnalysisSortState.direction === 'asc' ? valA - valB : valB - valA;
+    });
+
+    renderHoldingsAnalysisTable();
+}
+
+function renderHoldingsAnalysisTable() {
+    const tableBody = document.querySelector('#holdings-analysis-table tbody');
+    if (!tableBody) return;
+    tableBody.innerHTML = '';
+    
+    holdingsAnalysisData.forEach(data => {
+        const tr = document.createElement('tr');
+        tr.onclick = () => window.open(`https://finance.yahoo.com/quote/${data.ticker}`, '_blank');
+        
+        let rsiClass = 'rsi-neutral';
+        const rsiValue = parseFloat(data.rsi);
+        if (!isNaN(rsiValue)) {
+            if (rsiValue >= 70) rsiClass = 'rsi-overbought';
+            else if (rsiValue <= 30) rsiClass = 'rsi-oversold';
+        }
+        
+        const pricePrefix = data.currency === 'KRW' ? '₩' : '$';
+        const priceFmt = data.price ? (data.currency === 'KRW' ? data.price.toLocaleString() : data.price.toFixed(2)) : "-";
+        const capFmt = data.marketCap ? (data.currency === 'KRW' ? formatKoreanCap(data.marketCap) : formatBillion(data.marketCap)) : "-";
+        
+        tr.innerHTML = `
+            <td data-label="종목명"><strong>${data.name}</strong> <span style="color:#888; font-size:0.85em;">(${data.ticker})</span></td>
+            <td data-label="시가 총액">${capFmt}</td>
+            <td data-label="현재가">${pricePrefix}${priceFmt}</td>
+            <td data-label="변동률" class="${getColorClass(data.change)}">${data.change}%</td>
+            <td data-label="수익률" class="${getColorClass(data.returnRate)}">${data.returnRate}%</td>
+            <td data-label="MDD" style="color:var(--negative)">${data.mdd === '-' ? '-' : data.mdd + '%'}</td>
+            <td data-label="회복확률">
+                ${data.recoveryProb === '-' ? '-' : `
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span class="drawdown-text">${data.recoveryProb}%</span>
+                </div>
+                <div class="drawdown-bar-container" style="background:rgba(255,255,255,0.1); width:100%; height:4px; border-radius:2px; overflow:hidden; margin-top:4px;">
+                    <div style="background:${parseFloat(data.recoveryProb) >= 80 ? '#4ade80' : '#fb7185'}; width: ${data.recoveryProb}%; height:100%;"></div>
+                </div>
+                `}
+            </td>
+            <td data-label="RSI(14)" style="text-align:center;">${data.rsi === '-' ? '-' : `<span class="rsi-tag ${rsiClass}">${data.rsi}</span>`}</td>
+            <td data-label="분배율/배당률" style="text-align:center; color: var(--primary);">${data.dividendYield === '-' ? '-' : data.dividendYield + '%'}</td>
+        `;
+        tableBody.appendChild(tr);
+    });
 }
 
 /**
@@ -469,6 +667,7 @@ function showToast(message, type = 'info', duration = 5000) {
 }
 
 async function fetchData(shouldRefreshMarket = true) {
+    holdingsAnalysisData = []; // 보유 종목 분석 데이터 초기화
     const CACHE_KEY = 'dashboard_data_cache';
 
     // 1. 캐시된 데이터가 있으면 즉시 렌더링 (빈 화면 방지용)

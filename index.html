@@ -36,6 +36,7 @@
         <nav class="tabs">
             <button class="tab-btn active" onclick="openTab(event, 'portfolio-tab')">📊 포트폴리오</button>
             <button class="tab-btn" onclick="openTab(event, 'mdd-tab')">📉 MDD 분석</button>
+            <button class="tab-btn" onclick="openTab(event, 'holdings-analysis-tab')">💼 My holdings</button>
             <button class="tab-btn" onclick="openTab(event, 'sp500-tab')">🇺🇸 S&P 500</button>
             <button class="tab-btn" onclick="openTab(event, 'kospi200-tab')">🇰🇷 KOSPI 200</button>
         </nav>
@@ -307,6 +308,42 @@
                             </p>
                         </div>
                     </aside>
+                </div>
+            </section>
+        </div>
+
+        <!-- 2.5. My Holdings 분석 탭 -->
+        <div id="holdings-analysis-tab" class="tab-content">
+            <section class="mdd-container">
+                <div class="mdd-header">
+                    <h2 class="section-title">💼 내 보유 종목 상세 분석</h2>
+                    <p id="holdings-analysis-status" class="status-msg">포트폴리오 데이터를 로딩 중...</p>
+                </div>
+                
+                <div class="card glass">
+                    <div class="table-wrapper">
+                        <table id="holdings-analysis-table">
+                            <thead>
+                                <tr>
+                                    <th style="cursor:pointer" onclick="sortHoldingsAnalysis('name')">종목명↕</th>
+                                    <th style="cursor:pointer" onclick="sortHoldingsAnalysis('marketCap')">시가 총액↕</th>
+                                    <th style="cursor:pointer" onclick="sortHoldingsAnalysis('price')">현재가↕</th>
+                                    <th style="cursor:pointer" onclick="sortHoldingsAnalysis('change')">변동률↕</th>
+                                    <th style="cursor:pointer" onclick="sortHoldingsAnalysis('returnRate')">수익률↕</th>
+                                    <th style="cursor:pointer" onclick="sortHoldingsAnalysis('mdd')">MDD↕</th>
+                                    <th style="cursor:pointer" onclick="sortHoldingsAnalysis('recoveryProb')">회복확률↕</th>
+                                    <th style="cursor:pointer" onclick="sortHoldingsAnalysis('rsi')">RSI(14)↕</th>
+                                    <th style="cursor:pointer" onclick="sortHoldingsAnalysis('dividendYield')">분배율/배당률↕</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- script.js에서 데이터 채워짐 -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="margin-top: 1rem; font-size: 0.8rem; color: var(--text-muted);">
+                        * 본 데이터는 야후 파이낸스 실시간 API를 통해 분석됩니다. (ETF의 경우 배당률은 분배율을 의미합니다.)
+                    </div>
                 </div>
             </section>
         </div>
