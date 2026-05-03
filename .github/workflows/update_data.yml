@@ -24,6 +24,9 @@ jobs:
         with:
           node-version: '18'
 
+      - name: Install Dependencies
+        run: npm install
+
       - name: Create Update Script
         run: |
           cat << 'EOF' > update_snapshot.js
@@ -130,3 +133,4 @@ jobs:
           git add data_snapshot.json
           git diff --quiet && git diff --staged --quiet || git commit -m "chore: auto update data snapshot [skip ci]"
           git push
+it push

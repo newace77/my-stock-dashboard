@@ -11,5 +11,8 @@
   "license": "ISC",
   "devDependencies": {
     "serve": "^14.2.6"
+  },
+  "dependencies": {
+    "yahoo-finance2": "^3.14.0"
   }
 }

@@ -37,6 +37,7 @@
             <button class="tab-btn active" onclick="openTab(event, 'portfolio-tab')">📊 포트폴리오</button>
             <button class="tab-btn" onclick="openTab(event, 'mdd-tab')">📉 MDD 분석</button>
             <button class="tab-btn" onclick="openTab(event, 'sp500-tab')">🇺🇸 S&P 500</button>
+            <button class="tab-btn" onclick="openTab(event, 'kospi200-tab')">🇰🇷 KOSPI 200</button>
         </nav>
 
         <!-- 1. 포트폴리오 탭 -->
@@ -319,16 +320,55 @@
                 </div>
                 
                 <div class="card glass">
-                    <div class="table-container">
+                    <div class="table-wrapper">
                         <table id="sp500-table">
                             <thead>
                                 <tr>
-                                    <th>순위</th>
-                                    <th>티커</th>
-                                    <th>종목명</th>
-                                    <th>현재가</th>
-                                    <th>변동률</th>
-                                    <th>RSI(14)</th>
+                                    <th onclick="sortSP500('rank')" style="cursor:pointer">순위↕</th>
+                                    <th onclick="sortSP500('name')" style="cursor:pointer">종목명↕</th>
+                                    <th onclick="sortSP500('marketCap')" style="cursor:pointer">시가 총액↕</th>
+                                    <th onclick="sortSP500('price')" style="cursor:pointer">현재가↕</th>
+                                    <th onclick="sortSP500('change')" style="cursor:pointer">변동률↕</th>
+                                    <th onclick="sortSP500('mdd')" style="cursor:pointer">MDD↕</th>
+                                    <th onclick="sortSP500('recoveryProb')" style="cursor:pointer">회복확률↕</th>
+                                    <th onclick="sortSP500('rsi')" style="cursor:pointer">RSI(14)↕</th>
+                                    <th onclick="sortSP500('dividendYield')" style="cursor:pointer">배당률↕</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- script.js에서 데이터 채워짐 -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="margin-top: 1rem; font-size: 0.8rem; color: var(--text-muted);">
+                        * RSI 70 이상: <span class="rsi-tag rsi-overbought">과매수</span> / RSI 30 이하: <span class="rsi-tag rsi-oversold">과매도</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- 4. KOSPI 200 탭 -->
+        <div id="kospi200-tab" class="tab-content">
+            <section class="mdd-container">
+                <div class="mdd-header">
+                    <h2 class="section-title">🇰🇷 KOSPI 200 상위 100 분석</h2>
+                    <p id="kospi200-status" class="status-msg">데이터 로딩 대기 중...</p>
+                </div>
+                
+                <div class="card glass">
+                    <div class="table-wrapper">
+                        <table id="kospi200-table">
+                            <thead>
+                                <tr>
+                                    <th onclick="sortKOSPI200('rank')" style="cursor:pointer">순위↕</th>
+                                    <th onclick="sortKOSPI200('name')" style="cursor:pointer">종목명↕</th>
+                                    <th onclick="sortKOSPI200('marketCap')" style="cursor:pointer">시가 총액↕</th>
+                                    <th onclick="sortKOSPI200('price')" style="cursor:pointer">현재가↕</th>
+                                    <th onclick="sortKOSPI200('change')" style="cursor:pointer">변동률↕</th>
+                                    <th onclick="sortKOSPI200('mdd')" style="cursor:pointer">MDD↕</th>
+                                    <th onclick="sortKOSPI200('recoveryProb')" style="cursor:pointer">회복확률↕</th>
+                                    <th onclick="sortKOSPI200('rsi')" style="cursor:pointer">RSI(14)↕</th>
+                                    <th onclick="sortKOSPI200('dividendYield')" style="cursor:pointer">배당률↕</th>
                                 </tr>
                             </thead>
                             <tbody>

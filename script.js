@@ -560,6 +560,7 @@ async function fetchData(shouldRefreshMarket = true) {
 
     if (shouldRefreshMarket) {
         fetchSP500Data();
+        fetchKOSPI200Data();
     }
 }
 
@@ -578,138 +579,216 @@ function renderFromData(data) {
 }
 
 /**
- * 🇺🇸 S&P 500 시가총액 상위 100 종목 데이터 수집 및 분석
+ * 🇺🇸 S&P 500 시가총액 상위 100 종목 데이터 렌더링 (Github Actions 결과 연동)
  */
+let sp500Data = [];
+let sp500SortState = { column: 'rank', direction: 'asc' };
+
 async function fetchSP500Data() {
     const tableBody = document.querySelector('#sp500-table tbody');
     const statusText = document.getElementById('sp500-status');
     if (!tableBody) return;
 
     try {
-        statusText.textContent = "⏳ 시가총액 상위 100 순위 확인 중...";
-
-        // 1. S&P 500 시가총액 상위 100 목록 가져오기 (야후 스크리너 API)
-        // query2와 query1 두 곳을 순차적으로 시도합니다.
-        const endpoints = [
-            `https://query2.finance.yahoo.com/v1/finance/screener/predefined/saved?formatted=false&scrIds=sp500&count=100`,
-            `https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved?formatted=false&scrIds=sp500&count=100`
-        ];
-
-        let screenerResult = null;
-        for (const url of endpoints) {
-            try {
-                screenerResult = await fetchWithFallback(url, true);
-                if (screenerResult && screenerResult.data && (screenerResult.data.finance || screenerResult.data.quoteResponse)) break;
-            } catch (e) { console.warn(`Endpoint failed: ${url}`); }
-        }
-
-        if (!screenerResult || !screenerResult.data) {
-            throw new Error("야후 서버 응답 없음");
-        }
-
-        // 데이터 경로가 다를 수 있으므로 유연하게 추출
-        const resultObj = screenerResult.data.finance?.result?.[0] || screenerResult.data.quoteResponse?.result;
-        const quotes = resultObj?.quotes || resultObj;
-
-        if (!quotes || !Array.isArray(quotes)) {
-            throw new Error("종목 정보를 찾을 수 없습니다.");
-        }
-
-        const top100Tickers = quotes.slice(0, 100).map(q => q.symbol);
-        statusText.textContent = `⏳ 100개 종목 분석 중... (RSI 및 하락률 계산)`;
-        tableBody.innerHTML = '';
-
-        // 가격/변동률 정보 매핑
-        const quoteMap = {};
-        quotes.forEach(q => {
-            quoteMap[q.symbol] = {
-                name: q.shortName || q.longName || q.symbol,
-                price: q.regularMarketPrice || 0,
-                change: q.regularMarketChangePercent || 0,
-                high52: q.fiftyTwoWeekHigh || q.regularMarketPrice || 1
-            };
-        });
-
-        // 뼈대 생성
-        top100Tickers.forEach((ticker, index) => {
-            const data = quoteMap[ticker];
-            const drawdown = data.high52 ? ((data.price / data.high52 - 1) * 100).toFixed(2) : "0.00";
-
-            const tr = document.createElement('tr');
-            tr.onclick = () => window.open(`https://finance.yahoo.com/quote/${ticker}`, '_blank');
-            tr.innerHTML = `
-                <td style="text-align:center;">${index + 1}</td>
-                <td><strong>${data.name}</strong> <span style="color:#888;">(${ticker})</span></td>
-                <td>$${data.price ? data.price.toFixed(2) : "-"}</td>
-                <td class="${getColorClass(data.change)}">${data.change ? data.change.toFixed(2) : "0"}%</td>
-                <td id="rsi-${ticker.replace(/[^a-zA-Z]/g, '')}" style="text-align:center;">-</td>
-                <td>
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span class="drawdown-text">${drawdown}%</span>
-                    </div>
-                    <div class="drawdown-bar-container">
-                        <div class="drawdown-bar" style="width: ${Math.min(Math.abs(parseFloat(drawdown)) * 2, 100)}%;"></div>
-                    </div>
-                </td>
-            `;
-            tableBody.appendChild(tr);
-        });
-
-        // RSI 계산 (Batch 처리)
-        const batchSize = 10;
-        for (let i = 0; i < top100Tickers.length; i += batchSize) {
-            const batch = top100Tickers.slice(i, i + batchSize);
-            statusText.textContent = `⏳ 기술 분석 중... (${i + batch.length}/100)`;
-
-            await Promise.all(batch.map(async (ticker) => {
-                try {
-                    // RSI용 데이터는 최근 1개월치만 가져옴
-                    const chartURL = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1mo`;
-                    const result = await fetchWithFallback(chartURL, true);
-                    const history = parseYahooData(result, ticker);
-
-                    if (history && history.length >= 14) {
-                        const rsiValue = calculateRSIValue(history.map(h => h.close));
-                        const rsiCell = document.getElementById(`rsi-${ticker.replace(/[^a-zA-Z]/g, '')}`);
-                        if (rsiCell) {
-                            let rsiClass = 'rsi-neutral';
-                            if (rsiValue >= 70) rsiClass = 'rsi-overbought';
-                            else if (rsiValue <= 30) rsiClass = 'rsi-oversold';
-                            rsiCell.innerHTML = `<span class="rsi-tag ${rsiClass}">${rsiValue.toFixed(1)}</span>`;
-                        }
-                    }
-                } catch (e) { console.warn("Resource cleanup/fetch error:", e); }
-            }));
-            // API 차단 방지를 위한 짧은 휴식 (50ms)
-            await new Promise(resolve => setTimeout(resolve, 50));
-        }
-
-        statusText.textContent = `✅ S&P 500 Top 100 업데이트 완료 (${new Date().toLocaleTimeString()})`;
-
+        statusText.textContent = "⏳ S&P 500 상위 100종목 데이터 로드 중...";
+        
+        // Fetch static JSON generated by GitHub Actions
+        const response = await fetch('sp500_data.json?v=' + new Date().getTime());
+        if (!response.ok) throw new Error("데이터를 찾을 수 없습니다.");
+        
+        sp500Data = await response.json();
+        
+        // 렌더링
+        renderSP500Table();
+        
+        statusText.textContent = `✅ S&P 500 업데이트 완료 (${new Date().toLocaleTimeString()})`;
     } catch (err) {
         console.error("SP500 데이터 로드 실패:", err);
-        statusText.textContent = "❌ 업데이트 실패 (야후 API 응답 지연 또는 차단)";
+        statusText.textContent = "❌ 데이터 로드 실패 (업데이트 준비 중일 수 있습니다)";
     }
 }
 
+function formatBillion(num) {
+    if (num >= 1e9) {
+        return '$' + (num / 1e9).toFixed(1) + 'B';
+    }
+    return '$' + num.toLocaleString();
+}
+
+function sortSP500(column) {
+    if (sp500SortState.column === column) {
+        sp500SortState.direction = sp500SortState.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        sp500SortState.column = column;
+        sp500SortState.direction = column === 'rank' || column === 'ticker' || column === 'name' ? 'asc' : 'desc';
+    }
+    
+    sp500Data.sort((a, b) => {
+        let valA = a[column];
+        let valB = b[column];
+        
+        // Convert to numbers if applicable
+        if (typeof valA === 'string' && typeof valB === 'string') {
+            const numA = parseFloat(valA.replace(/,/g, ''));
+            const numB = parseFloat(valB.replace(/,/g, ''));
+            if (!isNaN(numA) && !isNaN(numB) && column !== 'ticker' && column !== 'name') {
+                valA = numA; valB = numB;
+            } else {
+                return sp500SortState.direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            }
+        }
+        
+        return sp500SortState.direction === 'asc' ? valA - valB : valB - valA;
+    });
+    
+    renderSP500Table();
+}
+
+function renderSP500Table() {
+    const tableBody = document.querySelector('#sp500-table tbody');
+    if (!tableBody) return;
+    tableBody.innerHTML = '';
+    
+    sp500Data.forEach(data => {
+        const tr = document.createElement('tr');
+        tr.onclick = () => window.open(`https://finance.yahoo.com/quote/${data.ticker}`, '_blank');
+        
+        let rsiClass = 'rsi-neutral';
+        const rsiValue = parseFloat(data.rsi);
+        if (!isNaN(rsiValue)) {
+            if (rsiValue >= 70) rsiClass = 'rsi-overbought';
+            else if (rsiValue <= 30) rsiClass = 'rsi-oversold';
+        }
+        
+        const priceFmt = data.price ? parseFloat(data.price).toFixed(2) : "-";
+        
+        tr.innerHTML = `
+            <td data-label="순위" style="text-align:center;">${data.rank}</td>
+            <td data-label="종목명"><strong>${data.name}</strong> <span style="color:#888; font-size:0.85em;">(${data.ticker})</span></td>
+            <td data-label="시가 총액">${formatBillion(data.marketCap)}</td>
+            <td data-label="현재가">$${priceFmt}</td>
+            <td data-label="변동률" class="${getColorClass(data.change)}">${data.change}%</td>
+            <td data-label="MDD" style="color:var(--negative)">${data.mdd}%</td>
+            <td data-label="회복확률">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span class="drawdown-text">${data.recoveryProb}%</span>
+                </div>
+                <div class="drawdown-bar-container" style="background:rgba(255,255,255,0.1); width:100%; height:4px; border-radius:2px; overflow:hidden; margin-top:4px;">
+                    <div style="background:${parseFloat(data.recoveryProb) >= 80 ? '#4ade80' : '#fb7185'}; width: ${data.recoveryProb}%; height:100%;"></div>
+                </div>
+            </td>
+            <td data-label="RSI(14)" style="text-align:center;"><span class="rsi-tag ${rsiClass}">${data.rsi}</span></td>
+            <td data-label="배당률" style="text-align:center; color: var(--primary);">${data.dividendYield}%</td>
+        `;
+        tableBody.appendChild(tr);
+    });
+}
+
 /**
- * RSI (Relative Strength Index) 계산 함수 (14일 기준)
+ * 🇰🇷 KOSPI 200 시가총액 상위 100 종목 데이터 렌더링
  */
-function calculateRSIValue(closes, period = 14) {
-    if (closes.length <= period) return 50;
+let kospi200Data = [];
+let kospi200SortState = { column: 'rank', direction: 'asc' };
 
-    let gains = 0;
-    let losses = 0;
+function formatKoreanCap(num) {
+    if (num >= 1e12) {
+        return '₩' + (num / 1e12).toFixed(1) + '조';
+    }
+    if (num >= 1e8) {
+        return '₩' + (num / 1e8).toFixed(1) + '억';
+    }
+    return '₩' + num.toLocaleString();
+}
 
-    for (let i = closes.length - period; i < closes.length; i++) {
-        const diff = closes[i] - closes[i - 1];
-        if (diff >= 0) gains += diff;
-        else losses -= diff;
+async function fetchKOSPI200Data() {
+    const tableBody = document.querySelector('#kospi200-table tbody');
+    const statusText = document.getElementById('kospi200-status');
+    if (!tableBody) return;
+
+    try {
+        statusText.textContent = "⏳ KOSPI 200 상위 100종목 데이터 로드 중...";
+
+        const response = await fetch('kospi200_data.json?v=' + new Date().getTime());
+        if (!response.ok) throw new Error("데이터를 찾을 수 없습니다.");
+
+        kospi200Data = await response.json();
+
+        // 렌더링
+        renderKOSPI200Table();
+
+        statusText.textContent = `✅ KOSPI 200 업데이트 완료 (${new Date().toLocaleTimeString()})`;
+    } catch (err) {
+        console.error("KOSPI200 데이터 로드 실패:", err);
+        statusText.textContent = "❌ 데이터 로드 실패 (업데이트 준비 중일 수 있습니다)";
+    }
+}
+
+function sortKOSPI200(column) {
+    if (kospi200SortState.column === column) {
+        kospi200SortState.direction = kospi200SortState.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        kospi200SortState.column = column;
+        kospi200SortState.direction = column === 'rank' || column === 'ticker' || column === 'name' ? 'asc' : 'desc';
     }
 
-    if (losses === 0) return 100;
-    const rs = (gains / period) / (losses / period);
-    return 100 - (100 / (1 + rs));
+    kospi200Data.sort((a, b) => {
+        let valA = a[column];
+        let valB = b[column];
+
+        if (typeof valA === 'string' && typeof valB === 'string') {
+            const numA = parseFloat(valA.replace(/,/g, ''));
+            const numB = parseFloat(valB.replace(/,/g, ''));
+            if (!isNaN(numA) && !isNaN(numB) && column !== 'ticker' && column !== 'name') {
+                valA = numA; valB = numB;
+            } else {
+                return kospi200SortState.direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            }
+        }
+
+        return kospi200SortState.direction === 'asc' ? valA - valB : valB - valA;
+    });
+
+    renderKOSPI200Table();
+}
+
+function renderKOSPI200Table() {
+    const tableBody = document.querySelector('#kospi200-table tbody');
+    if (!tableBody) return;
+    tableBody.innerHTML = '';
+    
+    kospi200Data.forEach(data => {
+        const tr = document.createElement('tr');
+        tr.onclick = () => window.open(`https://finance.yahoo.com/quote/${data.ticker}`, '_blank');
+        
+        let rsiClass = 'rsi-neutral';
+        const rsiValue = parseFloat(data.rsi);
+        if (!isNaN(rsiValue)) {
+            if (rsiValue >= 70) rsiClass = 'rsi-overbought';
+            else if (rsiValue <= 30) rsiClass = 'rsi-oversold';
+        }
+        
+        const priceFmt = data.price ? parseFloat(data.price).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : "-";
+        
+        tr.innerHTML = `
+            <td data-label="순위" style="text-align:center;">${data.rank}</td>
+            <td data-label="종목명"><strong>${data.name}</strong> <span style="color:#888; font-size:0.85em;">(${data.ticker})</span></td>
+            <td data-label="시가 총액">${formatKoreanCap(data.marketCap)}</td>
+            <td data-label="현재가">₩${priceFmt}</td>
+            <td data-label="변동률" class="${getColorClass(data.change)}">${data.change}%</td>
+            <td data-label="MDD" style="color:var(--negative)">${data.mdd}%</td>
+            <td data-label="회복확률">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span class="drawdown-text">${data.recoveryProb}%</span>
+                </div>
+                <div class="drawdown-bar-container" style="background:rgba(255,255,255,0.1); width:100%; height:4px; border-radius:2px; overflow:hidden; margin-top:4px;">
+                    <div style="background:${parseFloat(data.recoveryProb) >= 80 ? '#4ade80' : '#fb7185'}; width: ${data.recoveryProb}%; height:100%;"></div>
+                </div>
+            </td>
+            <td data-label="RSI(14)" style="text-align:center;"><span class="rsi-tag ${rsiClass}">${data.rsi}</span></td>
+            <td data-label="배당률" style="text-align:center; color: var(--primary);">${data.dividendYield}%</td>
+        `;
+        tableBody.appendChild(tr);
+    });
 }
 
 /**
