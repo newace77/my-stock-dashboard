@@ -480,7 +480,17 @@
 
 
             <div class="modal-chart-section">
-                <h3 class="modal-chart-title">Intraday Performance</h3>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.5rem; flex-wrap:wrap; gap: 0.5rem;">
+                    <h3 class="modal-chart-title" style="margin:0;">Performance History</h3>
+                    <div class="chart-filter-container" style="margin:0;">
+                        <div class="holdings-sort-group" id="modal-chart-filter-group">
+                            <button class="sort-btn" onclick="updateModalChartRange('5d', this)">5일</button>
+                            <button class="sort-btn active" onclick="updateModalChartRange('1mo', this)">1달</button>
+                            <button class="sort-btn" onclick="updateModalChartRange('6mo', this)">6개월</button>
+                            <button class="sort-btn" onclick="updateModalChartRange('1y', this)">1년</button>
+                        </div>
+                    </div>
+                </div>
                 <div class="modal-chart-wrapper">
                     <canvas id="modal-intraday-chart"></canvas>
                 </div>
@@ -488,11 +498,11 @@
 
             <div class="modal-bottom-grid">
                 <div class="modal-info-card">
-                    <h4>Trading Info</h4>
-                    <div class="modal-info-row"><span>Open</span><span id="modal-open"></span></div>
-                    <div class="modal-info-row"><span>High</span><span id="modal-high"></span></div>
-                    <div class="modal-info-row"><span>Low</span><span id="modal-low"></span></div>
-                    <div class="modal-info-row"><span>Volume</span><span id="modal-volume"></span></div>
+                    <h4>주식/ETF 정보</h4>
+                    <div class="modal-info-row"><span>시가총액</span><span id="modal-market-cap"></span></div>
+                    <div class="modal-info-row"><span>52주 최고가</span><span id="modal-52w-high"></span></div>
+                    <div class="modal-info-row"><span>현재 MDD</span><span id="modal-mdd"></span></div>
+                    <div class="modal-info-row"><span>RSI(14)</span><span id="modal-rsi"></span></div>
                 </div>
                 <div class="modal-info-card">
                     <h4>Your Position</h4>

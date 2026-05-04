@@ -1872,11 +1872,15 @@ function switchHoldingsView(view) {
 }
 
 
+// Global variable to keep track of the current item in the modal for chart range updates
+let currentModalItem = null;
+
 // ===== Stock Detail Modal =====
 async function openStockModal(item) {
     const overlay = document.getElementById('stock-modal-overlay');
     if (!overlay) return;
 
+    currentModalItem = item;
     const isPositive = item.dailyChange >= 0;
     const posClass = isPositive ? 'positive' : 'negative';
     const changeSign = isPositive ? '+' : '';
@@ -1885,7 +1889,7 @@ async function openStockModal(item) {
 
     // 헬퍼 함수
     const fmtKRW = (n) => Math.round(n).toLocaleString('ko-KR') + '원';
-    const fmtUSD = (n) => (n >= 0 ? '+$' : '-$') + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const fmtUSD = (n) => (n >= 0 ? '+' : '-') + '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const fmtUSDabs = (n) => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const fmtKRWS = (n) => (n >= 0 ? '+' : '') + Math.round(n).toLocaleString('ko-KR') + '원';
 
@@ -1900,16 +1904,29 @@ async function openStockModal(item) {
     currBadge.className = `modal-currency-badge ${currencyIsKRW ? 'krw' : ''}`;
     document.getElementById('modal-company').textContent = maskValue(item.name, true);
 
-    // Price Section
-    document.getElementById('modal-current-price').textContent = maskValue(item.display.evalKRW) || '-';
-    const diffElem = document.getElementById('modal-price-diff');
-    const pctElem = document.getElementById('modal-price-pct');
-
+    // Price Section (Market Value & Change)
     const evalKRWNum = item.eval || 0;
     const dailyAmtKRW = evalKRWNum * item.dailyChange / 100;
-    diffElem.textContent = maskValue(fmtKRWS(dailyAmtKRW));
+    
+    // 3. 가장 위 마켓 밸류: 원화(달러) 형식
+    let displayEval = fmtKRW(evalKRWNum);
+    if (!currencyIsKRW && usdKrwRate > 100) {
+        displayEval += `(${fmtUSDabs(evalKRWNum / usdKrwRate)})`;
+    }
+    document.getElementById('modal-current-price').textContent = maskValue(displayEval);
+
+    // 4. 가장 위 변동액: 변동액 원화(달러) - 변동률(%) 형식
+    const diffElem = document.getElementById('modal-price-diff');
+    const pctElem = document.getElementById('modal-price-pct');
+    
+    let displayDiff = fmtKRWS(dailyAmtKRW);
+    if (!currencyIsKRW && usdKrwRate > 100) {
+        displayDiff += `(${fmtUSD(dailyAmtKRW / usdKrwRate)})`;
+    }
+    diffElem.textContent = maskValue(displayDiff);
     diffElem.className = isPositive ? 'positive' : 'negative';
-    pctElem.textContent = `(${changeSign}${item.dailyChange}%)`;
+    
+    pctElem.textContent = `${changeSign}${item.dailyChange}%`;
     pctElem.className = isPositive ? 'positive' : 'negative';
 
     // --- Stats Cards ---
@@ -1952,11 +1969,15 @@ async function openStockModal(item) {
     const hlCard = todayPLEl.closest('.modal-stat-card');
     if (hlCard) hlCard.classList.toggle('negative-pl', !isPositive);
 
-    // Trading Info
-    document.getElementById('modal-open').textContent = maskValue(item.display.evalKRW) || '-';
-    document.getElementById('modal-high').textContent = maskValue(item.display.evalKRW) || '-';
-    document.getElementById('modal-low').textContent = maskValue(item.display.evalKRW) || '-';
-    document.getElementById('modal-volume').textContent = '-';
+    // 2. 주식/ETF 정보 업데이트 (시총, 52주 최고가, 현재 MDD, RSI)
+    // 분석 테이블에 이미 있는 데이터(MDD, RSI) 활용 시도
+    let analysisData = holdingsAnalysisData.find(d => d.ticker === item.ticker);
+    document.getElementById('modal-mdd').textContent = analysisData && analysisData.mdd !== '-' ? analysisData.mdd + '%' : (item.mdd ? item.mdd + '%' : '-');
+    document.getElementById('modal-rsi').textContent = analysisData && analysisData.rsi !== '-' ? analysisData.rsi : '-';
+    
+    // 시총과 52주 최고가는 fetchModalChartData에서 meta 데이터를 받아와서 업데이트할 예정
+    document.getElementById('modal-market-cap').textContent = analysisData && analysisData.marketCap ? (currencyIsKRW ? formatKoreanCap(analysisData.marketCap) : formatBillion(analysisData.marketCap)) : '-';
+    document.getElementById('modal-52w-high').textContent = '-';
 
     // Your Position — 모두 원화
     const profitKRW = parseSafeFloat(item.display.profitKRW);
@@ -1979,13 +2000,17 @@ async function openStockModal(item) {
     overlay.classList.add('active');
     document.body.style.overflow = 'hidden';
 
-    // Draw intraday chart
-    drawIntradayChart(item);
-
-    // Fetch real intraday data if available
-    if (item.ticker) {
-        fetchIntradayData(item);
+    // 기본 그래프 그리기 (1달)
+    const chartFilterGroup = document.getElementById('modal-chart-filter-group');
+    if (chartFilterGroup) {
+        chartFilterGroup.querySelectorAll('.sort-btn').forEach(btn => {
+            if (btn.textContent.includes('1달')) btn.classList.add('active');
+            else btn.classList.remove('active');
+        });
     }
+
+    // 1. Intraday 대신 한달(1mo) 그래프로 표시 (기본값)
+    fetchModalChartData(item, '1mo');
 }
 
 
@@ -2009,39 +2034,33 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-function drawIntradayChart(item, labels = null, prices = null) {
+function drawModalChart(item, labels, prices, range = '1mo') {
     const canvas = document.getElementById('modal-intraday-chart');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
-    if (intradayChart) { try { intradayChart.destroy(); } catch (e) { console.warn("Resource cleanup/fetch error:", e); } }
+    if (intradayChart) { try { intradayChart.destroy(); } catch (e) { console.warn("Resource cleanup error:", e); } }
 
-    const isPositive = item.dailyChange >= 0;
+    const isPositive = prices[prices.length - 1] >= prices[0];
     const color = isPositive ? '#4ade80' : '#fb7185';
 
-    // Use real data if provided, otherwise simulate
-    const chartLabels = labels || generateIntradayLabels();
-    const chartPrices = prices || generateIntradayPrices(item.dailyChange, chartLabels.length);
-
     const gradient = ctx.createLinearGradient(0, 0, 0, 220);
-    gradient.addColorStop(0, isPositive ? 'rgba(74,222,128,0.25)' : 'rgba(251,113,133,0.25)');
-    gradient.addColorStop(0.6, isPositive ? 'rgba(74,222,128,0.05)' : 'rgba(251,113,133,0.05)');
+    gradient.addColorStop(0, isPositive ? 'rgba(74,222,128,0.2)' : 'rgba(251,113,133,0.2)');
     gradient.addColorStop(1, 'rgba(0,0,0,0)');
 
     intradayChart = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: chartLabels,
+            labels: labels,
             datasets: [{
-                data: chartPrices,
+                data: prices,
                 borderColor: color,
                 borderWidth: 2,
+                pointRadius: 0,
+                pointHoverRadius: 4,
                 fill: true,
                 backgroundColor: gradient,
-                tension: 0.3,
-                pointRadius: 0,
-                pointHoverRadius: 5,
-                pointHoverBackgroundColor: color
+                tension: 0.2
             }]
         },
         options: {
@@ -2051,25 +2070,39 @@ function drawIntradayChart(item, labels = null, prices = null) {
             scales: {
                 x: {
                     grid: { display: false },
-                    ticks: { color: '#64748b', font: { size: 10 }, maxTicksLimit: 7, autoSkip: true }
+                    ticks: {
+                        maxTicksLimit: 6,
+                        color: 'rgba(255,255,255,0.4)',
+                        font: { size: 10 }
+                    }
                 },
                 y: {
-                    position: 'left',
-                    grid: { color: 'rgba(255,255,255,0.04)' },
-                    ticks: { color: '#64748b', font: { size: 10 }, callback: v => v.toFixed(0) }
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: {
+                        color: 'rgba(255,255,255,0.4)',
+                        font: { size: 10 },
+                        callback: function(value) {
+                            return value.toLocaleString();
+                        }
+                    }
                 }
             },
             plugins: {
                 legend: { display: false },
                 tooltip: {
-                    backgroundColor: 'rgba(15,23,42,0.95)',
+                    backgroundColor: 'rgba(30, 41, 59, 0.9)',
                     titleColor: '#f1f5f9',
-                    bodyColor: '#94a3b8',
+                    bodyColor: '#f1f5f9',
                     padding: 10,
-                    borderColor: 'rgba(255,255,255,0.08)',
-                    borderWidth: 1,
+                    cornerRadius: 8,
+                    displayColors: false,
                     callbacks: {
-                        label: ctx => ` ${ctx.parsed.y.toFixed(2)}`
+                        label: function(context) {
+                            let label = ' 가격: ';
+                            if (item.currency === 'KRW') label += '₩' + context.parsed.y.toLocaleString();
+                            else label += '$' + context.parsed.y.toFixed(2);
+                            return label;
+                        }
                     }
                 }
             }
@@ -2077,36 +2110,32 @@ function drawIntradayChart(item, labels = null, prices = null) {
     });
 }
 
-function generateIntradayLabels() {
-    const labels = [];
-    for (let h = 9; h <= 16; h++) {
-        for (let m = 0; m < 60; m += 15) {
-            if (h === 16 && m > 0) break;
-            labels.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
-        }
+/**
+ * 모달 차트 기간 변경 처리
+ */
+function updateModalChartRange(range, btn) {
+    if (!currentModalItem) return;
+    
+    // 버튼 활성화 상태 변경
+    const group = document.getElementById('modal-chart-filter-group');
+    if (group) {
+        group.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
     }
-    return labels;
+    if (btn) btn.classList.add('active');
+    
+    fetchModalChartData(currentModalItem, range);
 }
 
-function generateIntradayPrices(dailyChange, count) {
-    const prices = [];
-    let price = 100;
-    const totalChange = dailyChange / 100;
-    for (let i = 0; i < count; i++) {
-        const progress = i / (count - 1);
-        const trend = totalChange * progress;
-        const noise = (Math.random() - 0.48) * 0.4;
-        price = 100 + (trend * 100) + noise;
-        prices.push(parseFloat(price.toFixed(2)));
-    }
-    return prices;
-}
-
-async function fetchIntradayData(item) {
+/**
+ * 야후 파이낸스에서 히스토리컬 데이터를 가져와 차트 업데이트
+ */
+async function fetchModalChartData(item, range = '1mo') {
     try {
         const ticker = formatTicker(item.ticker);
+        let interval = '1d';
+        if (range === '5d') interval = '15m';
 
-        const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=15m&range=1d`;
+        const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=${interval}&range=${range}`;
         const result = await fetchWithFallback(url, true);
 
         if (!result || result.type !== 'json') return;
@@ -2117,41 +2146,44 @@ async function fetchIntradayData(item) {
         const chartResult = chart.result[0];
         const timestamps = chartResult.timestamp;
         const closes = chartResult.indicators.quote[0].close;
-        const opens = chartResult.indicators.quote[0].open;
-        const highs = chartResult.indicators.quote[0].high;
-        const lows = chartResult.indicators.quote[0].low;
-        const volumes = chartResult.indicators.quote[0].volume;
         const meta = chartResult.meta;
 
         if (!timestamps || !closes) return;
 
         const labels = timestamps.map(ts => {
             const d = new Date(ts * 1000);
-            return d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+            if (range === '5d') {
+                return d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+            }
+            return (d.getMonth() + 1) + '/' + d.getDate();
         });
 
-        const prices = closes.map((c, i) => c || closes[i - 1] || closes[0]);
-        const validPrices = prices.filter(p => p !== null && !isNaN(p));
-        if (validPrices.length < 2) return;
+        // null 값 보정
+        const prices = [];
+        const rawCloses = closes;
+        for (let i = 0; i < rawCloses.length; i++) {
+            if (rawCloses[i] !== null) prices.push(rawCloses[i]);
+            else if (i > 0) prices.push(prices[i-1]);
+            else prices.push(meta.regularMarketPrice);
+        }
 
-        // Update intraday chart with real data
-        drawIntradayChart(item, labels, prices);
+        // 차트 그리기
+        drawModalChart(item, labels, prices, range);
 
-        // Update trading info with real Yahoo data
-        const currentPrice = meta.regularMarketPrice;
-        const openPrice = meta.regularMarketOpen || meta.chartPreviousClose;
-        const highPrice = meta.regularMarketDayHigh;
-        const lowPrice = meta.regularMarketDayLow;
-        const volume = meta.regularMarketVolume;
-
-        const formatter = val => val ? val.toFixed(2) : '-';
-        document.getElementById('modal-open').textContent = openPrice ? formatter(openPrice) : '-';
-        document.getElementById('modal-high').textContent = highPrice ? formatter(highPrice) : '-';
-        document.getElementById('modal-low').textContent = lowPrice ? formatter(lowPrice) : '-';
-        document.getElementById('modal-volume').textContent = volume ? formatVolume(volume) : '-';
+        // 2. 주식/ETF 정보 업데이트 (실시간 데이터 활용)
+        const currencyIsKRW = item.currency === 'KRW';
+        const mktCap = meta.marketCap;
+        const high52w = meta.fiftyTwoWeekHigh;
+        
+        if (mktCap) {
+            document.getElementById('modal-market-cap').textContent = currencyIsKRW ? formatKoreanCap(mktCap) : formatBillion(mktCap);
+        }
+        if (high52w) {
+            document.getElementById('modal-52w-high').textContent = currencyIsKRW ? '₩' + high52w.toLocaleString() : '$' + high52w.toFixed(2);
+        }
 
     } catch (e) {
-        console.warn('Intraday data fetch failed:', e);
+        console.warn('Modal chart data fetch failed:', e);
     }
 }
 
