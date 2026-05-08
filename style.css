@@ -383,6 +383,12 @@ header h1 {
     display: grid;
     grid-template-columns: 1fr 320px;
     gap: 1.5rem;
+    align-items: start;
+}
+
+.sidebar-area {
+    position: sticky;
+    top: 80px;
 }
 
 /* Tablet & Mobile Layout Adjustment */
