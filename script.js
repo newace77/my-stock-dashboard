@@ -2114,6 +2114,7 @@ function renderHistoryChartWithRange() {
         const cutoff = new Date();
         if (currentHistoryRange === '1M') cutoff.setMonth(now.getMonth() - 1);
         else if (currentHistoryRange === '3M') cutoff.setMonth(now.getMonth() - 3);
+        else if (currentHistoryRange === '6M') cutoff.setMonth(now.getMonth() - 6);
         else if (currentHistoryRange === '1Y') cutoff.setFullYear(now.getFullYear() - 1);
         else if (currentHistoryRange === '3Y') cutoff.setFullYear(now.getFullYear() - 3);
         else if (currentHistoryRange === '5Y') cutoff.setFullYear(now.getFullYear() - 5);
@@ -2121,7 +2122,14 @@ function renderHistoryChartWithRange() {
             cutoff.setMonth(0); cutoff.setDate(1); cutoff.setHours(0,0,0,0);
         }
         
-        filteredData = data.filter(row => new Date(row[0]) >= cutoff);
+        filteredData = data.filter(row => {
+            let dateStr = row[0];
+            // 구글 시트의 "YY. MM. DD" 형식을 "20YY-MM-DD" 로 변환하여 파싱 에러 방지
+            if (typeof dateStr === 'string' && /^\d{2}\.\s*\d{2}\.\s*\d{2}$/.test(dateStr)) {
+                dateStr = '20' + dateStr.replace(/\.\s*/g, '-');
+            }
+            return new Date(dateStr) >= cutoff;
+        });
     }
 
     const labels = filteredData.map(row => row[0]);
