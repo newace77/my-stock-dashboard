@@ -133,4 +133,3 @@ jobs:
           git add data_snapshot.json
           git diff --quiet && git diff --staged --quiet || git commit -m "chore: auto update data snapshot [skip ci]"
           git push
-it push
