@@ -2215,7 +2215,11 @@ function renderHistoryChartWithRange() {
                 }
             },
             plugins: {
-                legend: { display: false },
+                legend: { 
+                    display: window.innerWidth > 768 || document.body.classList.contains('force-pc'),
+                    position: 'top',
+                    labels: { color: '#94a3b8', boxWidth: 12 }
+                },
                 tooltip: {
                     callbacks: {
                         label: (ctx) => `${ctx.dataset.label}: ${maskValue(ctx.raw.toLocaleString())}원`
