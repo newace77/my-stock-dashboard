@@ -356,9 +356,11 @@ function renderHoldingsAnalysisTable() {
         const priceFmt = data.price ? (data.currency === 'KRW' ? data.price.toLocaleString() : data.price.toFixed(2)) : "-";
         const capFmt = data.marketCap ? (data.currency === 'KRW' ? formatKoreanCap(data.marketCap) : formatBillion(data.marketCap)) : "-";
         
+        const weightFmt = data.weight != null && data.weight !== '' ? parseFloat(data.weight).toFixed(1) + '%' : '-';
+
         tr.innerHTML = `
             <td data-label="종목명"><strong>${data.name}</strong> <span style="color:#888; font-size:0.85em;">(${data.ticker})</span></td>
-            <td data-label="시가 총액">${capFmt}</td>
+            <td data-label="비중">${weightFmt}</td>
             <td data-label="현재가">${pricePrefix}${priceFmt}</td>
             <td data-label="변동률" class="${getColorClass(data.change)}">${data.change}%</td>
             <td data-label="수익률" class="${getColorClass(data.returnRate)}">${data.returnRate}%</td>
