@@ -37,6 +37,7 @@
             <button class="tab-btn" onclick="openTab(event, 'holdings-analysis-tab')">💼 My holdings</button>
             <button class="tab-btn" onclick="openTab(event, 'sp500-tab')">🇺🇸 S&P 500</button>
             <button class="tab-btn" onclick="openTab(event, 'kospi200-tab')">🇰🇷 KOSPI 200</button>
+            <button class="tab-btn" onclick="openTab(event, 'heatmap-tab')">🔥 Heatmap</button>
         </nav>
 
         <!-- 1. 포트폴리오 탭 -->
@@ -73,32 +74,32 @@
                 <!-- 지수 및 환율 -->
                 <div class="summary-card market-card" id="card-snp">
                     <span class="label">S&P 500</span>
-                    <div id="card-snp-val" class="value">7,165.08</div>
+                    <div id="card-snp-val" class="value" data-price="7165.08">7,165.08</div>
                     <div class="market-change"><span id="card-snp-change" class="value-up">+0.80%</span></div>
                 </div>
                 <div class="summary-card market-card" id="card-nasdaq">
                     <span class="label">Nasdaq</span>
-                    <div id="card-nasdaq-val" class="value">24,836.60</div>
+                    <div id="card-nasdaq-val" class="value" data-price="24836.60">24,836.60</div>
                     <div class="market-change"><span id="card-nasdaq-change" class="value-up">+1.63%</span></div>
                 </div>
                 <div class="summary-card market-card" id="card-dow">
                     <span class="label">Dow Jones</span>
-                    <div id="card-dow-val" class="value">49,230.71</div>
+                    <div id="card-dow-val" class="value" data-price="49230.71">49,230.71</div>
                     <div class="market-change"><span id="card-dow-change" class="value-down">-0.16%</span></div>
                 </div>
                 <div class="summary-card market-card" id="card-kospi">
                     <span class="label">KOSPI</span>
-                    <div id="card-kospi-val" class="value">6,615.03</div>
+                    <div id="card-kospi-val" class="value" data-price="6615.03">6,615.03</div>
                     <div class="market-change"><span id="card-kospi-change" class="value-up">+2.15%</span></div>
                 </div>
                 <div class="summary-card market-card" id="card-kosdaq">
                     <span class="label">KOSDAQ</span>
-                    <div id="card-kosdaq-val" class="value">1,226.18</div>
+                    <div id="card-kosdaq-val" class="value" data-price="1226.18">1,226.18</div>
                     <div class="market-change"><span id="card-kosdaq-change" class="value-up">+1.86%</span></div>
                 </div>
                 <div class="summary-card market-card" id="card-fx">
                     <span class="label">USD/KRW</span>
-                    <div id="card-fx-val" class="value">1,476.40</div>
+                    <div id="card-fx-val" class="value" data-price="1476.40">1,476.40</div>
                     <div class="market-change"><span id="card-fx-change">(-)</span></div>
                 </div>
             </section>
@@ -424,6 +425,25 @@
                     <div style="margin-top: 1rem; font-size: 0.8rem; color: var(--text-muted);">
                         * RSI 70 이상: <span class="rsi-tag rsi-overbought">과매수</span> / RSI 30 이하: <span class="rsi-tag rsi-oversold">과매도</span>
                     </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- 6. 히트맵 탭 -->
+        <div id="heatmap-tab" class="tab-content">
+            <section class="mdd-container">
+                <h2 class="section-title">🔥 자산 변동 히트맵</h2>
+                <div class="card glass heatmap-scroll-container">
+                    <div id="heatmap-container" class="heatmap-wrapper">
+                        <!-- script.js에서 렌더링 -->
+                    </div>
+                </div>
+                <div class="heatmap-legend" style="margin-top: 1rem; display: flex; align-items: center; gap: 1rem; font-size: 0.85rem; color: var(--text-muted);">
+                    <span>레전드:</span>
+                    <div style="display: flex; align-items: center; gap: 0.3rem;"><div class="hm-cell hm-up-3"></div> 하락</div>
+                    <div style="display: flex; align-items: center; gap: 0.3rem;"><div class="hm-cell hm-empty"></div> 변동없음/데이터없음</div>
+                    <div style="display: flex; align-items: center; gap: 0.3rem;"><div class="hm-cell hm-down-3"></div> 상승</div>
+                    <span style="margin-left: 0.5rem;">* 빨간색: 상승 / 파란색: 하락</span>
                 </div>
             </section>
         </div>

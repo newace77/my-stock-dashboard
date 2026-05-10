@@ -1663,3 +1663,90 @@ body.force-pc .container {
     color: var(--bg-deep);
     transform: translateY(-3px);
 }
+
+/* Heatmap Styles */
+.heatmap-scroll-container {
+    overflow-x: auto;
+    padding: 1.5rem;
+    background: rgba(15, 23, 42, 0.5);
+    border-radius: 12px;
+}
+
+.heatmap-wrapper {
+    display: inline-block;
+    min-width: 100%;
+}
+
+.heatmap-table {
+    border-collapse: separate;
+    border-spacing: 2px;
+    font-size: 0.7rem;
+}
+
+.heatmap-table th {
+    padding: 2px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-align: center;
+    min-width: 15px;
+}
+
+.heatmap-table td.hm-month-label {
+    padding-right: 8px;
+    text-align: right;
+    color: var(--text-main);
+    font-weight: 600;
+    white-space: nowrap;
+    font-size: 0.75rem;
+}
+
+.hm-cell {
+    width: 13px;
+    height: 13px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.05);
+    transition: transform 0.2s;
+    cursor: pointer;
+    position: relative;
+}
+
+.hm-cell:hover {
+    transform: scale(1.3);
+    z-index: 10;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+}
+
+/* Color Scales */
+.hm-empty { background: rgba(255, 255, 255, 0.05); } /* 데이터 없음 / 미래 날짜 */
+.hm-missing { background: rgba(71, 85, 105, 0.3); } /* 날짜는 있으나 데이터가 연속되지 않음 */
+
+/* 하락 (Blue 계열) - 사용자가 하락은 파란색이라고 함 */
+.hm-down-1 { background: #1e3a8a; } /* 미미한 하락 */
+.hm-down-2 { background: #1d4ed8; }
+.hm-down-3 { background: #2563eb; }
+.hm-down-4 { background: #3b82f6; }
+.hm-down-5 { background: #60a5fa; } /* 큰 하락 */
+
+/* 상승 (Red 계열) - 사용자가 상승은 빨간색이라고 함 */
+.hm-up-1 { background: #450a0a; } /* 미미한 상승 */
+.hm-up-2 { background: #7f1d1d; }
+.hm-up-3 { background: #b91c1c; }
+.hm-up-4 { background: #dc2626; }
+.hm-up-5 { background: #ef4444; } /* 큰 상승 */
+
+/* Tooltip on hover */
+.hm-cell[title]:hover:after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.9);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    font-size: 0.7rem;
+    margin-bottom: 5px;
+    pointer-events: none;
+}

@@ -141,6 +141,8 @@ function openTab(evt, tabName) {
 
     if (tabName === 'holdings-analysis-tab') {
         fetchHoldingsAnalysisData();
+    } else if (tabName === 'heatmap-tab') {
+        renderHeatmap();
     }
 
     window.dispatchEvent(new Event('resize'));
@@ -625,6 +627,27 @@ function updateViewModeIndicator() {
     } else {
         viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
     }
+
+    // 5. 모바일/PC 전환에 따른 시장 데이터 포맷 즉시 갱신 (데이터가 있는 경우)
+    const isMobileMode = currentDisplayMode === 'mobile';
+    const markets = ['snp', 'nasdaq', 'dow', 'kospi', 'kosdaq', 'fx'];
+    markets.forEach(id => {
+        const valEl = document.getElementById(`card-${id}-val`);
+        if (valEl && valEl.getAttribute('data-price')) {
+            const lastPrice = parseFloat(valEl.getAttribute('data-price'));
+            if (!isNaN(lastPrice)) {
+                if (id === 'fx') {
+                    valEl.textContent = isMobileMode ? Math.round(lastPrice).toLocaleString() : lastPrice.toFixed(2);
+                } else {
+                    if (isMobileMode) {
+                        valEl.textContent = Math.round(lastPrice).toLocaleString();
+                    } else {
+                        valEl.textContent = lastPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    }
+                }
+            }
+        }
+    });
 }
 
 /**
@@ -710,9 +733,12 @@ async function fetchData(force = false) {
     updateTimestamp(null, "⏳ 데이터 로드 중...");
 
     try {
-        // 2. 실시간 데이터 로드
+        // 2. 실시간 데이터 페치 및 시장 지수 병렬 업데이트
         console.log("실시간 데이터 페칭 시작...");
         
+        // 시장 지수 업데이트 (await 하지 않고 백그라운드에서 실행)
+        updateMarketCharts();
+
         // 구글 시트 캐시 방지를 위해 고유 타임스탬프 추가
         const ts = new Date().getTime();
         const addTs = (url) => url ? (url + (url.includes('?') ? '&' : '?') + 't=' + ts) : url;
@@ -763,6 +789,7 @@ function renderFromData(data) {
         if (data.history) {
             rawHistoryData = data.history;
             renderHistoryChartWithRange();
+            renderHeatmap();
         }
     } catch (e) { console.error("History rendering failed:", e); }
 }
@@ -1384,11 +1411,22 @@ async function updateMarketCharts() {
                         const isPositive = parseFloat(changePercent) >= 0;
 
                         if (valEl) {
+                            // 모바일 모드 여부 확인 (화면 너비 768px 이하 또는 사용자 설정이 모바일인 경우)
+                            const isMobileMode = userViewMode === 'mobile' || (userViewMode === 'auto' && window.innerWidth <= 768);
+                            
                             if (m.id === 'fx') {
-                                valEl.textContent = lastPrice.toFixed(2);
+                                // 환율 표시: 모바일은 소수점 없이, PC는 소수점 2자리
+                                valEl.textContent = isMobileMode ? Math.round(lastPrice).toLocaleString() : lastPrice.toFixed(2);
+                                valEl.setAttribute('data-price', lastPrice);
                                 usdKrwRate = lastPrice;
                             } else {
-                                valEl.textContent = lastPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                                // 지수 표시: 모바일은 소수점 없이, PC는 소수점 2자리(천단위 구분자 포함)
+                                valEl.setAttribute('data-price', lastPrice);
+                                if (isMobileMode) {
+                                    valEl.textContent = Math.round(lastPrice).toLocaleString();
+                                } else {
+                                    valEl.textContent = lastPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                                }
                             }
                         }
                         
@@ -2562,3 +2600,115 @@ async function updateLivePrices(dataArray, isKorean = false) {
         await new Promise(resolve => setTimeout(resolve, 50));
     }
 }
+
+/**
+ * 🔥 자산 변동 히트맵 렌더링
+ */
+function renderHeatmap() {
+    const container = document.getElementById('heatmap-container');
+    if (!container || !rawHistoryData || rawHistoryData.length < 2) return;
+
+    // 1. 데이터 파싱 및 일별 변동 계산
+    const data = rawHistoryData.slice(1); // 헤더 제외
+    const historyMap = new Map();
+    let minDate = null;
+    let maxDate = new Date();
+
+    data.forEach((row, idx) => {
+        let dateStr = row[0];
+        if (typeof dateStr === 'string' && /^\d{2}\.\s*\d{2}\.\s*\d{2}$/.test(dateStr)) {
+            dateStr = '20' + dateStr.replace(/\.\s*/g, '-');
+        }
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return;
+        
+        if (!minDate || d < minDate) minDate = d;
+        
+        // 전날 대비 변동률 계산
+        let changePercent = 0;
+        if (idx > 0) {
+            const currentEval = parseSafeFloat(row[1]);
+            const prevEval = parseSafeFloat(data[idx-1][1]);
+            if (prevEval > 0) {
+                changePercent = ((currentEval / prevEval) - 1) * 100;
+            }
+        }
+        
+        const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        historyMap.set(dateKey, {
+            percent: changePercent,
+            eval: parseSafeFloat(row[1]),
+            invest: parseSafeFloat(row[2])
+        });
+    });
+
+    if (!minDate) return;
+
+    // 2. 테이블 구조 생성 (세로: 월, 가로: 일)
+    let html = '<table class="heatmap-table"><thead><tr><th></th>';
+    for (let d = 1; d <= 31; d++) {
+        html += `<th>${d}</th>`;
+    }
+    html += '</tr></thead><tbody>';
+
+    const startYear = minDate.getFullYear();
+    const startMonth = minDate.getMonth();
+    const endYear = maxDate.getFullYear();
+    const endMonth = maxDate.getMonth();
+
+    // 월별 루프 (역순: 최신이 위로 오게 하려면 여기서 조절 가능, 일단 과거부터 현재순)
+    for (let y = startYear; y <= endYear; y++) {
+        const mStart = (y === startYear) ? startMonth : 0;
+        const mEnd = (y === endYear) ? endMonth : 11;
+
+        for (let m = mStart; m <= mEnd; m++) {
+            const monthLabel = `${y}년 ${m + 1}월`;
+            html += `<tr><td class="hm-month-label">${monthLabel}</td>`;
+
+            for (let d = 1; d <= 31; d++) {
+                const dateKey = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                
+                // 해당 월의 실제 일수 확인
+                const lastDayOfMonth = new Date(y, m + 1, 0).getDate();
+                
+                if (d > lastDayOfMonth) {
+                    html += '<td class="hm-cell hm-empty"></td>'; // 달에 없는 날짜
+                } else {
+                    const entry = historyMap.get(dateKey);
+                    if (entry) {
+                        const p = entry.percent;
+                        let colorClass = 'hm-empty';
+                        
+                        // 색상 클래스 결정 (사용자 요청: 상승 빨강, 하락 파랑)
+                        if (p > 0) {
+                            if (p > 3) colorClass = 'hm-up-5';
+                            else if (p > 1.5) colorClass = 'hm-up-4';
+                            else if (p > 0.5) colorClass = 'hm-up-3';
+                            else if (p > 0.1) colorClass = 'hm-up-2';
+                            else colorClass = 'hm-up-1';
+                        } else if (p < 0) {
+                            const ap = Math.abs(p);
+                            if (ap > 3) colorClass = 'hm-down-5';
+                            else if (ap > 1.5) colorClass = 'hm-down-4';
+                            else if (ap > 0.5) colorClass = 'hm-down-3';
+                            else if (ap > 0.1) colorClass = 'hm-down-2';
+                            else colorClass = 'hm-down-1';
+                        } else {
+                            colorClass = 'hm-missing'; // 변동 0 (주말 등)
+                        }
+
+                        const tooltip = `${dateKey}: ${p.toFixed(2)}% (${entry.eval.toLocaleString()}원)`;
+                        html += `<td class="hm-cell ${colorClass}" title="${tooltip}"></td>`;
+                    } else {
+                        html += '<td class="hm-cell hm-missing"></td>'; // 데이터 없는 날 (회색)
+                    }
+                }
+            }
+            html += '</tr>';
+        }
+    }
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
