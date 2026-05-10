@@ -2672,7 +2672,7 @@ function renderHeatmap() {
                 const lastDayOfMonth = new Date(y, m + 1, 0).getDate();
                 
                 if (d > lastDayOfMonth) {
-                    html += '<td class="hm-cell hm-empty"></td>'; // 달에 없는 날짜
+                    html += '<td class="hm-cell hm-empty">X</td>'; // 달에 없는 날짜
                 } else {
                     const entry = historyMap.get(dateKey);
                     if (entry) {
