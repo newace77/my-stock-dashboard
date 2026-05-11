@@ -31,17 +31,17 @@
             <p class="subtitle">데이터로 보는 스마트한 투자 생활</p>
         </header>
 
-        <nav class="tabs">
-            <button class="tab-btn active" onclick="openTab(event, 'portfolio-tab')">📊 포트폴리오</button>
-            <button class="tab-btn" onclick="openTab(event, 'mdd-tab')">📉 MDD 분석</button>
-            <button class="tab-btn" onclick="openTab(event, 'holdings-analysis-tab')">💼 My holdings</button>
-            <button class="tab-btn" onclick="openTab(event, 'sp500-tab')">🇺🇸 S&P 500</button>
-            <button class="tab-btn" onclick="openTab(event, 'kospi200-tab')">🇰🇷 KOSPI 200</button>
-            <button class="tab-btn" onclick="openTab(event, 'heatmap-tab')">🔥 Heatmap</button>
+        <nav class="tabs" role="tablist" aria-label="대시보드 탭">
+            <button class="tab-btn active" role="tab" aria-selected="true" aria-controls="portfolio-tab" onclick="openTab(event, 'portfolio-tab')">📊 포트폴리오</button>
+            <button class="tab-btn" role="tab" aria-selected="false" aria-controls="mdd-tab" onclick="openTab(event, 'mdd-tab')">📉 MDD 분석</button>
+            <button class="tab-btn" role="tab" aria-selected="false" aria-controls="holdings-analysis-tab" onclick="openTab(event, 'holdings-analysis-tab')">💼 My holdings</button>
+            <button class="tab-btn" role="tab" aria-selected="false" aria-controls="sp500-tab" onclick="openTab(event, 'sp500-tab')">🇺🇸 S&P 500</button>
+            <button class="tab-btn" role="tab" aria-selected="false" aria-controls="kospi200-tab" onclick="openTab(event, 'kospi200-tab')">🇰🇷 KOSPI 200</button>
+            <button class="tab-btn" role="tab" aria-selected="false" aria-controls="heatmap-tab" onclick="openTab(event, 'heatmap-tab')">🔥 Heatmap</button>
         </nav>
 
         <!-- 1. 포트폴리오 탭 -->
-        <div id="portfolio-tab" class="tab-content active">
+        <div id="portfolio-tab" class="tab-content active" role="tabpanel" aria-labelledby="tab-portfolio">
             <section class="summary-cards" style="position: relative;">
                 <button id="refresh-fab" class="submit-btn refresh-btn-top">새로 갱신 🔄</button>
                 <div class="summary-card">
@@ -195,12 +195,12 @@
                             <table id="holdings-table">
                                 <thead>
                                     <tr>
-                                        <th>종목명</th>
-                                        <th onclick="sortHoldings('weight')" style="cursor:pointer">비중↕</th>
-                                        <th onclick="sortHoldings('returnRate')" style="cursor:pointer">수익률↕</th>
-                                        <th onclick="sortHoldings('profit')" style="cursor:pointer">수익액↕</th>
-                                        <th onclick="sortHoldings('eval')" style="cursor:pointer">평가금↕</th>
-                                        <th onclick="sortHoldings('dailyChange')" style="cursor:pointer">일일변동↕</th>
+                                        <th scope="col">종목명</th>
+                                        <th scope="col" onclick="sortHoldings('weight')" style="cursor:pointer">비중↕</th>
+                                        <th scope="col" onclick="sortHoldings('returnRate')" style="cursor:pointer">수익률↕</th>
+                                        <th scope="col" onclick="sortHoldings('profit')" style="cursor:pointer">수익액↕</th>
+                                        <th scope="col" onclick="sortHoldings('eval')" style="cursor:pointer">평가금↕</th>
+                                        <th scope="col" onclick="sortHoldings('dailyChange')" style="cursor:pointer">일일변동↕</th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
@@ -262,7 +262,7 @@
         </div>
 
         <!-- 2. MDD 분석 탭 -->
-        <div id="mdd-tab" class="tab-content">
+        <div id="mdd-tab" class="tab-content" role="tabpanel">
             <section class="card">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap: wrap; gap: 1rem;">
                     <h2>📉 종목 하락장 분석 (MDD & Recovery)</h2>
@@ -313,7 +313,7 @@
         </div>
 
         <!-- 2.5. My Holdings 분석 탭 -->
-        <div id="holdings-analysis-tab" class="tab-content">
+        <div id="holdings-analysis-tab" class="tab-content" role="tabpanel">
             <section class="mdd-container">
                 <div class="mdd-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
                     <div>
@@ -328,15 +328,15 @@
                         <table id="holdings-analysis-table">
                             <thead>
                                 <tr>
-                                    <th style="cursor:pointer" onclick="sortHoldingsAnalysis('name')">종목명↕</th>
-                                    <th style="cursor:pointer" onclick="sortHoldingsAnalysis('weight')">비중↕</th>
-                                    <th style="cursor:pointer" onclick="sortHoldingsAnalysis('price')">현재가↕</th>
-                                    <th style="cursor:pointer" onclick="sortHoldingsAnalysis('change')">변동률↕</th>
-                                    <th style="cursor:pointer" onclick="sortHoldingsAnalysis('returnRate')">수익률↕</th>
-                                    <th style="cursor:pointer" onclick="sortHoldingsAnalysis('mdd')">MDD↕</th>
-                                    <th style="cursor:pointer" onclick="sortHoldingsAnalysis('recoveryProb')">회복확률↕</th>
-                                    <th style="cursor:pointer" onclick="sortHoldingsAnalysis('rsi')">RSI(14)↕</th>
-                                    <th style="cursor:pointer" onclick="sortHoldingsAnalysis('dividendYield')">분배율/배당률↕</th>
+                                    <th scope="col" style="cursor:pointer" onclick="sortHoldingsAnalysis('name')">종목명↕</th>
+                                    <th scope="col" style="cursor:pointer" onclick="sortHoldingsAnalysis('weight')">비중↕</th>
+                                    <th scope="col" style="cursor:pointer" onclick="sortHoldingsAnalysis('price')">현재가↕</th>
+                                    <th scope="col" style="cursor:pointer" onclick="sortHoldingsAnalysis('change')">변동률↕</th>
+                                    <th scope="col" style="cursor:pointer" onclick="sortHoldingsAnalysis('returnRate')">수익률↕</th>
+                                    <th scope="col" style="cursor:pointer" onclick="sortHoldingsAnalysis('mdd')">MDD↕</th>
+                                    <th scope="col" style="cursor:pointer" onclick="sortHoldingsAnalysis('recoveryProb')">회복확률↕</th>
+                                    <th scope="col" style="cursor:pointer" onclick="sortHoldingsAnalysis('rsi')">RSI(14)↕</th>
+                                    <th scope="col" style="cursor:pointer" onclick="sortHoldingsAnalysis('dividendYield')">분배율/배당률↕</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -352,7 +352,7 @@
         </div>
 
         <!-- 3. S&P 500 탭 -->
-        <div id="sp500-tab" class="tab-content">
+        <div id="sp500-tab" class="tab-content" role="tabpanel">
             <section class="mdd-container">
                 <div class="mdd-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
                     <div>
@@ -367,15 +367,15 @@
                         <table id="sp500-table">
                             <thead>
                                 <tr>
-                                    <th onclick="sortSP500('rank')" style="cursor:pointer">순위↕</th>
-                                    <th onclick="sortSP500('name')" style="cursor:pointer">종목명↕</th>
-                                    <th onclick="sortSP500('marketCap')" style="cursor:pointer">시가 총액↕</th>
-                                    <th onclick="sortSP500('price')" style="cursor:pointer">현재가↕</th>
-                                    <th onclick="sortSP500('change')" style="cursor:pointer">변동률↕</th>
-                                    <th onclick="sortSP500('mdd')" style="cursor:pointer">MDD↕</th>
-                                    <th onclick="sortSP500('recoveryProb')" style="cursor:pointer">회복확률↕</th>
-                                    <th onclick="sortSP500('rsi')" style="cursor:pointer">RSI(14)↕</th>
-                                    <th onclick="sortSP500('dividendYield')" style="cursor:pointer">배당률↕</th>
+                                    <th scope="col" onclick="sortSP500('rank')" style="cursor:pointer">순위↕</th>
+                                    <th scope="col" onclick="sortSP500('name')" style="cursor:pointer">종목명↕</th>
+                                    <th scope="col" onclick="sortSP500('marketCap')" style="cursor:pointer">시가 총액↕</th>
+                                    <th scope="col" onclick="sortSP500('price')" style="cursor:pointer">현재가↕</th>
+                                    <th scope="col" onclick="sortSP500('change')" style="cursor:pointer">변동률↕</th>
+                                    <th scope="col" onclick="sortSP500('mdd')" style="cursor:pointer">MDD↕</th>
+                                    <th scope="col" onclick="sortSP500('recoveryProb')" style="cursor:pointer">회복확률↕</th>
+                                    <th scope="col" onclick="sortSP500('rsi')" style="cursor:pointer">RSI(14)↕</th>
+                                    <th scope="col" onclick="sortSP500('dividendYield')" style="cursor:pointer">배당률↕</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -391,7 +391,7 @@
         </div>
 
         <!-- 4. KOSPI 200 탭 -->
-        <div id="kospi200-tab" class="tab-content">
+        <div id="kospi200-tab" class="tab-content" role="tabpanel">
             <section class="mdd-container">
                 <div class="mdd-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
                     <div>
@@ -406,15 +406,15 @@
                         <table id="kospi200-table">
                             <thead>
                                 <tr>
-                                    <th onclick="sortKOSPI200('rank')" style="cursor:pointer">순위↕</th>
-                                    <th onclick="sortKOSPI200('name')" style="cursor:pointer">종목명↕</th>
-                                    <th onclick="sortKOSPI200('marketCap')" style="cursor:pointer">시가 총액↕</th>
-                                    <th onclick="sortKOSPI200('price')" style="cursor:pointer">현재가↕</th>
-                                    <th onclick="sortKOSPI200('change')" style="cursor:pointer">변동률↕</th>
-                                    <th onclick="sortKOSPI200('mdd')" style="cursor:pointer">MDD↕</th>
-                                    <th onclick="sortKOSPI200('recoveryProb')" style="cursor:pointer">회복확률↕</th>
-                                    <th onclick="sortKOSPI200('rsi')" style="cursor:pointer">RSI(14)↕</th>
-                                    <th onclick="sortKOSPI200('dividendYield')" style="cursor:pointer">배당률↕</th>
+                                    <th scope="col" onclick="sortKOSPI200('rank')" style="cursor:pointer">순위↕</th>
+                                    <th scope="col" onclick="sortKOSPI200('name')" style="cursor:pointer">종목명↕</th>
+                                    <th scope="col" onclick="sortKOSPI200('marketCap')" style="cursor:pointer">시가 총액↕</th>
+                                    <th scope="col" onclick="sortKOSPI200('price')" style="cursor:pointer">현재가↕</th>
+                                    <th scope="col" onclick="sortKOSPI200('change')" style="cursor:pointer">변동률↕</th>
+                                    <th scope="col" onclick="sortKOSPI200('mdd')" style="cursor:pointer">MDD↕</th>
+                                    <th scope="col" onclick="sortKOSPI200('recoveryProb')" style="cursor:pointer">회복확률↕</th>
+                                    <th scope="col" onclick="sortKOSPI200('rsi')" style="cursor:pointer">RSI(14)↕</th>
+                                    <th scope="col" onclick="sortKOSPI200('dividendYield')" style="cursor:pointer">배당률↕</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -430,7 +430,7 @@
         </div>
 
         <!-- 6. 히트맵 탭 -->
-        <div id="heatmap-tab" class="tab-content">
+        <div id="heatmap-tab" class="tab-content" role="tabpanel">
             <section class="mdd-container">
                 <h2 class="section-title">🔥 자산 변동 히트맵</h2>
                 <div class="card glass heatmap-scroll-container">
@@ -450,7 +450,7 @@
     </div>
 
     <!-- Stock Detail Modal -->
-    <div id="stock-modal-overlay" class="modal-overlay" onclick="closeStockModal(event)">
+    <div id="stock-modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-label="종목 상세 정보" onclick="closeStockModal(event)">
         <div class="modal-container" id="stock-modal">
             <div class="modal-header">
                 <div class="modal-title-row">

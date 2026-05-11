@@ -4,12 +4,16 @@
   "description": "Stock Dashboard with Google Sheets Integration",
   "scripts": {
     "start": "npx serve .",
-    "dev": "python3 -m http.server 8000"
+    "dev": "python3 -m http.server 8000",
+    "lint": "eslint script.js update_sp500.js update_kospi200.js",
+    "format": "prettier --write '*.{js,css,html}'"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "eslint": "^9.0.0",
+    "prettier": "^3.3.0",
     "serve": "^14.2.6"
   },
   "dependencies": {

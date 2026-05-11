@@ -25,26 +25,142 @@ if (typeof CONFIG === 'undefined') {
     };
 }
 
-// Supabase 데이터 로드 예시 함수
-async function fetchFromSupabase(table) {
-    if (!CONFIG.supabaseURL) return null;
-    try {
-        const response = await fetch(`${CONFIG.supabaseURL}/rest/v1/${table}?select=*`, {
-            headers: {
-                "apikey": CONFIG.supabaseKey,
-                "Authorization": `Bearer ${CONFIG.supabaseKey}`
-            }
-        });
-        return await response.json();
-    } catch (e) {
-        console.error("Supabase fetch error:", e);
-        return null;
-    }
+// =========================================================================
+// 유틸리티 모듈
+// =========================================================================
+
+/**
+ * HTML 특수문자 이스케이프 (XSS 방어)
+ * innerHTML 에 구글 시트 등 외부 입력을 삽입할 때 반드시 사용.
+ * @param {string|number|null|undefined} val
+ * @returns {string}
+ */
+function escapeHtml(val) {
+    if (val === null || val === undefined) return '';
+    const str = String(val);
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
+
+/**
+ * 마스킹과 이스케이프를 함께 수행 (innerHTML 출력용 헬퍼)
+ */
+function safeValue(val, isName = false) {
+    return escapeHtml(maskValue(val, isName));
+}
+
+/**
+ * 한국 주식(6자리 숫자 티커) 판별
+ * @param {string} ticker
+ * @returns {boolean}
+ */
+function isKoreanStock(ticker) {
+    if (!ticker) return false;
+    const cleaned = String(ticker).replace('KRX:', '').trim();
+    return /^\d{6}$/.test(cleaned);
+}
+
+/**
+ * 구글 시트 Holdings 컬럼 인덱스 매핑
+ */
+const HOLDINGS_COL = {
+    NAME: 0,
+    TICKER: 1,
+    SHARES: 3,
+    COST_BASIS: 4,
+    AVG_COST: 5,
+    CURRENT_PRICE: 6,
+    RETURN_RATE: 7,
+    EVAL_KRW: 8,
+    WEIGHT: 9,
+    DAILY_CHANGE: 10,
+    PROFIT: 14
+};
+
+/**
+ * 구글 시트 Summary 컬럼 인덱스 매핑
+ */
+const SUMMARY_COL = {
+    NAME: 0,
+    EVAL_TOTAL: 1,
+    INVEST_TOTAL: 2,
+    PROFIT: 3,
+    RETURN_RATE: 4,
+    DAILY_CHANGE_PCT: 5,
+    DAILY_CHANGE_AMT: 6,
+    DIVIDEND: 11
+};
+
+/**
+ * 구글 시트 History 컬럼 인덱스 매핑
+ */
+const HISTORY_COL = {
+    DATE: 0,
+    EVAL_TOTAL: 1,
+    INVEST_TOTAL: 2,
+    PROFIT: 3,
+    DIVIDEND: 11
+};
+
+/**
+ * 환율이 유효한지 확인 (갱신된 적 있고, 30분 이내)
+ */
+function isExchangeRateValid() {
+    if (usdKrwRate <= 100) return false;
+    if (usdKrwRateUpdatedAt === 0) return true; // 초기값 1400 사용 허용
+    const THIRTY_MIN = 30 * 60 * 1000;
+    return (Date.now() - usdKrwRateUpdatedAt) < THIRTY_MIN;
+}
+
+/**
+ * 디버그 로거 — localStorage('debug_mode')가 'true'일 때만 출력
+ */
+const DEBUG = localStorage.getItem('debug_mode') === 'true';
+const logger = {
+    log:  (...args) => { if (DEBUG) console.log(...args); },
+    warn: (...args) => console.warn(...args),
+    error:(...args) => console.error(...args)
+};
+
+/**
+ * Chart.js 인스턴스 레지스트리 — 생성/파괴를 중앙에서 관리하여 메모리 누수 방지
+ */
+const chartRegistry = {
+    _charts: new Map(),
+    set(id, chart) {
+        this.destroy(id);
+        this._charts.set(id, chart);
+        return chart;
+    },
+    get(id) { return this._charts.get(id); },
+    destroy(id) {
+        const chart = this._charts.get(id);
+        if (chart) {
+            try { chart.destroy(); } catch (e) { /* ignore */ }
+            this._charts.delete(id);
+        }
+    },
+    destroyAll(prefix = null) {
+        for (const [id, chart] of this._charts) {
+            if (prefix && !id.startsWith(prefix)) continue;
+            try { chart.destroy(); } catch (e) { /* ignore */ }
+            this._charts.delete(id);
+        }
+    }
+};
+
+// =========================================================================
+// 전역 상태
+// =========================================================================
 
 // 뷰 모드 설정 (auto, pc, mobile)
 let globalHoldings = [];
 let usdKrwRate = 1400; // USD/KRW 환율 (기본값, Summary 시트에서 갱신)
+let usdKrwRateUpdatedAt = 0; // 환율 최근 갱신 시각 (ms)
 let isPrivacyMode = localStorage.getItem('privacy_mode') === 'true';
 let userViewMode = localStorage.getItem('user_view_mode') || 'auto';
 
@@ -117,7 +233,7 @@ function getResponsiveValueHTML(valStr) {
 function formatTicker(ticker) {
     if (!ticker) return ticker;
     const cleanTicker = ticker.trim().toUpperCase();
-    if (/^\d{6}$/.test(cleanTicker)) {
+    if (isKoreanStock(cleanTicker)) {
         // 기본적으로 .KS를 붙이되, 향후 시장 구분 로직 확장 가능
         return cleanTicker + ".KS";
     }
@@ -134,10 +250,12 @@ function openTab(evt, tabName) {
     const tabButtons = document.getElementsByClassName("tab-btn");
     for (let i = 0; i < tabButtons.length; i++) {
         tabButtons[i].classList.remove("active");
+        tabButtons[i].setAttribute('aria-selected', 'false');
     }
 
     document.getElementById(tabName).classList.add("active");
     evt.currentTarget.classList.add("active");
+    evt.currentTarget.setAttribute('aria-selected', 'true');
 
     if (tabName === 'holdings-analysis-tab') {
         fetchHoldingsAnalysisData();
@@ -292,7 +410,7 @@ async function fetchHoldingsAnalysisData(force = false) {
                     }
                 }
             } catch (e) {
-                console.warn(`Analysis failed for ${item.ticker}`, e);
+                logger.warn(`Analysis failed for ${item.ticker}`, e);
             }
         }));
         
@@ -345,7 +463,7 @@ function renderHoldingsAnalysisTable() {
     
     holdingsAnalysisData.forEach(data => {
         const tr = document.createElement('tr');
-        tr.onclick = () => window.open(`https://finance.yahoo.com/quote/${data.ticker}`, '_blank');
+        tr.onclick = () => window.open(`https://finance.yahoo.com/quote/${encodeURIComponent(data.ticker)}`, '_blank');
         
         let rsiClass = 'rsi-neutral';
         const rsiValue = parseFloat(data.rsi);
@@ -361,24 +479,24 @@ function renderHoldingsAnalysisTable() {
         const weightFmt = data.weight != null && data.weight !== '' ? parseFloat(data.weight).toFixed(1) + '%' : '-';
 
         tr.innerHTML = `
-            <td data-label="종목명"><strong>${data.name}</strong> <span style="color:#888; font-size:0.85em;">(${data.ticker})</span></td>
+            <td data-label="종목명"><strong>${escapeHtml(data.name)}</strong> <span style="color:#888; font-size:0.85em;">(${escapeHtml(data.ticker)})</span></td>
             <td data-label="비중">${weightFmt}</td>
-            <td data-label="현재가">${pricePrefix}${priceFmt}</td>
-            <td data-label="변동률" class="${getColorClass(data.change)}">${data.change}%</td>
-            <td data-label="수익률" class="${getColorClass(data.returnRate)}">${data.returnRate}%</td>
-            <td data-label="MDD" style="color:var(--negative)">${data.mdd === '-' ? '-' : data.mdd + '%'}</td>
+            <td data-label="현재가">${pricePrefix}${escapeHtml(priceFmt)}</td>
+            <td data-label="변동률" class="${getColorClass(data.change)}">${escapeHtml(data.change)}%</td>
+            <td data-label="수익률" class="${getColorClass(data.returnRate)}">${escapeHtml(data.returnRate)}%</td>
+            <td data-label="MDD" style="color:var(--negative)">${data.mdd === '-' ? '-' : escapeHtml(data.mdd) + '%'}</td>
             <td data-label="회복확률">
                 ${data.recoveryProb === '-' ? '-' : `
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span class="drawdown-text">${data.recoveryProb}%</span>
+                    <span class="drawdown-text">${escapeHtml(data.recoveryProb)}%</span>
                 </div>
                 <div class="drawdown-bar-container" style="background:rgba(255,255,255,0.1); width:100%; height:4px; border-radius:2px; overflow:hidden; margin-top:4px;">
-                    <div style="background:${parseFloat(data.recoveryProb) >= 80 ? '#4ade80' : '#fb7185'}; width: ${data.recoveryProb}%; height:100%;"></div>
+                    <div style="background:${parseFloat(data.recoveryProb) >= 80 ? '#4ade80' : '#fb7185'}; width: ${parseFloat(data.recoveryProb) || 0}%; height:100%;"></div>
                 </div>
                 `}
             </td>
-            <td data-label="RSI(14)" style="text-align:center;">${data.rsi === '-' ? '-' : `<span class="rsi-tag ${rsiClass}">${data.rsi}</span>`}</td>
-            <td data-label="분배율/배당률" style="text-align:center; color: var(--primary);">${data.dividendYield === '-' ? '-' : data.dividendYield + '%'}</td>
+            <td data-label="RSI(14)" style="text-align:center;">${data.rsi === '-' ? '-' : `<span class="rsi-tag ${rsiClass}">${escapeHtml(data.rsi)}</span>`}</td>
+            <td data-label="분배율/배당률" style="text-align:center; color: var(--primary);">${data.dividendYield === '-' ? '-' : escapeHtml(data.dividendYield) + '%'}</td>
         `;
         tableBody.appendChild(tr);
     });
@@ -560,7 +678,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const refreshFab = document.getElementById('refresh-fab');
     if (refreshFab) refreshFab.classList.add('loading');
 
-    console.log("🔄 대시보드 로드 시작...");
+    logger.log("🔄 대시보드 로드 시작...");
 
     // 시장 데이터 갱신을 백그라운드에서 요청
     requestMarketRefresh();
@@ -691,7 +809,7 @@ function showToast(message, type = 'info', duration = 5000) {
 
     toast.innerHTML = `
         <span class="toast-icon">${icon}</span>
-        <span class="toast-message">${message}</span>
+        <span class="toast-message">${escapeHtml(message)}</span>
         <button class="toast-close" onclick="this.parentElement.remove()">✕</button>
     `;
 
@@ -726,7 +844,17 @@ async function fetchData(force = false) {
                     updateTimestamp(true, "Cache");
                     return; 
                 }
-            } catch (e) { console.warn("Cache fail", e); }
+            } catch (e) { logger.warn("Cache fail", e); }
+        } else {
+            // 캐시가 없으면 스냅샷(data_snapshot.json) 시도
+            try {
+                const response = await fetch(CONFIG.snapshotURL + '?t=' + new Date().getTime());
+                if (response.ok) {
+                    const snapshot = await response.json();
+                    renderFromData(snapshot);
+                    updateTimestamp(false, "Snapshot");
+                }
+            } catch (e) { logger.warn("Snapshot load fail", e); }
         }
     }
     
@@ -734,7 +862,7 @@ async function fetchData(force = false) {
 
     try {
         // 2. 실시간 데이터 페치 및 시장 지수 병렬 업데이트
-        console.log("실시간 데이터 페칭 시작...");
+        logger.log("실시간 데이터 페칭 시작...");
         
         // 시장 지수 업데이트 (await 하지 않고 백그라운드에서 실행)
         updateMarketCharts();
@@ -760,30 +888,30 @@ async function fetchData(force = false) {
             renderFromData(freshData);
             localStorage.setItem(CACHE_KEY, JSON.stringify(freshData));
             updateTimestamp(true, "Live");
-            console.log("Live 데이터 업데이트 완료");
+            logger.log("Live 데이터 업데이트 완료");
         } else {
             throw new Error("Empty response from all proxies");
         }
     } catch (err) {
-        console.warn("실시간 로드 실패", err);
+        logger.warn("실시간 로드 실패", err);
         showToast("데이터 갱신 실패. 시트의 '웹에 게시' 상태를 확인하세요.", 'error');
     }
 }
 
 // 데이터를 받아서 각 컴포넌트에 뿌려주는 통합 함수
 function renderFromData(data) {
-    console.log("데이터 렌더링 시작...", Object.keys(data));
+    logger.log("데이터 렌더링 시작...", Object.keys(data));
     try {
         if (data.summary) {
             renderSummary(data.summary, document.querySelector('#summary-table tbody'));
         }
-    } catch (e) { console.error("Summary rendering failed:", e); }
+    } catch (e) { logger.error("Summary rendering failed:", e); }
 
     try {
         if (data.holdings) {
             processHoldingsData(data.holdings);
         }
-    } catch (e) { console.error("Holdings rendering failed:", e); }
+    } catch (e) { logger.error("Holdings rendering failed:", e); }
 
     try {
         if (data.history) {
@@ -791,7 +919,7 @@ function renderFromData(data) {
             renderHistoryChartWithRange();
             renderHeatmap();
         }
-    } catch (e) { console.error("History rendering failed:", e); }
+    } catch (e) { logger.error("History rendering failed:", e); }
 }
 
 /**
@@ -822,7 +950,7 @@ async function fetchSP500Data() {
         
         statusText.textContent = `✅ S&P 500 업데이트 완료 (${new Date().toLocaleTimeString()})`;
     } catch (err) {
-        console.error("SP500 데이터 로드 실패:", err);
+        logger.error("SP500 데이터 로드 실패:", err);
         statusText.textContent = "❌ 데이터 로드 실패 (업데이트 준비 중일 수 있습니다)";
     }
 }
@@ -870,7 +998,7 @@ function renderSP500Table() {
     
     sp500Data.forEach(data => {
         const tr = document.createElement('tr');
-        tr.onclick = () => window.open(`https://finance.yahoo.com/quote/${data.ticker}`, '_blank');
+        tr.onclick = () => window.open(`https://finance.yahoo.com/quote/${encodeURIComponent(data.ticker)}`, '_blank');
         
         let rsiClass = 'rsi-neutral';
         const rsiValue = parseFloat(data.rsi);
@@ -882,22 +1010,22 @@ function renderSP500Table() {
         const priceFmt = data.price ? parseFloat(data.price).toFixed(2) : "-";
         
         tr.innerHTML = `
-            <td data-label="순위" style="text-align:center;">${data.rank}</td>
-            <td data-label="종목명"><strong>${data.name}</strong> <span style="color:#888; font-size:0.85em;">(${data.ticker})</span></td>
+            <td data-label="순위" style="text-align:center;">${escapeHtml(data.rank)}</td>
+            <td data-label="종목명"><strong>${escapeHtml(data.name)}</strong> <span style="color:#888; font-size:0.85em;">(${escapeHtml(data.ticker)})</span></td>
             <td data-label="시가 총액">${formatBillion(data.marketCap)}</td>
-            <td data-label="현재가">$${priceFmt}</td>
-            <td data-label="변동률" class="${getColorClass(data.change)}">${data.change}%</td>
-            <td data-label="MDD" style="color:var(--negative)">${data.mdd}%</td>
+            <td data-label="현재가">$${escapeHtml(priceFmt)}</td>
+            <td data-label="변동률" class="${getColorClass(data.change)}">${escapeHtml(data.change)}%</td>
+            <td data-label="MDD" style="color:var(--negative)">${escapeHtml(data.mdd)}%</td>
             <td data-label="회복확률">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span class="drawdown-text">${data.recoveryProb}%</span>
+                    <span class="drawdown-text">${escapeHtml(data.recoveryProb)}%</span>
                 </div>
                 <div class="drawdown-bar-container" style="background:rgba(255,255,255,0.1); width:100%; height:4px; border-radius:2px; overflow:hidden; margin-top:4px;">
-                    <div style="background:${parseFloat(data.recoveryProb) >= 80 ? '#4ade80' : '#fb7185'}; width: ${data.recoveryProb}%; height:100%;"></div>
+                    <div style="background:${parseFloat(data.recoveryProb) >= 80 ? '#4ade80' : '#fb7185'}; width: ${parseFloat(data.recoveryProb) || 0}%; height:100%;"></div>
                 </div>
             </td>
-            <td data-label="RSI(14)" style="text-align:center;"><span class="rsi-tag ${rsiClass}">${data.rsi}</span></td>
-            <td data-label="배당률" style="text-align:center; color: var(--primary);">${data.dividendYield}%</td>
+            <td data-label="RSI(14)" style="text-align:center;"><span class="rsi-tag ${rsiClass}">${escapeHtml(data.rsi)}</span></td>
+            <td data-label="배당률" style="text-align:center; color: var(--primary);">${escapeHtml(data.dividendYield)}%</td>
         `;
         tableBody.appendChild(tr);
     });
@@ -940,7 +1068,7 @@ async function fetchKOSPI200Data() {
 
         statusText.textContent = `✅ KOSPI 200 업데이트 완료 (${new Date().toLocaleTimeString()})`;
     } catch (err) {
-        console.error("KOSPI200 데이터 로드 실패:", err);
+        logger.error("KOSPI200 데이터 로드 실패:", err);
         statusText.textContent = "❌ 데이터 로드 실패 (업데이트 준비 중일 수 있습니다)";
     }
 }
@@ -980,7 +1108,7 @@ function renderKOSPI200Table() {
     
     kospi200Data.forEach(data => {
         const tr = document.createElement('tr');
-        tr.onclick = () => window.open(`https://finance.yahoo.com/quote/${data.ticker}`, '_blank');
+        tr.onclick = () => window.open(`https://finance.yahoo.com/quote/${encodeURIComponent(data.ticker)}`, '_blank');
         
         let rsiClass = 'rsi-neutral';
         const rsiValue = parseFloat(data.rsi);
@@ -992,21 +1120,21 @@ function renderKOSPI200Table() {
         const priceFmt = data.price ? parseFloat(data.price).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : "-";
         
         tr.innerHTML = `
-            <td data-label="순위" style="text-align:center;">${data.rank}</td>
-            <td data-label="종목명"><strong>${data.name}</strong> <span style="color:#888; font-size:0.85em;">(${data.ticker})</span></td>
+            <td data-label="순위" style="text-align:center;">${escapeHtml(data.rank)}</td>
+            <td data-label="종목명"><strong>${escapeHtml(data.name)}</strong> <span style="color:#888; font-size:0.85em;">(${escapeHtml(data.ticker)})</span></td>
             <td data-label="시가 총액">${formatKoreanCap(data.marketCap)}</td>
-            <td data-label="현재가">₩${priceFmt}</td>
-            <td data-label="변동률" class="${getColorClass(data.change)}">${data.change}%</td>
-            <td data-label="MDD" style="color:var(--negative)">${data.mdd}%</td>
+            <td data-label="현재가">₩${escapeHtml(priceFmt)}</td>
+            <td data-label="변동률" class="${getColorClass(data.change)}">${escapeHtml(data.change)}%</td>
+            <td data-label="MDD" style="color:var(--negative)">${escapeHtml(data.mdd)}%</td>
             <td data-label="회복확률">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span class="drawdown-text">${data.recoveryProb}%</span>
+                    <span class="drawdown-text">${escapeHtml(data.recoveryProb)}%</span>
                 </div>
                 <div class="drawdown-bar-container" style="background:rgba(255,255,255,0.1); width:100%; height:4px; border-radius:2px; overflow:hidden; margin-top:4px;">
-                    <div style="background:${parseFloat(data.recoveryProb) >= 80 ? '#4ade80' : '#fb7185'}; width: ${data.recoveryProb}%; height:100%;"></div>
+                    <div style="background:${parseFloat(data.recoveryProb) >= 80 ? '#4ade80' : '#fb7185'}; width: ${parseFloat(data.recoveryProb) || 0}%; height:100%;"></div>
                 </div>
             </td>
-            <td data-label="RSI(14)" style="text-align:center;"><span class="rsi-tag ${rsiClass}">${data.rsi}</span></td>
+            <td data-label="RSI(14)" style="text-align:center;"><span class="rsi-tag ${rsiClass}">${escapeHtml(data.rsi)}</span></td>
             <td data-label="배당률" style="text-align:center; color: var(--primary);">${data.dividendYield}%</td>
         `;
         tableBody.appendChild(tr);
@@ -1069,8 +1197,8 @@ async function fetchWithFallback(targetUrl, isYahoo = false) {
     if (CONFIG.gasURL) {
         tasks.push(fetchTask(CONFIG.gasURL, {
             method: 'POST',
-            body: JSON.stringify({ command: "proxy_yahoo", url: targetUrl })
-        }).catch(() => new Promise(() => {})));
+            body: JSON.stringify({ command: "proxy_yahoo", url: targetUrl, apiKey: CONFIG.gasApiKey || '' })
+        }));
     }
 
     // 2. 공용 프록시 시도
@@ -1079,11 +1207,11 @@ async function fetchWithFallback(targetUrl, isYahoo = false) {
         `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`
     ];
     publicProxies.forEach(proxy => {
-        tasks.push(fetchTask(proxy).catch(() => new Promise(() => {})));
+        tasks.push(fetchTask(proxy));
     });
 
     // 3. 직접 호출 시도 (마지막 수단)
-    tasks.push(fetchTask(targetUrl).catch(() => new Promise(() => {})));
+    tasks.push(fetchTask(targetUrl));
 
     try {
         // 가장 빨리 성공하는 작업 결과 반환
@@ -1091,7 +1219,7 @@ async function fetchWithFallback(targetUrl, isYahoo = false) {
         clearTimeout(timeoutId);
         return fastestResult;
     } catch (e) {
-        console.error("All fetch attempts failed", e);
+        logger.error("All fetch attempts failed", e);
         clearTimeout(timeoutId);
         return null;
     }
@@ -1125,7 +1253,7 @@ function parseYahooData(result, ticker) {
                 close: closes[i]
             })).filter(d => d.close !== null && d.close !== undefined && !isNaN(d.close));
         } catch (e) { 
-            console.error("JSON 파싱 에러:", e);
+            logger.error("JSON 파싱 에러:", e);
             return []; 
         }
     } else if (result.type === 'csv') {
@@ -1179,7 +1307,7 @@ async function analyzeMDD() {
         updateMDDSummary(ticker, mdd, processedData, currentDrawdown);
 
     } catch (err) {
-        console.error(err);
+        logger.error(err);
         alert(`분석 중 오류 발생: ${err.message}`);
     } finally {
         analyzeBtn.disabled = false;
@@ -1337,7 +1465,7 @@ function updateMDDSummary(ticker, mdd, data, currentDrawdown = 0) {
     const totalReturn = ((lastPrice / data[0].close - 1) * 100).toFixed(2);
 
     summary.innerHTML = `
-        <div class="mdd-summary-item"><span class="label">종목</span><span class="value">${ticker}</span></div>
+        <div class="mdd-summary-item"><span class="label">종목</span><span class="value">${escapeHtml(ticker)}</span></div>
         <div class="mdd-summary-item"><span class="label">최대 낙폭</span><span class="value" style="color:var(--negative)">${(mdd * 100).toFixed(2)}%</span></div>
         <div class="mdd-summary-item"><span class="label">현재 낙폭</span><span class="value" style="color:var(--negative)">${currentDrawdown.toFixed(2)}%</span></div>
         <div class="mdd-summary-item"><span class="label">누적 수익률</span><span class="value" style="color:var(--positive)">${totalReturn}%</span></div>
@@ -1378,7 +1506,7 @@ async function updateMarketCharts() {
         { id: 'fx', ticker: 'KRW=X' }
     ];
 
-    console.log("📊 지수 데이터 업데이트 시작...");
+    logger.log("📊 지수 데이터 업데이트 시작...");
 
     await Promise.all(markets.map(async (m) => {
         try {
@@ -1419,6 +1547,7 @@ async function updateMarketCharts() {
                                 valEl.textContent = isMobileMode ? Math.round(lastPrice).toLocaleString() : lastPrice.toFixed(2);
                                 valEl.setAttribute('data-price', lastPrice);
                                 usdKrwRate = lastPrice;
+                                usdKrwRateUpdatedAt = Date.now();
                             } else {
                                 // 지수 표시: 모바일은 소수점 없이, PC는 소수점 2자리(천단위 구분자 포함)
                                 valEl.setAttribute('data-price', lastPrice);
@@ -1439,22 +1568,22 @@ async function updateMarketCharts() {
                 }
             }
         } catch (e) {
-            console.error(`🚨 ${m.id} 업데이트 오류:`, e);
+            logger.error(`🚨 ${m.id} 업데이트 오류:`, e);
         }
     }));
 }
 
 function renderSummary(data, tableElement) {
     if (!data || !Array.isArray(data)) {
-        console.warn("Invalid summary data format:", data);
+        logger.warn("Invalid summary data format:", data);
         return;
     }
     if (!tableElement) {
-        console.warn("Summary table element not found");
+        logger.warn("Summary table element not found");
         return;
     }
     
-    console.log(`요약 데이터 렌더링 시작: ${data.length}행 발견`);
+    logger.log(`요약 데이터 렌더링 시작: ${data.length}행 발견`);
     tableElement.innerHTML = '';
 
     // 스켈레톤 제거
@@ -1463,83 +1592,83 @@ function renderSummary(data, tableElement) {
     try {
         // "합계" 또는 "합산"이 포함된 행 중 평가액(index 1)이 숫자인 행 찾기
         let totalRow = data.find(row => {
-            if (!row[0]) return false;
-            const name = String(row[0]);
-            const evalVal = parseSafeFloat(row[1]);
+            if (!row[SUMMARY_COL.NAME]) return false;
+            const name = String(row[SUMMARY_COL.NAME]);
+            const evalVal = parseSafeFloat(row[SUMMARY_COL.EVAL_TOTAL]);
             return (name.includes("합계") || name.includes("합산")) && evalVal !== 0;
         });
         
         // 만약 못 찾으면 데이터 구조를 분석하여 가장 큰 평가액을 가진 행을 후보로 선택
         if (!totalRow) {
-            const candidates = data.filter(row => row[0] && parseSafeFloat(row[1]) > 0);
+            const candidates = data.filter(row => row[SUMMARY_COL.NAME] && parseSafeFloat(row[SUMMARY_COL.EVAL_TOTAL]) > 0);
             if (candidates.length > 0) {
                 totalRow = candidates.reduce((prev, curr) => 
-                    parseSafeFloat(curr[1]) > parseSafeFloat(prev[1]) ? curr : prev
+                    parseSafeFloat(curr[SUMMARY_COL.EVAL_TOTAL]) > parseSafeFloat(prev[SUMMARY_COL.EVAL_TOTAL]) ? curr : prev
                 );
             }
         }
 
         if (totalRow) {
-            const evalKRW = parseSafeFloat(totalRow[1]);
-            const investKRW = parseSafeFloat(totalRow[2]);
+            const evalKRW = parseSafeFloat(totalRow[SUMMARY_COL.EVAL_TOTAL]);
+            const investKRW = parseSafeFloat(totalRow[SUMMARY_COL.INVEST_TOTAL]);
             
             // 현재 평가액 카드 업데이트 (KRW + USD 병기)
             const evalValEl = document.getElementById('card-eval-val');
             if (evalValEl) {
-                const evalTextKRW = maskValue(totalRow[1]);
+                const evalTextKRW = maskValue(totalRow[SUMMARY_COL.EVAL_TOTAL]);
                 let evalText = getResponsiveValueHTML(evalTextKRW);
-                if (usdKrwRate > 0 && evalKRW > 10000) { 
+                if (isExchangeRateValid() && evalKRW > 10000) { 
                     const evalUSD = evalKRW / usdKrwRate;
                     evalText += ` <span class="value-sub">($${evalUSD.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0})})</span>`;
                 }
                 evalValEl.innerHTML = evalText || "-";
             }
 
-            document.getElementById('card-invest-val').innerHTML = getResponsiveValueHTML(maskValue(totalRow[2])) || "-";
+            document.getElementById('card-invest-val').innerHTML = getResponsiveValueHTML(maskValue(totalRow[SUMMARY_COL.INVEST_TOTAL])) || "-";
             
             const profitElem = document.getElementById('card-profit-val');
-            profitElem.innerHTML = getResponsiveValueHTML(maskValue(totalRow[3])) || "0";
-            profitElem.className = 'value ' + getColorClass(totalRow[3]);
+            profitElem.innerHTML = getResponsiveValueHTML(maskValue(totalRow[SUMMARY_COL.PROFIT])) || "0";
+            profitElem.className = 'value ' + getColorClass(totalRow[SUMMARY_COL.PROFIT]);
             
             const rateElem = document.getElementById('card-rate-val');
-            rateElem.textContent = totalRow[4] || "0%";
-            rateElem.className = 'value ' + getColorClass(totalRow[4]);
+            rateElem.textContent = totalRow[SUMMARY_COL.RETURN_RATE] || "0%";
+            rateElem.className = 'value ' + getColorClass(totalRow[SUMMARY_COL.RETURN_RATE]);
 
             const dailyElem = document.getElementById('card-daily-val');
             if (dailyElem) {
-                const changePct = totalRow[5] || "0%";
-                const changeAmt = getResponsiveValueHTML(maskValue(totalRow[6])) || "0";
+                const changePct = totalRow[SUMMARY_COL.DAILY_CHANGE_PCT] || "0%";
+                const changeAmt = getResponsiveValueHTML(maskValue(totalRow[SUMMARY_COL.DAILY_CHANGE_AMT])) || "0";
                 dailyElem.innerHTML = `${changePct} <span style="font-size:0.6em; opacity:0.8;">(${changeAmt})</span>`;
-                dailyElem.className = 'value ' + getColorClass(totalRow[5]);
+                dailyElem.className = 'value ' + getColorClass(totalRow[SUMMARY_COL.DAILY_CHANGE_PCT]);
             }
 
-            document.getElementById('card-dividend-val').innerHTML = getResponsiveValueHTML(maskValue(totalRow[12])) || "0";
+            document.getElementById('card-dividend-val').innerHTML = getResponsiveValueHTML(maskValue(totalRow[SUMMARY_COL.DIVIDEND])) || "0";
         }
-    } catch (e) { console.warn("Summary parsing error", e); }
+    } catch (e) { logger.warn("Summary parsing error", e); }
 
     const labels = [], invests = [], evals = [];
-    const headerIndex = data.findIndex(row => row[0] && row[0].includes("계좌명"));
+    const headerIndex = data.findIndex(row => row[SUMMARY_COL.NAME] && row[SUMMARY_COL.NAME].includes("계좌명"));
     const startIndex = headerIndex !== -1 ? headerIndex + 1 : 0;
 
     data.forEach((row, i) => {
-        if (i < startIndex || !row[0] || row[0].includes("계좌명") || row[0].includes("합산") || row[0].includes("합계")) return;
+        if (i < startIndex || !row[SUMMARY_COL.NAME] || row[SUMMARY_COL.NAME].includes("계좌명") || row[SUMMARY_COL.NAME].includes("합산") || row[SUMMARY_COL.NAME].includes("합계")) return;
         
-        const name = row[0].trim(); 
+        const name = row[SUMMARY_COL.NAME].trim(); 
         if (name === "") return;
         
-        const evalNum = parseSafeFloat(row[1]), investNum = parseSafeFloat(row[2]);
+        const evalNum = parseSafeFloat(row[SUMMARY_COL.EVAL_TOTAL]), investNum = parseSafeFloat(row[SUMMARY_COL.INVEST_TOTAL]);
         labels.push(maskValue(name, true)); 
         invests.push(investNum); 
         evals.push(evalNum);
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td data-label="계좌명"><span>${maskValue(name, true)}</span></td>
-            <td data-label="평가금"><span>${maskValue(row[1])}</span></td>
-            <td data-label="투자금"><span>${maskValue(row[2])}</span></td>
-            <td data-label="수입액" class="${getColorClass(row[3])}"><span>${maskValue(row[3])}</span></td>
-            <td data-label="수익률" class="${getColorClass(row[4])}"><span>${maskValue(row[4])}</span></td>
-            <td data-label="일일변동" class="${getColorClass(row[5])}"><span>${maskValue(row[5])} <span style="font-size:0.85em; opacity:0.8;">(${maskValue(row[6])})</span></span></td>
+            <td data-label="계좌명"><span>${safeValue(name, true)}</span></td>
+            <td data-label="평가금"><span>${safeValue(row[SUMMARY_COL.EVAL_TOTAL])}</span></td>
+            <td data-label="투자금"><span>${safeValue(row[SUMMARY_COL.INVEST_TOTAL])}</span></td>
+            <td data-label="수입액" class="${getColorClass(row[SUMMARY_COL.PROFIT])}"><span>${safeValue(row[SUMMARY_COL.PROFIT])}</span></td>
+            <td data-label="수익률" class="${getColorClass(row[SUMMARY_COL.RETURN_RATE])}"><span>${safeValue(row[SUMMARY_COL.RETURN_RATE])}</span></td>
+            <td data-label="일일변동" class="${getColorClass(row[SUMMARY_COL.DAILY_CHANGE_PCT])}"><span>${safeValue(row[SUMMARY_COL.DAILY_CHANGE_PCT])} <span style="font-size:0.85em; opacity:0.8;">(${safeValue(row[SUMMARY_COL.DAILY_CHANGE_AMT])})</span></span></td>
         `;
         tableElement.appendChild(tr);
     });
@@ -1548,10 +1677,10 @@ function renderSummary(data, tableElement) {
 
 function processHoldingsData(data) {
     if (!data || !Array.isArray(data)) {
-        console.warn("Invalid holdings data format:", data);
+        logger.warn("Invalid holdings data format:", data);
         return;
     }
-    console.log(`보유 종목 데이터 처리 시작: ${data.length}행 발견`);
+    logger.log(`보유 종목 데이터 처리 시작: ${data.length}행 발견`);
     globalHoldings = [];
 
     // 매매 기록용 종목 선택 드롭다운 초기화
@@ -1562,42 +1691,56 @@ function processHoldingsData(data) {
 
     const addedStocks = new Set();
     data.forEach((row, i) => {
-        if (i === 0 || !row[0] || ["종목명", "환율"].includes(row[0])) return;
+        if (i === 0 || !row[HOLDINGS_COL.NAME] || ["종목명", "환율"].includes(row[HOLDINGS_COL.NAME])) return;
 
         // 한국 주식 여부 (6자리 숫자 티커 또는 특정 종목명)
-        const nameValue = row[0] || '';
-        const tickerValue = row[1] || '';
-        const isKRW = /^\d{6}$/.test(tickerValue.replace('KRX:', '')) || nameValue.toLowerCase().includes('plus50');
+        const nameValue = row[HOLDINGS_COL.NAME] || '';
+        const tickerValue = row[HOLDINGS_COL.TICKER] || '';
+        const isKRW = isKoreanStock(tickerValue) || nameValue.toLowerCase().includes('plus50');
         const currency = isKRW ? 'KRW' : 'USD';
 
         // 드롭다운에 추가 (중복 제거)
-        if (stockSelect && row[0] && !addedStocks.has(row[0])) {
-            addedStocks.add(row[0]);
+        if (stockSelect && row[HOLDINGS_COL.NAME] && !addedStocks.has(row[HOLDINGS_COL.NAME])) {
+            addedStocks.add(row[HOLDINGS_COL.NAME]);
             const opt = document.createElement('option');
-            opt.value = row[0]; // 종목명
+            opt.value = row[HOLDINGS_COL.NAME]; // 종목명
             opt.dataset.ticker = tickerValue; // 티커
             opt.dataset.currency = currency; // 통화 정보 추가
-            opt.textContent = row[0];
+            opt.textContent = row[HOLDINGS_COL.NAME];
             stockSelect.appendChild(opt);
         }
 
-        const weight = parseSafeFloat(row[9]), evalKRW = parseSafeFloat(row[8]);
+        const weight = parseSafeFloat(row[HOLDINGS_COL.WEIGHT]);
+        const evalKRW = parseSafeFloat(row[HOLDINGS_COL.EVAL_KRW]);
         if (weight === 0 && evalKRW === 0) return;
 
-        const rawTicker = row[1] || '';
+        const rawTicker = row[HOLDINGS_COL.TICKER] || '';
         const ticker = rawTicker.includes(':') ? rawTicker.split(':').pop() : rawTicker;
 
         globalHoldings.push({
-            name: row[0], ticker: ticker, currency, weight, returnRate: parseSafeFloat(row[7]), eval: evalKRW,
-            profit: parseSafeFloat(row[14]), dailyChange: parseSafeFloat(row[10]),
-            shares: row[3] || '-',
-            avgCost: row[4] || '-',
-            currentPriceKRW: row[5] || row[8] || '-',
-            display: { weight: row[9], returnRate: row[7], evalKRW: row[8], profitKRW: row[14], dailyChange: row[10], currentPrice: row[5] || row[8] }
+            name: row[HOLDINGS_COL.NAME],
+            ticker: ticker,
+            currency,
+            weight,
+            returnRate: parseSafeFloat(row[HOLDINGS_COL.RETURN_RATE]),
+            eval: evalKRW,
+            profit: parseSafeFloat(row[HOLDINGS_COL.PROFIT]),
+            dailyChange: parseSafeFloat(row[HOLDINGS_COL.DAILY_CHANGE]),
+            shares: row[HOLDINGS_COL.SHARES] || '-',
+            avgCost: row[HOLDINGS_COL.AVG_COST] || '-',
+            currentPriceKRW: row[HOLDINGS_COL.CURRENT_PRICE] || row[HOLDINGS_COL.EVAL_KRW] || '-',
+            display: {
+                weight: row[HOLDINGS_COL.WEIGHT],
+                returnRate: row[HOLDINGS_COL.RETURN_RATE],
+                evalKRW: row[HOLDINGS_COL.EVAL_KRW],
+                profitKRW: row[HOLDINGS_COL.PROFIT],
+                dailyChange: row[HOLDINGS_COL.DAILY_CHANGE],
+                currentPrice: row[HOLDINGS_COL.CURRENT_PRICE] || row[HOLDINGS_COL.EVAL_KRW]
+            }
         });
     });
     
-    console.log(`보유 종목 처리 완료: ${globalHoldings.length}종목 추출됨`);
+    logger.log(`보유 종목 처리 완료: ${globalHoldings.length}종목 추출됨`);
     
     // 리스크 분석 필터 초기화 (전체로 리셋)
     const bubbleFilters = document.querySelectorAll('#bubble-filter-group .sort-btn');
@@ -1638,10 +1781,8 @@ function renderHoldingsTable() {
         tr.style.cursor = 'pointer';
         tr.onclick = () => openStockModal(item);
 
-        // 한국 주식 여부 (6자리 숫자 티커)
-        const isKR = /^\d{6}/.test(item.ticker);
-        const formattedProfit = maskValue(item.display.profitKRW + '원');
-        const formattedEval = maskValue(item.display.evalKRW + '원');
+        const formattedProfit = escapeHtml(maskValue(item.display.profitKRW + '원'));
+        const formattedEval = escapeHtml(maskValue(item.display.evalKRW + '원'));
 
         const currencyLabel = item.currency === 'KRW' ? 'KRW' : 'USD';
         const currencyClass = item.currency === 'KRW' ? 'krw' : '';
@@ -1649,15 +1790,15 @@ function renderHoldingsTable() {
         tr.innerHTML = `
             <td data-label="종목명">
                 <div style="display: flex; align-items: center; gap: 8px; justify-content: flex-end;">
-                    ${maskValue(item.name, true)}
+                    ${safeValue(item.name, true)}
                     <span class="card-currency-badge ${currencyClass}" style="font-size: 0.6rem; padding: 1px 4px;">${currencyLabel}</span>
                 </div>
             </td>
-            <td data-label="비중"><span>${item.display.weight}%</span></td>
-            <td data-label="수익률" class="${getColorClass(item.display.returnRate)}"><span>${item.display.returnRate}%</span></td>
+            <td data-label="비중"><span>${escapeHtml(item.display.weight)}%</span></td>
+            <td data-label="수익률" class="${getColorClass(item.display.returnRate)}"><span>${escapeHtml(item.display.returnRate)}%</span></td>
             <td data-label="수익액" class="${getColorClass(item.display.profitKRW)}"><span>${formattedProfit}</span></td>
             <td data-label="평가금"><span>${formattedEval}</span></td>
-            <td data-label="일일변동" class="${getColorClass(item.display.dailyChange)}"><span>${item.display.dailyChange}%</span></td>
+            <td data-label="일일변동" class="${getColorClass(item.display.dailyChange)}"><span>${escapeHtml(item.display.dailyChange)}%</span></td>
         `;
         tbody.appendChild(tr);
     });
@@ -1690,7 +1831,7 @@ function renderHoldingsCards() {
     grid.innerHTML = '';
 
     // Destroy existing sparkline charts
-    Object.values(sparklineCharts).forEach(c => { try { c.destroy(); } catch (e) { console.warn("Resource cleanup/fetch error:", e); } });
+    Object.values(sparklineCharts).forEach(c => { try { c.destroy(); } catch (e) { logger.warn("Resource cleanup/fetch error:", e); } });
 
     // --- 상승/하락 카운터 ---
     const upCount = globalHoldings.filter(h => h.dailyChange >= 0).length;
@@ -1730,8 +1871,8 @@ function renderHoldingsCards() {
             displayPrice = '$' + item.display.currentPrice;
         }
 
-        // Privacy Mode 적용
-        displayPrice = maskValue(displayPrice);
+        // Privacy Mode 적용 (innerHTML 삽입 전 escape 포함)
+        const displayPriceSafe = escapeHtml(maskValue(displayPrice));
 
         const currencyLabel = item.currency === 'KRW' ? 'KRW' : 'USD';
         const currencyClass = item.currency === 'KRW' ? 'krw' : '';
@@ -1753,18 +1894,18 @@ function renderHoldingsCards() {
             <div class="card-top">
                 <div class="card-ticker-section">
                     <div class="card-ticker-row">
-                        <span class="card-ticker">${maskValue(item.ticker || item.name, true)}</span>
+                        <span class="card-ticker">${safeValue(item.ticker || item.name, true)}</span>
                         <span class="card-currency-badge ${currencyClass}">${currencyLabel}</span>
-                        ${weightText ? `<span class="card-weight-badge">${weightText}</span>` : ''}
+                        ${weightText ? `<span class="card-weight-badge">${escapeHtml(weightText)}</span>` : ''}
                     </div>
-                    <div class="card-company">${maskValue(item.name, true)}</div>
+                    <div class="card-company">${safeValue(item.name, true)}</div>
                 </div>
                 <div class="card-trend-icon ${posClass}">${trendSvg}</div>
             </div>
 
             <div class="card-price-section">
-                <div class="card-price">${displayPrice}</div>
-                <div class="card-change ${posClass}">${changeSign}${item.display.dailyChange}%</div>
+                <div class="card-price">${displayPriceSafe}</div>
+                <div class="card-change ${posClass}">${changeSign}${escapeHtml(item.display.dailyChange)}%</div>
             </div>
 
             <div class="card-sparkline">
@@ -1774,11 +1915,11 @@ function renderHoldingsCards() {
             <div class="card-bottom">
                 <div class="card-bottom-row">
                     <span class="label">Shares</span>
-                    <span class="value">${maskValue(item.shares) || '-'}</span>
+                    <span class="value">${safeValue(item.shares) || '-'}</span>
                 </div>
                 <div class="card-bottom-row">
                     <span class="label">Total Value</span>
-                    <span class="value">${maskValue(item.display.evalKRW) || '-'}원</span>
+                    <span class="value">${safeValue(item.display.evalKRW) || '-'}원</span>
                 </div>
             </div>
         `;
@@ -1803,7 +1944,7 @@ function drawSparkline(canvasId, item, isPositive) {
     const color = isPositive ? '#4ade80' : '#fb7185';
 
     if (sparklineCharts[canvasId]) {
-        try { sparklineCharts[canvasId].destroy(); } catch (e) { console.warn("Resource cleanup/fetch error:", e); }
+        try { sparklineCharts[canvasId].destroy(); } catch (e) { logger.warn("Resource cleanup/fetch error:", e); }
     }
 
     const gradient = ctx.createLinearGradient(0, 0, 0, 40);
@@ -1867,6 +2008,12 @@ function switchHoldingsView(view) {
         tableView.style.display = 'block';
         cardsBtn.classList.remove('active');
         tableBtn.classList.add('active');
+
+        // 카드 뷰 비활성화 시 스파크라인 Chart.js 인스턴스 정리 (메모리 누수 방지)
+        Object.keys(sparklineCharts).forEach(id => {
+            try { sparklineCharts[id].destroy(); } catch (e) { /* ignore */ }
+            delete sparklineCharts[id];
+        });
     }
 }
 
@@ -1883,7 +2030,7 @@ async function openStockModal(item) {
     const isPositive = item.dailyChange >= 0;
     const posClass = isPositive ? 'positive' : 'negative';
     const changeSign = isPositive ? '+' : '';
-    const currencyIsKRW = item.ticker && /^\d{6}/.test(item.ticker);
+    const currencyIsKRW = isKoreanStock(item.ticker);
     const currencyLabel = currencyIsKRW ? 'KRW' : 'USD';
 
     // 헬퍼 함수
@@ -1909,7 +2056,7 @@ async function openStockModal(item) {
     
     // 3. 가장 위 마켓 밸류: 원화(달러) 형식
     let displayEval = fmtKRW(evalKRWNum);
-    if (!currencyIsKRW && usdKrwRate > 100) {
+    if (!currencyIsKRW && isExchangeRateValid()) {
         displayEval += `(${fmtUSDabs(evalKRWNum / usdKrwRate)})`;
     }
     document.getElementById('modal-current-price').textContent = maskValue(displayEval);
@@ -1919,7 +2066,7 @@ async function openStockModal(item) {
     const pctElem = document.getElementById('modal-price-pct');
     
     let displayDiff = fmtKRWS(dailyAmtKRW);
-    if (!currencyIsKRW && usdKrwRate > 100) {
+    if (!currencyIsKRW && isExchangeRateValid()) {
         displayDiff += `(${fmtUSD(dailyAmtKRW / usdKrwRate)})`;
     }
     diffElem.textContent = maskValue(displayDiff);
@@ -1939,7 +2086,7 @@ async function openStockModal(item) {
     const todayPLEl = document.getElementById('modal-today-pl');
     const todayPLSubEl = document.getElementById('modal-today-pl-sub');
 
-    if (!currencyIsKRW && usdKrwRate > 100) {
+    if (!currencyIsKRW && isExchangeRateValid()) {
         // USD 종목: 달러(메인) + 원화(보조)
         const avgCostUSD = avgCostNum > 0 ? avgCostNum / usdKrwRate : 0;
         avgCostEl.textContent = maskValue(avgCostUSD > 0 ? fmtUSDabs(avgCostUSD) : (item.avgCost || '-'));
@@ -2029,11 +2176,11 @@ async function fetchModalChartData(ticker, range) {
 
             // Update meta info in modal if available
             if (meta.marketCap) {
-                const isKRW = /^\d{6}/.test(ticker);
+                const isKRW = isKoreanStock(ticker);
                 document.getElementById('modal-market-cap').textContent = isKRW ? formatKoreanCap(meta.marketCap) : formatBillion(meta.marketCap);
             }
             if (meta.fiftyTwoWeekHigh) {
-                const isKRW = /^\d{6}/.test(ticker);
+                const isKRW = isKoreanStock(ticker);
                 document.getElementById('modal-52w-high').textContent = isKRW ? Math.round(meta.fiftyTwoWeekHigh).toLocaleString() + '원' : '$' + meta.fiftyTwoWeekHigh.toFixed(2);
             }
 
@@ -2079,7 +2226,7 @@ async function fetchModalChartData(ticker, range) {
             });
         }
     } catch (e) {
-        console.warn("Chart data load failed", e);
+        logger.warn("Chart data load failed", e);
         if (intradayChart) {
             intradayChart.destroy();
             intradayChart = new Chart(ctx, { type: 'line', data: { labels: [], datasets: [] }, options: { plugins: { title: { display: true, text: 'Failed to load chart data' } } } });
@@ -2174,7 +2321,7 @@ function renderHistoryChartWithRange() {
         }
         
         filteredData = data.filter(row => {
-            let dateStr = row[0];
+            let dateStr = row[HISTORY_COL.DATE];
             // 구글 시트의 "YY. MM. DD" 형식을 "20YY-MM-DD" 로 변환하여 파싱 에러 방지
             if (typeof dateStr === 'string' && /^\d{2}\.\s*\d{2}\.\s*\d{2}$/.test(dateStr)) {
                 dateStr = '20' + dateStr.replace(/\.\s*/g, '-');
@@ -2183,11 +2330,11 @@ function renderHistoryChartWithRange() {
         });
     }
 
-    const labels = filteredData.map(row => row[0]);
-    const evals = filteredData.map(row => parseSafeFloat(row[1]));
-    const invests = filteredData.map(row => parseSafeFloat(row[2]));
-    const profits = filteredData.map(row => parseSafeFloat(row[3])); // 3번째 열: 총 수입액
-    const dividends = filteredData.map(row => parseSafeFloat(row[11])); // 11번째 열: 배당금
+    const labels = filteredData.map(row => row[HISTORY_COL.DATE]);
+    const evals = filteredData.map(row => parseSafeFloat(row[HISTORY_COL.EVAL_TOTAL]));
+    const invests = filteredData.map(row => parseSafeFloat(row[HISTORY_COL.INVEST_TOTAL]));
+    const profits = filteredData.map(row => parseSafeFloat(row[HISTORY_COL.PROFIT]));
+    const dividends = filteredData.map(row => parseSafeFloat(row[HISTORY_COL.DIVIDEND]));
 
     const gradient = ctx.createLinearGradient(0, 0, 0, 400);
     gradient.addColorStop(0, 'rgba(56, 189, 248, 0.2)');
@@ -2395,8 +2542,8 @@ async function handleTransactionSubmit(e) {
                 return;
             }
 
-            // 한국 주식 (6자리 숫자) 처리: 접두사가 없으면 KRX: 추가
-            if (/^\d{6}$/.test(rawTicker)) {
+        // 한국 주식 (6자리 숫자) 처리: 접두사가 없으면 KRX: 추가
+            if (isKoreanStock(rawTicker)) {
                 stockCode = 'KRX:' + rawTicker;
             } else {
                 stockCode = rawTicker;
@@ -2433,7 +2580,7 @@ async function handleTransactionSubmit(e) {
             mode: 'no-cors',
             cache: 'no-cache',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(formData)
+            body: JSON.stringify({ ...formData, apiKey: CONFIG.gasApiKey || '' })
         });
 
         // 성공 알림 (간단하게 버튼 텍스트 변경)
@@ -2459,7 +2606,7 @@ async function handleTransactionSubmit(e) {
         }, 1500);
 
     } catch (err) {
-        console.error('GAS transaction failed:', err);
+        logger.error('GAS transaction failed:', err);
         alert('전송 실패: ' + err.message);
         submitBtn.disabled = false;
         submitBtn.textContent = '기록하기 🐕';
@@ -2468,18 +2615,17 @@ async function handleTransactionSubmit(e) {
 
 async function requestMarketRefresh(account = null) {
     try {
-        const payload = { command: "refresh_market" };
+        const payload = { command: "refresh_market", apiKey: CONFIG.gasApiKey || '' };
         if (account) payload.account = account;
 
-        console.log(`${account || '전체'} 시트 데이터 갱신 요청 중...`);
-        // fetch promise를 반환하여 await 가능하게 함
+        logger.log(`${account || '전체'} 시트 데이터 갱신 요청 중...`);
         return fetch(CONFIG.gasURL, {
             method: 'POST',
             mode: 'no-cors',
             body: JSON.stringify(payload)
         });
     } catch (e) {
-        console.warn('Market refresh request failed:', e);
+        logger.warn('Market refresh request failed:', e);
         return Promise.resolve();
     }
 }
@@ -2592,7 +2738,7 @@ async function updateLivePrices(dataArray, isKorean = false) {
                     });
                 }
             } catch (e) {
-                console.warn(`Live update failed for ${item.ticker}`, e);
+                logger.warn(`Live update failed for ${item.ticker}`, e);
             }
         }));
         
