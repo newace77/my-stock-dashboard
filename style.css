@@ -1673,14 +1673,18 @@ body.force-pc .container {
 }
 
 .heatmap-wrapper {
-    display: inline-block;
-    min-width: 100%;
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .heatmap-table {
     border-collapse: separate;
     border-spacing: 2px;
     font-size: 0.7rem;
+    table-layout: fixed; /* 셀 크기 고정 */
+    width: max-content; /* 테이블이 내용에 맞게 너비 조절 */
 }
 
 .heatmap-table th {
@@ -1688,7 +1692,7 @@ body.force-pc .container {
     font-weight: 500;
     color: var(--text-muted);
     text-align: center;
-    min-width: 15px;
+    width: 15px; /* 너비 명시적 고정 */
 }
 
 .heatmap-table td.hm-month-label {
@@ -1698,6 +1702,7 @@ body.force-pc .container {
     font-weight: 600;
     white-space: nowrap;
     font-size: 0.75rem;
+    width: 80px; /* 라벨 영역 너비 확보 */
 }
 
 .hm-cell {
@@ -1708,22 +1713,25 @@ body.force-pc .container {
     transition: transform 0.2s;
     cursor: pointer;
     position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 9px;
-    line-height: 1;
+    /* display: flex 제거 - 테이블 레이아웃 파괴 원인 */
+    text-align: center;
+    vertical-align: middle;
+    font-size: 8px;
+    line-height: 13px; /* 높이와 맞춰 중앙 정렬 효과 */
+    padding: 0 !important; /* 모바일 전역 스타일 오버라이드 방지 */
+    display: table-cell !important; /* 테이블 셀 유지 강제 */
 }
 
 .hm-cell.hm-empty {
     background: rgba(255, 255, 255, 0.03);
-    color: rgba(0, 0, 0, 0.5);
+    color: rgba(255, 255, 255, 0.2); /* 대비 조정 */
     cursor: default;
 }
 
-.hm-cell.hm-empty:hover {
-    transform: none;
-    box-shadow: none;
+.hm-cell:not(.hm-empty):hover {
+    transform: scale(1.4);
+    z-index: 10;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
 }
 .hm-missing { background: rgba(71, 85, 105, 0.3); } /* 날짜는 있으나 데이터가 연속되지 않음 */
 
