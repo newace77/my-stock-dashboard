@@ -165,33 +165,11 @@
 
                     <section class="card">
                         <div class="holdings-header">
-                            <div class="holdings-header-left">
-                                <h2>📋 보유 종목 (Holdings)</h2>
-                                <div class="holdings-stat-badges">
-                                    <span class="holdings-badge up" id="holdings-up-count" title="상승 종목">▲ 0</span>
-                                    <span class="holdings-badge down" id="holdings-down-count" title="하락 종목">▼ 0</span>
-                                </div>
-                            </div>
-                            <div class="holdings-header-right">
-                                <div class="holdings-sort-group">
-                                    <button class="sort-btn active" id="sort-btn-weight"   onclick="setHoldingsSort('weight')"    >비중</button>
-                                    <button class="sort-btn"        id="sort-btn-return"   onclick="setHoldingsSort('returnRate')" >수익률</button>
-                                    <button class="sort-btn"        id="sort-btn-profit"   onclick="setHoldingsSort('profit')"    >수익액</button>
-                                    <button class="sort-btn"        id="sort-btn-change"   onclick="setHoldingsSort('dailyChange')">변화율</button>
-                                </div>
-                                <div class="holdings-view-toggle">
-                                    <button class="view-btn active" id="view-cards-btn" onclick="switchHoldingsView('cards')" title="카드 뷰">⊞</button>
-                                    <button class="view-btn" id="view-table-btn" onclick="switchHoldingsView('table')" title="테이블 뷰" style="display:none;">☰</button>
-                                </div>
-                            </div>
+                            <h2>📋 보유 종목 (Holdings)</h2>
                         </div>
 
-
-                        <!-- 카드 뷰 -->
-                        <div id="holdings-cards-view" class="holdings-cards-grid"></div>
-
                         <!-- 테이블 뷰 -->
-                        <div id="holdings-table-view" class="table-wrapper" style="display:none;">
+                        <div id="holdings-table-view" class="table-wrapper">
                             <table id="holdings-table">
                                 <thead>
                                     <tr>
