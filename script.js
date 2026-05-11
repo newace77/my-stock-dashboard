@@ -672,6 +672,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // 모바일 기기 감지 시 카드 뷰를 기본으로 설정 (사용자 요청에 따라 테이블 뷰로 변경)
     if (window.innerWidth < 768) {
         switchHoldingsView('table');
+    } else {
+        // PC에서도 기본은 테이블 뷰
+        switchHoldingsView('table');
     }
 
     // 페이지 로드 시 구글 시트 데이터 갱신 요청 (Non-blocking)
