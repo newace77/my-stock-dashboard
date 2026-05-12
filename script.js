@@ -68,17 +68,17 @@ function isKoreanStock(ticker) {
  * 구글 시트 Holdings 컬럼 인덱스 매핑
  */
 const HOLDINGS_COL = {
-    NAME: 0,
-    TICKER: 1,
-    SHARES: 3,
-    COST_BASIS: 4,
-    AVG_COST: 7,
-    CURRENT_PRICE: 8,
-    RETURN_RATE: 9,
-    EVAL_KRW: 10,
-    WEIGHT: 11,
-    DAILY_CHANGE: 12,
-    PROFIT: 16
+    NAME: 0,           // 1열
+    TICKER: 1,         // (기존 유지)
+    SHARES: 3,         // (기존 유지)
+    COST_BASIS: 4,     // (기존 유지)
+    AVG_COST: 5,       // (기존 유지)
+    CURRENT_PRICE: 6,  // (기존 유지)
+    RETURN_RATE: 7,    // 8열
+    EVAL_KRW: 8,       // 9열
+    WEIGHT: 9,         // 10열
+    DAILY_CHANGE: 10,  // 11열
+    PROFIT: 14         // 15열
 };
 
 /**
