@@ -69,16 +69,16 @@ function isKoreanStock(ticker) {
  */
 const HOLDINGS_COL = {
     NAME: 0,           // 1열
-    TICKER: 1,         // (기존 유지)
-    SHARES: 3,         // (기존 유지)
-    COST_BASIS: 4,     // (기존 유지)
-    AVG_COST: 5,       // (기존 유지)
-    CURRENT_PRICE: 6,  // (기존 유지)
-    RETURN_RATE: 7,    // 8열
-    EVAL_KRW: 8,       // 9열
-    WEIGHT: 9,         // 10열
-    DAILY_CHANGE: 10,  // 11열
-    PROFIT: 14         // 15열
+    TICKER: 1,         // (데이터 어긋남 가능성 있음)
+    SHARES: 1,         // 4열 -> index 1
+    COST_BASIS: 2,     // 5열 -> index 2
+    AVG_COST: 2,       // 5열 -> index 2
+    CURRENT_PRICE: 3,  // 6열 -> index 3
+    RETURN_RATE: 5,    // 8열 -> index 5
+    EVAL_KRW: 6,       // 9열 -> index 6
+    WEIGHT: 7,         // 10열 -> index 7
+    DAILY_CHANGE: 8,   // 11열 -> index 8
+    PROFIT: 12         // 15열 -> index 12
 };
 
 /**
