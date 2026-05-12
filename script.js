@@ -2310,12 +2310,17 @@ function renderBubbleChart(data) {
     const ctx = document.getElementById('bubbleChart').getContext('2d');
     if (bubbleChart) bubbleChart.destroy();
 
+    // 평가금액 기준 정규화를 위한 최대값 계산
+    const maxEval = Math.max(...data.map(h => h.eval || 0), 1);
+
     const bubbleData = data.map(h => ({
         x: h.dailyChange,
         y: h.returnRate,
-        r: Math.sqrt(h.weight) * 5 + 5,
+        // 평가금액에 비례하도록 수정 (Area ∝ Value => r ∝ sqrt(Value))
+        r: Math.sqrt((h.eval || 0) / maxEval) * 35 + 6,
         name: h.name,
         profit: h.profit,
+        eval: h.eval,
         ticker: h.ticker
     }));
 
@@ -2349,10 +2354,11 @@ function renderBubbleChart(data) {
                 tooltip: {
                     callbacks: {
                         label: (context) => {
-                            const name = context.dataset.label;
                             const d = context.raw;
+                            const name = d.name;
                             const profitStr = d.profit ? ` / 수익: ${maskValue(d.profit.toLocaleString())}원` : '';
-                            return `${maskValue(name, true)}: 수익률 ${d.y.toFixed(2)}%, 일변동 ${d.x.toFixed(2)}%${profitStr}`;
+                            const evalStr = d.eval ? ` / 평가: ${maskValue(d.eval.toLocaleString())}원` : '';
+                            return `${maskValue(name, true)}: 수익률 ${d.y.toFixed(2)}%, 일변동 ${d.x.toFixed(2)}%${profitStr}${evalStr}`;
                         }
                     }
                 }
@@ -2370,17 +2376,18 @@ function renderBubbleChart(data) {
                             const data = dataset.data[index];
                             const radius = element.options.radius;
 
-                            // 버블이 아주 작지 않으면 이름 표시
-                            if (radius > 8) {
+                            // 버블이 너무 작지 않으면 이름 표시
+                            if (radius > 6) {
                                 const displayName = maskValue(data.name, true);
                                 ctx.fillStyle = '#ffffff';
-                                const fontSize = Math.max(Math.min(radius / 2.2, 13), 8);
+                                // 글자 크기 조정
+                                const fontSize = Math.max(Math.min(radius / 2.5, 14), 8);
                                 ctx.font = `bold ${fontSize}px Pretendard`;
                                 ctx.textAlign = 'center';
                                 ctx.textBaseline = 'middle';
 
                                 // 가독성을 위한 강한 그림자
-                                ctx.shadowBlur = 6;
+                                ctx.shadowBlur = 4;
                                 ctx.shadowColor = 'rgba(0,0,0,0.8)';
                                 ctx.fillText(displayName, x, y);
                                 ctx.shadowBlur = 0;
