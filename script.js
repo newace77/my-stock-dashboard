@@ -201,26 +201,75 @@ function maskValue(val, isName = false) {
  * @param {string} valStr 원래 표시할 문자열 (예: "15,000,000")
  * @returns {string} 반응형 클래스가 적용된 HTML 문자열
  */
+/**
+ * 금액 포맷팅 (모바일: 만/억 단위, PC: 전체 숫자)
+ * @param {number|string} val 
+ * @param {boolean} isKRW 
+ * @returns {string}
+ */
+function formatValueByMode(val, isKRW = true) {
+    const num = parseSafeFloat(val);
+    const isMobile = userViewMode === 'mobile' || (userViewMode === 'auto' && window.innerWidth <= 768);
+    
+    if (!isMobile) {
+        if (isKRW) return Math.round(num).toLocaleString('ko-KR') + '원';
+        return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    // 모바일 포맷팅 (만/억 단위)
+    const absNum = Math.abs(num);
+    const sign = num < 0 ? '-' : '';
+    let result = '';
+
+    if (isKRW) {
+        if (absNum >= 100000000) {
+            result = sign + (absNum / 100000000).toFixed(1).replace(/\.0$/, '') + '억';
+        } else if (absNum >= 10000) {
+            result = sign + (absNum / 10000).toFixed(0) + '만';
+        } else {
+            result = sign + Math.round(absNum).toLocaleString() + '원';
+        }
+    } else {
+        // USD는 모바일에서도 가급적 소수점 유지하되 $ 표시
+        if (absNum >= 1000) {
+            result = sign + '$' + (absNum / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+        } else {
+            result = sign + '$' + absNum.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+        }
+    }
+    return result;
+}
+
+/**
+ * 수익률 포맷팅 (소수점 2자리 고정)
+ * @param {number|string} val 
+ * @returns {string}
+ */
+function formatPercent(val) {
+    const num = parseSafeFloat(val);
+    return num.toFixed(2) + '%';
+}
+
 function getResponsiveValueHTML(valStr) {
     if (!valStr || valStr === "-" || typeof valStr !== 'string') return valStr;
-    // 마스킹된 값이거나 비율(%)이면 그대로 반환
-    if (valStr.includes('●') || valStr.includes('%')) return valStr;
+    // 마스킹된 값이면 그대로 반환
+    if (valStr.includes('●')) return valStr;
+    
+    // 비율(%) 데이터면 소수점 2자리 강제 적용
+    if (valStr.includes('%')) {
+        return formatPercent(valStr);
+    }
     
     // 원본에서 숫자만 추출 (음수 기호 포함)
     const numStr = valStr.replace(/[^\d.-]/g, '');
     const num = Number(numStr);
     
-    if (!isNaN(num) && Math.abs(num) >= 10000) {
-        let shortStr = "";
-        const absNum = Math.abs(num);
-        const sign = num < 0 ? "-" : (valStr.startsWith("+") ? "+" : "");
-        if (absNum >= 100000000) { // 1억 이상
-            shortStr = sign + (absNum / 100000000).toFixed(2).replace(/\.?0+$/, '') + "억";
-        } else if (absNum >= 10000) { // 1만 이상
-            shortStr = sign + (absNum / 10000).toFixed(0) + "만";
-        }
+    if (!isNaN(num)) {
+        const isKRW = !valStr.includes('$');
+        const shortStr = formatValueByMode(num, isKRW);
         
-        if (shortStr) {
+        // PC 모드에서는 툴팁으로 원본 값을 보여주기 위해 span 래핑 (기존 호환성 유지)
+        if (shortStr !== valStr) {
             return `<span class="full-val">${valStr}</span><span class="short-val">${shortStr}</span>`;
         }
     }
@@ -1810,8 +1859,11 @@ function renderHoldingsTable() {
         tr.style.cursor = 'pointer';
         tr.onclick = () => openStockModal(item);
 
-        const formattedProfit = escapeHtml(maskValue(item.display.profitKRW + '원'));
-        const formattedEval = escapeHtml(maskValue(item.display.evalKRW + '원'));
+        const weightFmt = formatPercent(item.display.weight);
+        const returnRateFmt = formatPercent(item.display.returnRate);
+        const dailyChangeFmt = formatPercent(item.display.dailyChange);
+        const formattedProfit = getResponsiveValueHTML(maskValue(item.display.profitKRW + '원'));
+        const formattedEval = getResponsiveValueHTML(maskValue(item.display.evalKRW + '원'));
 
         const currencyLabel = item.currency === 'KRW' ? 'KRW' : 'USD';
         const currencyClass = item.currency === 'KRW' ? 'krw' : '';
@@ -1823,11 +1875,11 @@ function renderHoldingsTable() {
                     <span class="card-currency-badge ${currencyClass}" style="font-size: 0.6rem; padding: 1px 4px;">${currencyLabel}</span>
                 </div>
             </td>
-            <td data-label="비중"><span>${escapeHtml(item.display.weight)}%</span></td>
-            <td data-label="수익률" class="${getColorClass(item.display.returnRate)}"><span>${escapeHtml(item.display.returnRate)}%</span></td>
+            <td data-label="비중"><span>${weightFmt}</span></td>
+            <td data-label="수익률" class="${getColorClass(item.display.returnRate)}"><span>${returnRateFmt}</span></td>
             <td data-label="수익액" class="${getColorClass(item.display.profitKRW)}"><span>${formattedProfit}</span></td>
             <td data-label="평가금"><span>${formattedEval}</span></td>
-            <td data-label="일일변동" class="${getColorClass(item.display.dailyChange)}"><span>${escapeHtml(item.display.dailyChange)}%</span></td>
+            <td data-label="일일변동" class="${getColorClass(item.display.dailyChange)}"><span>${dailyChangeFmt}</span></td>
         `;
         tbody.appendChild(tr);
     });
@@ -2094,7 +2146,12 @@ function renderSummaryChart(labels, invests, evals) {
                 legend: { position: 'bottom' },
                 tooltip: {
                     callbacks: {
-                        label: (ctx) => `${ctx.dataset.label}: ${maskValue(ctx.raw.toLocaleString())}원`
+                        label: (ctx) => {
+                            const label = ctx.dataset.label || '';
+                            const value = ctx.raw;
+                            const formattedValue = formatValueByMode(value, true);
+                            return `${label}: ${maskValue(formattedValue)}`;
+                        }
                     }
                 }
             }
@@ -2224,7 +2281,12 @@ function renderHistoryChartWithRange() {
                 },
                 tooltip: {
                     callbacks: {
-                        label: (ctx) => `${ctx.dataset.label}: ${maskValue(ctx.raw.toLocaleString())}원`
+                        label: (ctx) => {
+                            const label = ctx.dataset.label || '';
+                            const value = ctx.raw;
+                            const formattedValue = formatValueByMode(value, true);
+                            return `${label}: ${maskValue(formattedValue)}`;
+                        }
                     }
                 }
             }
