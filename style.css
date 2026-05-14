@@ -471,7 +471,7 @@ td {
 
 tr:last-child td { border-bottom: none; }
 
-tr:hover td {
+tr:hover td:not(.hm-cell) {
     background: rgba(255, 255, 255, 0.02);
 }
 
