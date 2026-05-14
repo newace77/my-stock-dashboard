@@ -642,10 +642,11 @@ function initDashboard() {
         const toast = document.createElement('div');
         toast.className = 'toast toast-info show';
         
+        const nowStr = new Date().toLocaleTimeString('ko-KR', { hour12: false });
         toast.innerHTML = `
             <span class="toast-icon">⏳</span>
             <div style="display:flex; flex-direction:column; flex:1;">
-                <span class="toast-message">실시간 데이터 업데이트 중...</span>
+                <span class="toast-message">실시간 데이터 업데이트 중 (${nowStr})...</span>
                 <div class="toast-progress-list">
                     ${accounts.map(acc => `
                         <div class="toast-progress-item">
@@ -657,6 +658,9 @@ function initDashboard() {
             </div>
         `;
         container.appendChild(toast);
+
+        // 로컬 캐시 삭제 (강제 갱신을 위해)
+        localStorage.removeItem('dashboard_data_cache');
 
         // 각 계정별 순차 업데이트
         for (const acc of accounts) {
@@ -680,13 +684,15 @@ function initDashboard() {
             }
         }
 
-        toast.querySelector('.toast-message').textContent = '데이터 동기화 중 (3초)...';
+        const syncTimeStr = new Date().toLocaleTimeString('ko-KR', { hour12: false });
+        toast.querySelector('.toast-message').textContent = `데이터 동기화 중 (${syncTimeStr})...`;
         toast.querySelector('.toast-icon').textContent = '🔄';
 
         // 시트간 데이터 동기화 시간 대기
         await new Promise(resolve => setTimeout(resolve, 3000));
 
-        toast.querySelector('.toast-message').textContent = '최신 데이터 불러오기 완료!';
+        const finalTimeStr = new Date().toLocaleTimeString('ko-KR', { hour12: false });
+        toast.querySelector('.toast-message').textContent = `최신 데이터 불러오기 완료! (${finalTimeStr})`;
         toast.querySelector('.toast-icon').textContent = '✅';
         toast.className = 'toast toast-success show';
 
