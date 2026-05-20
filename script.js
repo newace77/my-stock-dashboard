@@ -314,23 +314,23 @@ function openTab(evt, tabName) {
     } else if (tabName === 'dividend-tab') {
         renderDividendCalendar();
     }
-    }
+}
 
-    // 🎁 배당 달력 관련 변수 및 함수
-    let currentDividendMonth = new Date(); // 현재 표시 중인 달
+// 🎁 배당 달력 관련 변수 및 함수
+let currentDividendMonth = new Date(); // 현재 표시 중인 달
 
-    /**
-    * 배당 달력 월 변경
-    */
-    function changeDividendMonth(offset) {
+/**
+ * 배당 달력 월 변경
+ */
+function changeDividendMonth(offset) {
     currentDividendMonth.setMonth(currentDividendMonth.getMonth() + offset);
     renderDividendCalendar();
-    }
+}
 
-    /**
-    * 배당 달력 렌더링
-    */
-    function renderDividendCalendar() {
+/**
+ * 배당 달력 렌더링
+ */
+function renderDividendCalendar() {
     const grid = document.getElementById('calendar-grid');
     const monthLabel = document.getElementById('current-calendar-month');
     if (!grid || !monthLabel) return;
@@ -387,12 +387,12 @@ function openTab(evt, tabName) {
     }
 
     updateDividendDetailTable(monthlyDividends);
-    }
+}
 
-    /**
-    * 특정 월의 배당 데이터를 가져옴 (History 데이터 기반)
-    */
-    function getMonthlyDividendData(year, month) {
+/**
+ * 특정 월의 배당 데이터를 가져옴 (History 데이터 기반)
+ */
+function getMonthlyDividendData(year, month) {
     const data = [];
     if (rawHistoryData && rawHistoryData.length > 1) {
         const history = rawHistoryData.slice(1);
@@ -419,16 +419,16 @@ function openTab(evt, tabName) {
         });
     }
     return data;
-    }
+}
 
-    function formatLocalDate(date) {
+function formatLocalDate(date) {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
     const d = String(date.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
-    }
+}
 
-    function updateDividendDetailTable(records) {
+function updateDividendDetailTable(records) {
     const tbody = document.getElementById('dividend-detail-body');
     const label = document.getElementById('selected-date-label');
     if (!tbody) return;
@@ -443,9 +443,9 @@ function openTab(evt, tabName) {
         tr.innerHTML = `<td>${r.date}</td><td>${r.name}</td><td>${r.qty}</td><td>${r.perShare}</td><td style="font-weight:bold; color:#4ade80;">${r.total.toLocaleString()}원</td>`;
         tbody.appendChild(tr);
     });
-    }
+}
 
-    function showDividendDetail(date, records) {
+function showDividendDetail(date, records) {
     const tbody = document.getElementById('dividend-detail-body');
     const label = document.getElementById('selected-date-label');
     if (!tbody) return;
@@ -456,9 +456,6 @@ function openTab(evt, tabName) {
         tr.innerHTML = `<td>${r.date}</td><td>${r.name}</td><td>${r.qty}</td><td>${r.perShare}</td><td style="font-weight:bold; color:#4ade80;">${r.total.toLocaleString()}원</td>`;
         tbody.appendChild(tr);
     });
-    }
-
-    window.dispatchEvent(new Event('resize'));
 }
 
 /**
