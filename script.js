@@ -341,40 +341,48 @@ function openTab(evt, tabName) {
 
     try {
         const results = [];
-        // 모든 보유 종목에 대해 배당 데이터 요청 (병렬 처리)
-        // 10년치 데이터를 가져와서 모든 과거/미래 배당 확인
-        await Promise.all(globalHoldings.map(async (h) => {
-            if (!h.ticker) return;
+        const holdings = globalHoldings.filter(h => h.ticker && !h.ticker.includes('=') && !h.ticker.startsWith('^'));
+        
+        let processedCount = 0;
+        const totalCount = holdings.length;
 
-            // 인덱스나 환율 티커 제외
-            if (h.ticker.includes('=') || h.ticker.startsWith('^')) return;
+        // 순차적으로 처리하여 프록시 과부하 및 레이트 리밋 방지
+        for (const h of holdings) {
+            processedCount++;
+            if (statusEl) statusEl.textContent = ` (데이터 동기화 중... ${processedCount}/${totalCount})`;
 
-            const formattedTicker = formatTicker(h.ticker);
+            const cleanTicker = h.ticker.trim();
+            const formattedTicker = formatTicker(cleanTicker);
             const url = `https://query1.finance.yahoo.com/v8/finance/chart/${formattedTicker}?interval=1d&range=10y&events=div`;
-            const result = await fetchWithFallback(url, true);
+            
+            try {
+                const result = await fetchWithFallback(url, true);
+                
+                if (result && result.type === 'json' && result.data.chart?.result?.[0]?.events?.dividends) {
+                    const divs = result.data.chart.result[0].events.dividends;
+                    Object.values(divs).forEach(div => {
+                        const d = new Date(div.date * 1000);
+                        const shares = parseSafeFloat(h.shares);
+                        let totalKRW = shares * div.amount;
+                        if (h.currency === 'USD') {
+                            totalKRW = totalKRW * usdKrwRate;
+                        }
 
-            if (result && result.type === 'json' && result.data.chart?.result?.[0]?.events?.dividends) {
-                const divs = result.data.chart.result[0].events.dividends;
-                Object.values(divs).forEach(div => {
-                    const d = new Date(div.date * 1000);
-                    const shares = parseSafeFloat(h.shares);
-                    let totalKRW = shares * div.amount;
-                    if (h.currency === 'USD') {
-                        totalKRW = totalKRW * usdKrwRate;
-                    }
-
-                    results.push({
-                        date: formatLocalDate(d),
-                        name: h.name,
-                        ticker: h.ticker,
-                        currency: h.currency,
-                        qty: h.shares,
-                        perShare: div.amount,
-                        total: totalKRW
+                        results.push({
+                            date: formatLocalDate(d),
+                            name: h.name,
+                            ticker: cleanTicker,
+                            currency: h.currency,
+                            qty: h.shares,
+                            perShare: div.amount,
+                            total: totalKRW
+                        });
                     });
-                });
+                }
+            } catch (innerE) {
+                logger.warn(`${cleanTicker} 배당 데이터 로드 실패:`, innerE);
             }
-        }));
+        }
 
         dividendCache = results;
         renderDividendCalendar();
