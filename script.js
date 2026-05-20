@@ -349,7 +349,8 @@ function openTab(evt, tabName) {
             // 인덱스나 환율 티커 제외
             if (h.ticker.includes('=') || h.ticker.startsWith('^')) return;
 
-            const url = `https://query1.finance.yahoo.com/v8/finance/chart/${h.ticker}?interval=1d&range=10y&events=div`;
+            const formattedTicker = formatTicker(h.ticker);
+            const url = `https://query1.finance.yahoo.com/v8/finance/chart/${formattedTicker}?interval=1d&range=10y&events=div`;
             const result = await fetchWithFallback(url, true);
 
             if (result && result.type === 'json' && result.data.chart?.result?.[0]?.events?.dividends) {
@@ -1435,15 +1436,14 @@ async function fetchWithFallback(targetUrl, isYahoo = false) {
     const publicProxies = [
         `https://api.allorigins.win/raw?url=${encodedTarget}`,
         `https://corsproxy.io/?url=${encodedTarget}`,
-        `https://thingproxy.freeboard.io/fetch/${targetUrl}`, // URL 인코딩 안함 (직접 경로)
         `https://api.codetabs.com/v1/proxy?url=${encodedTarget}`
     ];
     publicProxies.forEach(proxy => {
         tasks.push(fetchTask(proxy));
     });
 
-    // 3. 직접 호출 시도 (마지막 수단)
-    tasks.push(fetchTask(targetUrl));
+    // 3. 직접 호출 시도 (CORS 허용된 경우 대비, 짧은 타임아웃)
+    tasks.push(fetchTask(targetUrl, { signal: AbortSignal.timeout(3000) }));
 
     try {
         // 가장 빨리 성공하는 작업 결과 반환
