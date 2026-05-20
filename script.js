@@ -357,13 +357,20 @@ function openTab(evt, tabName) {
                 const divs = result.data.chart.result[0].events.dividends;
                 Object.values(divs).forEach(div => {
                     const d = new Date(div.date * 1000);
+                    const shares = parseSafeFloat(h.shares);
+                    let totalKRW = shares * div.amount;
+                    if (h.currency === 'USD') {
+                        totalKRW = totalKRW * usdKrwRate;
+                    }
+
                     results.push({
                         date: formatLocalDate(d),
                         name: h.name,
                         ticker: h.ticker,
+                        currency: h.currency,
                         qty: h.shares,
                         perShare: div.amount,
-                        total: (parseSafeFloat(h.shares) * div.amount)
+                        total: totalKRW
                     });
                 });
             }
@@ -477,7 +484,14 @@ function updateDividendDetailTable(records) {
     }
     records.sort((a,b) => a.date.localeCompare(b.date)).forEach(r => {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${r.date}</td><td>${r.name}</td><td>${r.qty}</td><td>${r.perShare}</td><td style="font-weight:bold; color:#4ade80;">${r.total.toLocaleString()}원</td>`;
+        const currencySymbol = r.currency === 'USD' ? '$' : '₩';
+        tr.innerHTML = `
+            <td>${r.date}</td>
+            <td>${r.name}</td>
+            <td>${r.qty}</td>
+            <td>${currencySymbol}${r.perShare.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+            <td style="font-weight:bold; color:#4ade80;">${Math.round(r.total).toLocaleString()}원</td>
+        `;
         tbody.appendChild(tr);
     });
 }
@@ -490,7 +504,14 @@ function showDividendDetail(date, records) {
     tbody.innerHTML = '';
     records.forEach(r => {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${r.date}</td><td>${r.name}</td><td>${r.qty}</td><td>${r.perShare}</td><td style="font-weight:bold; color:#4ade80;">${r.total.toLocaleString()}원</td>`;
+        const currencySymbol = r.currency === 'USD' ? '$' : '₩';
+        tr.innerHTML = `
+            <td>${r.date}</td>
+            <td>${r.name}</td>
+            <td>${r.qty}</td>
+            <td>${currencySymbol}${r.perShare.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+            <td style="font-weight:bold; color:#4ade80;">${Math.round(r.total).toLocaleString()}원</td>
+        `;
         tbody.appendChild(tr);
     });
 }
