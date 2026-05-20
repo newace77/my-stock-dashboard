@@ -2434,6 +2434,7 @@ function renderHistoryChartWithRange() {
                     labels: { 
                         color: '#94a3b8', 
                         boxWidth: window.innerWidth <= 768 ? 8 : 12,
+                        padding: 15,
                         font: {
                             size: window.innerWidth <= 768 ? 10 : 12
                         }
