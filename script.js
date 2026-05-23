@@ -2344,17 +2344,12 @@ function renderSummary(data, tableElement) {
     }
 
     if (totalRow) {
-      const evalKRW = parseSafeFloat(totalRow[SUMMARY_COL.EVAL_TOTAL]);
 
-      // 현재 평가액 카드 업데이트 (KRW + USD 병기)
+      // 현재 평가액 카드 업데이트 (KRW만 표기)
       const evalValEl = document.getElementById("card-eval-val");
       if (evalValEl) {
         const evalTextKRW = maskValue(totalRow[SUMMARY_COL.EVAL_TOTAL]);
         let evalText = getResponsiveValueHTML(evalTextKRW);
-        if (isExchangeRateValid() && evalKRW > 10000) {
-          const evalUSD = evalKRW / usdKrwRate;
-          evalText += ` <span class="value-sub">($${evalUSD.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })})</span>`;
-        }
         evalValEl.innerHTML = evalText || "-";
       }
 
