@@ -2185,7 +2185,7 @@ function updateTimestamp(isLive, method) {
   if (!lastUpdated) return;
   const timeStr = new Date().toLocaleTimeString("ko-KR", { hour12: false });
   lastUpdated.innerHTML =
-    isLive === null ? method : `Last Update: ${timeStr} (${method})`;
+    isLive === null ? method : `${timeStr} (${method})`;
   lastUpdated.style.color = isLive
     ? "#2e7d32"
     : isLive === false
