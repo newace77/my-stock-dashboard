@@ -765,8 +765,10 @@ body.force-pc .container {
 
   body:not(.force-pc) .header-right {
     flex-direction: row;
+    flex-wrap: wrap;
     width: 100%;
-    justify-content: space-between;
+    justify-content: flex-start;
+    align-items: center;
     gap: 0.5rem;
   }
 
@@ -884,8 +886,8 @@ body.force-pc .container {
 
 @media (max-width: 480px), body.force-mobile {
   body:not(.force-pc) .tab-btn {
-    flex: 1;
-    padding: 0.6rem 0.5rem;
+    flex: 0 0 auto;
+    padding: 0.6rem 0.8rem;
     font-size: 0.75rem;
     text-align: center;
   }
@@ -893,6 +895,18 @@ body.force-pc .container {
   body:not(.force-pc) .tabs {
     width: 100%;
     display: flex;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    gap: 0.4rem;
+    padding: 0.4rem;
+    border-radius: 12px;
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+
+  body:not(.force-pc) .tabs::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
   }
 
   body:not(.force-pc) header h1 {
