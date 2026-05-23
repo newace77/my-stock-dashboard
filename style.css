@@ -882,31 +882,46 @@ body.force-pc .container {
   body:not(.force-pc) .stock-card {
     padding: 1rem;
   }
+
+  body:not(.force-pc) .tabs {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 0.4rem;
+    padding: 0.4rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+  }
+
+  body:not(.force-pc) .tab-btn {
+    padding: 0.6rem 0.4rem;
+    font-size: 0.75rem;
+    text-align: center;
+    white-space: nowrap;
+    width: 100%;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  body:not(.force-pc) .tab-btn:nth-child(1),
+  body:not(.force-pc) .tab-btn:nth-child(2),
+  body:not(.force-pc) .tab-btn:nth-child(3),
+  body:not(.force-pc) .tab-btn:nth-child(4) {
+    grid-column: span 3;
+  }
+
+  body:not(.force-pc) .tab-btn:nth-child(5),
+  body:not(.force-pc) .tab-btn:nth-child(6),
+  body:not(.force-pc) .tab-btn:nth-child(7) {
+    grid-column: span 4;
+  }
 }
 
 @media (max-width: 480px), body.force-mobile {
   body:not(.force-pc) .tab-btn {
-    flex: 0 0 auto;
-    padding: 0.6rem 0.8rem;
-    font-size: 0.75rem;
-    text-align: center;
-  }
-
-  body:not(.force-pc) .tabs {
-    width: 100%;
-    display: flex;
-    overflow-x: auto;
-    white-space: nowrap;
-    -webkit-overflow-scrolling: touch;
-    gap: 0.4rem;
-    padding: 0.4rem;
-    border-radius: 12px;
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
-  }
-
-  body:not(.force-pc) .tabs::-webkit-scrollbar {
-    display: none; /* Chrome, Safari, Opera */
+    font-size: 0.7rem;
+    padding: 0.5rem 0.2rem;
   }
 
   body:not(.force-pc) header h1 {
