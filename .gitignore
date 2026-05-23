@@ -17,3 +17,8 @@ Thumbs.db
 # Backup files
 backup/
 backup_*/
+
+# Local tool files & scratch folders
+.antigravitycli/
+scratch/
+o_div.json

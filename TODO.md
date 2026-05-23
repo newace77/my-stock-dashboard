@@ -1,194 +1,80 @@
-# 📝 바둑이 주식 대시보드 - 개선 TODO
+# 주식 대시보드 개선 TODO 리스트
 
-코드 분석(script.js 2,714줄 / index.html 546줄 / style.css 1,766줄 / GAS.js 225줄) 기반, 우선순위별로 정리했습니다.
+이 문서는 현재 홈페이지(주식 대시보드) 소스코드 분석 및 정적 테스트를 통해 도출된 개선 사항들을 우선순위별로 정리한 목록입니다.
 
----
+## 🚨 P0: 런타임 오류 및 크리티컬 버그
 
-## 🔴 P0: 긴급 / 보안·안정성
-
-### ✅ 1. XSS 취약점 — `innerHTML` + 템플릿 리터럴 조합 (완료)
-- `escapeHtml()` + `safeValue()` 헬퍼 추가
-- 모든 테이블 렌더(Holdings, SP500, KOSPI200, Summary, MDD), 카드 뷰, 토스트에 적용
-- `window.open` URL에 `encodeURIComponent` 적용
-
-### ✅ 2. API Key / Spreadsheet ID 노출 (완료)
-- GAS `doPost` 진입부에 `API_KEY` 검증 로직 추가 (Script Properties 기반)
-- 클라이언트 측 모든 GAS 호출에 `apiKey: CONFIG.gasApiKey` 포함
-- `.gitignore`에 `config.js` 확인 완료
-
-### 3. CORS 프록시 의존성 (`allorigins.win`, `corsproxy.io`)
-- 외부 공용 프록시는 언제든 중단·변조 가능 (공급망 리스크)
-- **조치**:
-  - GAS 프록시 경로 우선순위 1로 유지, 공용 프록시는 명시적 opt-in
-  - 또는 Cloudflare Worker 같은 자체 프록시 구축
-
-### 4. `fetch` with `mode: 'no-cors'` (GAS 호출)
-- `handleTransactionSubmit` / `requestMarketRefresh`에서 `no-cors` 사용 → **응답을 읽을 수 없음**
-- 현재 "성공" UI는 실제 성공 여부와 무관하게 표시됨
-- **조치**: GAS Web App을 `Anyone` 액세스로 배포하고 CORS 헤더 설정 후 정상 fetch로 전환
+- [x] **모바일 뷰 모드 전환 시 자바스크립트 런타임 크래시 해결**
+  - **문제 상황**: [script.js](file:///Users/anjaemo/Documents/Code/my-stock-dashboard/script.js#L1181)의 `cycleViewMode()`에서 모바일 환경으로 판단될 때 `switchHoldingsView("cards")`를 호출하지만, 해당 함수의 정의가 존재하지 않아 자바스크립트 실행 오류 발생.
+  - **해당 코드**: [script.js (L1181)](file:///Users/anjaemo/Documents/Code/my-stock-dashboard/script.js#L1181)
+  - **해결 방안**: [style.css](file:///Users/anjaemo/Documents/Code/my-stock-dashboard/style.css#L919)에 정의된 카드 그리드 스타일(`holdings-cards-grid` 및 `stock-card`)을 실제로 렌더링하도록 `switchHoldingsView` 함수를 신규 구현하거나, 모바일 카드 뷰 구현을 완전히 통합/정리해야 함.
 
 ---
 
-## 🟠 P1: 구조·유지보수성
+## 🛠️ P1: 유지보수성 및 중복 코드 개선
 
-### 5. `script.js` 단일 파일 — 모듈 분리 필요
-- 포트폴리오 / MDD / SP500 / KOSPI / 차트 / 모달 / 폼이 한 파일에 혼재
-- **제안 구조**:
-  ```
-  src/
-    api/ (fetchWithFallback, parseYahooData, GAS)
-    modules/ (summary, holdings, mdd, sp500, kospi200, heatmap)
-    charts/ (historyChart, bubbleChart, sparkline, modalChart)
-    utils/ (format, mask, sort)
-    main.js
-  ```
-- ESM 모듈로 분리 후 Vite로 번들.
+- [x] **S&P 500 및 KOSPI 200 테이블 정렬 및 렌더링 로직 통합**
+  - **문제 상황**: [script.js](file:///Users/anjaemo/Documents/Code/my-stock-dashboard/script.js#L1379)와 [script.js](file:///Users/anjaemo/Documents/Code/my-stock-dashboard/script.js#L1509)에 정의된 정렬/렌더링 함수(`sortSP500`/`sortKOSPI200`, `renderSP500Table`/`renderKOSPI200Table`)가 통화 표시와 포맷을 제외하면 90% 이상 동일한 코드 구조를 가짐.
+  - **해당 코드**:
+    - [sortSP500 & renderSP500Table](file:///Users/anjaemo/Documents/Code/my-stock-dashboard/script.js#L1379-L1462)
+    - [sortKOSPI200 & renderKOSPI200Table](file:///Users/anjaemo/Documents/Code/my-stock-dashboard/script.js#L1509-L1595)
+  - **해결 방안**: 대상을 매개변수로 받는 범용(Generic) 정렬 및 렌더링 헬퍼 함수를 구현하여 코드 중복을 대폭 줄이고 유지보수성을 향상시킴.
 
-### 6. 전역 변수 남용
-- `globalHoldings`, `usdKrwRate`, `rawHistoryData` 등이 모두 최상위 전역
-- **조치**: `const Store = { holdings: [], fx: 1400, ... }` 싱글턴 객체로 캡슐화
-
-### ✅ 7. 매직 넘버 / 컬럼 인덱스 하드코딩 (완료)
-- `HOLDINGS_COL`, `HISTORY_COL` 상수 매핑 정의 및 적용 완료
-
-### 8. DOM 요소 반복 조회
-- `document.getElementById(...)` 가 렌더 함수마다 반복 호출됨
-- **조치**: 초기화 시점에 `refs = { eval: $('#card-eval-val'), ... }` 캐싱
-
-### 9. Race Condition 가능성 — `fetchHoldingsAnalysisData`
-- 사용자가 탭 전환을 빠르게 하면 이전 요청이 완료되며 최신 상태를 덮어쓸 수 있음
-- **조치**: `AbortController` + request id 세대 관리
-
-### ✅ 10. 차트 메모리 누수 위험 (완료)
-- `switchHoldingsView`에서 테이블 전환 시 스파크라인 차트 인스턴스 정리 추가
-- `chartRegistry` 유틸 추가 (향후 전체 차트에 적용 가능)
+- [x] **데이터 업데이트 스크립트 내 보조 지표 계산 로직 모듈화**
+  - **문제 상황**: [update_kospi200.js](file:///Users/anjaemo/Documents/Code/my-stock-dashboard/update_kospi200.js#L7)와 [update_sp500.js](file:///Users/anjaemo/Documents/Code/my-stock-dashboard/update_sp500.js#L8) 내에 보조 지표인 RSI(`calculateRSIValue`) 및 최대 낙폭(`calculateMDDAndRecovery`) 계산 로직이 완벽하게 중복되어 있음.
+  - **해당 코드**:
+    - [update_kospi200.js (L7-55)](file:///Users/anjaemo/Documents/Code/my-stock-dashboard/update_kospi200.js#L7-L55)
+    - [update_sp500.js (L8-56)](file:///Users/anjaemo/Documents/Code/my-stock-dashboard/update_sp500.js#L8-L56)
+  - **해결 방안**: 공통 수학/보조 지표 계산 함수를 별도의 유틸리티 파일(예: `helpers.js`)로 추출하여 두 스크립트가 모듈 형식으로 공용으로 불러와 사용할 수 있게 수정.
 
 ---
 
-## 🟡 P2: 성능·UX
+## ⚡ P2: 성능 및 사용자 경험(UX) 개선
 
-### 11. 10년치 히스토리를 모든 종목에 대해 매번 페칭
-- **조치**:
-  - `localStorage` 에 티커별 일자 기반 캐시 (`expires_at` 포함)
-  - 당일 캐시 hit 시 스킵
-  - IndexedDB 사용 검토
+- [x] **불필요한 캐시 방지(Cache Busting) 오용 개선**
+  - **문제 상황**: 정적 데이터나 JSON 스냅샷을 fetch할 때 쿼리스트링에 매번 `new Date().getTime()`을 강제 추가하여 브라우저의 HTTP 캐싱 메커니즘을 완전히 무력화함. 이로 인해 리소스 낭비 및 불필요한 네트워크 트래픽 발생.
+  - **해당 코드**:
+    - [script.js (L1247-1249)](file:///Users/anjaemo/Documents/Code/my-stock-dashboard/script.js#L1247-L1249) (Snapshot)
+    - [script.js (L1353)](file:///Users/anjaemo/Documents/Code/my-stock-dashboard/script.js#L1353) (S&P 500 데이터)
+    - [script.js (L1488-1490)](file:///Users/anjaemo/Documents/Code/my-stock-dashboard/script.js#L1488-L1490) (KOSPI 200 데이터)
+  - **해결 방안**: 무분별한 캐시 무효화 쿼리를 제거하고, 1분(시트)/10분(정적 JSON) 단위로 작동하는 `getCacheBuster`를 도입하여 브라우저 HTTP 캐싱이 동작하도록 개선.
 
-### 12. 차트 리사이즈 비용
-- `window.dispatchEvent(new Event('resize'))` 를 탭 전환마다 호출
-- **조치**: 활성 탭의 차트만 resize 호출하도록 대상 지정
+- [x] **브라우저 경고 alert() 창 사용 중단 및 커스텀 토스트 대체**
+  - **문제 상황**: 유효성 검사 오류나 예외 발생 시 `alert()` 브라우저 대화상자를 호출하여 사용자의 브라우저 흐름을 방해함. 현재 ESLint에서도 글로벌 `alert`가 정의되지 않아 경고가 표시되고 있음.
+  - **해당 코드**: [script.js (L1760, L1805, L3125, L3130, L3144)](file:///Users/anjaemo/Documents/Code/my-stock-dashboard/script.js#L1760) 등 5개 위치.
+  - **해결 방안**: 이미 [script.js](file:///Users/anjaemo/Documents/Code/my-stock-dashboard/script.js#L1188)에 완성되어 있는 `showToast(message, type)` 공통 알림 함수로 전부 교체.
 
-### 13. 메인 폰트 CDN
-- `cdn.jsdelivr.net/gh/orioncactus/pretendard` 로드 실패 시 폴백 없음
-- **조치**: `font-display: swap` + 로컬 시스템 폰트 폴백 명시
+- [x] **자산 변동 히트맵 최신순 정렬 옵션 또는 역순 렌더링 기능 추가**
+  - **문제 상황**: 자산 변동 히트맵이 항상 과거부터 최신순(정방향)으로 고정 렌더링되어 최신 정보를 확인하려면 페이지 하단으로 불필요하게 스크롤해야 함.
+  - **해당 코드**: [script.js (L3425-3430)](file:///Users/anjaemo/Documents/Code/my-stock-dashboard/script.js#L3425-L3430)
+  - **해결 방안**: 최신 정보가 가장 먼저 표출되도록 하는 역순 루프 옵션을 만들거나, 정렬 방식을 최신순으로 설정하는 UX 개선.
 
-### 14. 스파크라인 데이터가 가짜(Random noise 기반)
-- **조치**: Yahoo 5일 차트 데이터를 받아서 실 데이터 표시, 혹은 레이블 명시
-
-### 15. 초기 로딩 UX
-- **조치**: 캐시가 없을 때 스냅샷으로 즉시 렌더 → 라이브 데이터로 덮어쓰기
-
-### ✅ 16. 모바일 테이블 가독성 (완료)
-- CSS `font-variant-numeric: tabular-nums` 적용
-
-### ✅ 17. 환율 의존 계산의 fallback (완료)
-- `usdKrwRateUpdatedAt` 타임스탬프 추가
-- `isExchangeRateValid()` 헬퍼로 30분 stale 체크 적용
+- [x] **종목 하락장(MDD) 계산 시 브라우저 스토리지 캐시 도입**
+  - **문제 상황**: 특정 종목의 분석 요청 시 매번 10년 치 야후 파이낸스 역사적 데이터를 직접 새로 요청함. 동일 종목에 대해 불필요하게 야후 API를 재요청하게 됨.
+  - **해결 방안**: `localStorage`를 활용해 24시간 캐시 메커니즘을 두어 불필요한 원격 호출 차단.
 
 ---
 
-## 🟢 P3: 코드 퀄리티
+## 🎨 P3: 마크업, 스타일링 및 정적 분석 설정 개선
 
-### 18. 중복 함수 — SP500 / KOSPI200 정렬·렌더가 거의 동일
-- **조치**: `createStockIndexTab({tableId, data, sortState, isKRW})` 팩토리로 통합
+- [x] **CSS 스타일 중복 정의로 인한 히트맵 테이블 간격 오류 해결**
+  - **문제 상황**: [style.css](file:///Users/anjaemo/Documents/Code/my-stock-dashboard/style.css#L1772)와 [style.css](file:///Users/anjaemo/Documents/Code/my-stock-dashboard/style.css#L1799)에 `.heatmap-table` 스타일이 중복 선언되었으며, 아래에 설정된 `border-collapse: collapse;`가 위에 설정된 `border-collapse: separate; border-spacing: 1px;`를 완전히 무효화시킴. 이로 인해 셀 간 구분선이 보이지 않고 가독성이 심각하게 저하됨.
+  - **해당 코드**: [style.css (L1772-L1778, L1799-L1801)](file:///Users/anjaemo/Documents/Code/my-stock-dashboard/style.css#L1772)
+  - **해결 방안**: 중복된 선택자 정의를 하나로 합치고, 셀 간 1px의 테두리 여백이 미려하게 드러나도록 `separate` 속성과 `spacing` 설정을 살려 레이아웃 수정.
 
-### 19. `sortHoldings` 와 `sortHoldingsAnalysis` 역시 중복 패턴
-- 범용 `sortByColumn(array, state, numericKeys)` 유틸로 추출
+- [x] **HTML 문법 어긋남(줄바꿈 오류로 인한 깨진 태그) 정돈**
+  - **문제 상황**: [index.html](file:///Users/anjaemo/Documents/Code/my-stock-dashboard/index.html#L425) 등 여러 위치에서 label 태그를 작성할 때 줄바꿈 실수로 닫는 괄호 `>` 문자가 다음 줄의 input 태그 바로 앞에 부적절하게 위치하고 있음.
+  - **해당 코드**:
+    - [index.html (L425-426)](file:///Users/anjaemo/Documents/Code/my-stock-dashboard/index.html#L425-L426) (`<label>날짜</label` + `><input ...`)
+    - [index.html (L456-457)](file:///Users/anjaemo/Documents/Code/my-stock-dashboard/index.html#L456-L457) (`<label>단가</label` + `><input ...`)
+    - [index.html (L460-461)](file:///Users/anjaemo/Documents/Code/my-stock-dashboard/index.html#L460-L461) (`<label id="qty-label">수량/금액</label` + `><input ...`)
+  - **해결 방안**: 해당 마크업을 한 줄로 올바르게 묶어 닫는 태그 문법(`<label>날짜</label>`)을 준수하도록 정리.
 
-### ✅ 20. `console.log` / `console.warn` 프로덕션에도 노출 (완료)
-- `logger` 객체 도입 (DEBUG 플래그 기반)
-- 모든 `console.log/warn/error` → `logger.log/warn/error` 교체
+- [x] **HTML 인라인 CSS 남용 정리**
+  - **문제 상황**: [index.html](file:///Users/anjaemo/Documents/Code/my-stock-dashboard) 곳곳에 `style="display: none; flex-direction: column; ..."` 등의 인라인 스타일이 대량으로 하드코딩되어 코드 청결도가 저하됨.
+  - **해결 방안**: 스타일 속성들을 CSS 클래스(예: `.direct-input-container` 등)로 분리하고 `style.css`로 정의를 이관함.
 
-### 21. 에러 처리 불일치
-- **조치**: 에러 레벨(info/warn/error) 기준으로 `showToast` 일원화
-
-### ✅ 22. `GAS.js` 내부도 2곳에 같은 `accountMap` 선언됨 (완료)
-- 상단에 `var ACCOUNT_MAP = {...}` 단일 소스로 통합
-
-### ✅ 23. 미사용 / 죽은 코드 (완료)
-- `fetchFromSupabase` 제거
-- `GAS.js`에서 `forceAuth()`, `authTest()` 제거
-
-### 24. `update_sp500.js` / `update_kospi200.js` 중복
-- 공용 모듈로 `updateIndex(market)` 추출
-
-### ✅ 25. `backup_20260501/` 폴더 (완료)
-- 리포지토리에서 삭제 완료
-
-### ✅ 26. package.json (완료)
-- ESLint + Prettier devDependencies 추가
-- `npm run lint`, `npm run format` 스크립트 정의
-
-### ✅ 27. 일관성 없는 통화 판별 (완료)
-- `isKoreanStock(ticker)` 유틸 함수 추출 및 전체 적용
-
-### ✅ 28. Chart.js 인스턴스 관리 (완료)
-- `chartRegistry` 객체 추가 (set/get/destroy/destroyAll)
-
----
-
-## 🔵 P4: 접근성·국제화
-
-### ✅ 29. 접근성 (a11y) (부분 완료)
-- ✅ 테이블 헤더에 `scope="col"` 추가
-- ✅ 탭에 `role="tab"`, `aria-selected`, `aria-controls` 추가
-- ✅ 탭 패널에 `role="tabpanel"` 추가
-- ✅ 모달에 `role="dialog"`, `aria-modal="true"` 추가
-- ⬜ 모달 focus trap 미구현
-- ⬜ 차트 대체 텍스트 미구현
-
-### 30. 색상 대비
-- 수익/손실을 색상으로만 구분 → 색각 이상자를 위해 ↑/↓ 아이콘 보강 (일부 반영됨)
-
-### 31. i18n 준비 부족
-- 당장은 불필요해도 `i18n.js` 에 키로 분리해두면 유지보수에 유리
-
----
-
-## 🛠 P5: 개발 환경·배포
-
-### 32. 테스트 전무
-- **조치**: Vitest + JSDOM, 최소 `parseSafeFloat`, `calculateRSIValue`, `calculateMDDAndRecovery`, `formatTicker` 부터 테스트
-
-### 33. CI가 GitHub Actions 데이터 갱신 워크플로 1개뿐
-- **조치**: push 시 `npm run lint`, `npm run test`, HTML validator 구동
-
-### 34. 타입 안전성
-- 순수 JS → JSDoc으로 시작해서 점진적 TypeScript 마이그레이션 고려
-
-### 35. 빌드 파이프라인
-- **조치**: Vite + `vite build` 로 전환, GitHub Pages 자동 배포 워크플로 추가
-
-### 36. `config.js` 관리
-- **조치**: README.md 생성, 셋업/배포/GAS 권한 순서 정리
-
----
-
-## 🎯 완료 현황
-
-| 카테고리 | 완료 | 미완료 | 진행률 |
-|----------|------|--------|--------|
-| P0 보안 | 2 | 2 | 50% |
-| P1 구조 | 3 | 3 | 50% |
-| P2 성능 | 3 | 4 | 43% |
-| P3 코드 | 7 | 3 | 70% |
-| P4 접근성 | 1(부분) | 2 | 33% |
-| P5 개발환경 | 1 | 4 | 20% |
-| **합계** | **16** | **18** | **47%** |
-
----
-
-## 📌 참고
-
-- 분석 대상: `script.js`, `index.html`, `style.css`, `GAS.js`, `update_*.js`, `package.json`, `config.sample.js`
-- 분석 일: 2026-05-11
-- 최종 업데이트: 2026-05-11
+- [x] **ESLint 설정 보완 및 린트 경고 제거**
+  - **문제 상황**: [eslint.config.js](file:///Users/anjaemo/Documents/Code/my-stock-dashboard/eslint.config.js)의 `globals`에 브라우저 전역 객체인 `AbortController`, `AbortSignal`, `clearTimeout`, `Papa`, `process` 등이 누락되어 `no-undef` 경고가 발생함. 또한 인라인 이벤트 핸들러에서만 사용되는 많은 함수들이 `no-unused-vars` 경고로 등록됨.
+  - **해당 코드**: [eslint.config.js](file:///Users/anjaemo/Documents/Code/my-stock-dashboard/eslint.config.js)
+  - **해결 방안**: globals 목록에 브라우저 전역 및 Node.js 전역 객체를 보완하고, 사용하지 않는 변수와 모듈 정리.

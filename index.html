@@ -1,583 +1,1695 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>바둑이 주식 대시보드 🐶</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css" />
+    <!-- FOUC 방지 인라인 테마 적용 -->
+    <script>
+      (function () {
+        const mode = localStorage.getItem("theme_mode") || "auto";
+        let activeTheme = mode;
+        if (mode === "auto") {
+          const prefersDark = window.matchMedia(
+            "(prefers-color-scheme: dark)",
+          ).matches;
+          activeTheme = prefersDark ? "dark" : "light";
+        }
+        document.documentElement.setAttribute("data-theme", activeTheme);
+      })();
+    </script>
     <!-- Fonts -->
-    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-</head>
-<body>
+    <link
+      rel="stylesheet"
+      as="style"
+      crossorigin
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"
+    />
+  </head>
+  <body>
     <div class="container">
-        <div class="header-top">
-            <h1>🐶 바둑이 주식 대시보드</h1>
-            <div class="header-right">
-                <div id="view-mode-indicator" class="view-mode-container" onclick="cycleViewMode()" title="클릭하여 PC/모바일 모드 전환">
-                    <span id="view-mode-icon"></span>
-                    <span id="view-mode-text" class="view-mode-label">감지 중...</span>
-                </div>
-                <div class="privacy-toggle-container">
-                    <span class="privacy-label">🕶️ Privacy Mode</span>
-                    <label class="switch">
-                        <input type="checkbox" id="privacy-toggle">
-                        <span class="slider round"></span>
-                    </label>
-                </div>
-                <div id="last-updated" class="timestamp">업데이트 확인 중...</div>
+      <div class="header-top">
+        <h1>🐶 바둑이 주식 대시보드</h1>
+        <div class="header-right">
+          <!-- 구글 로그인 영역 -->
+          <div
+            id="google-auth-container"
+            class="google-auth-container"
+            style="display: none"
+          >
+            <button
+              id="google-login-btn"
+              class="google-login-btn"
+              onclick="loginGoogle()"
+            >
+              <svg
+                class="google-icon"
+                viewBox="0 0 24 24"
+                width="16"
+                height="16"
+              >
+                <path
+                  fill="#4285F4"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.85z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.85c.87-2.6 3.3-4.53 6.16-4.53z"
+                />
+              </svg>
+              <span>Google 로그인</span>
+            </button>
+            <div
+              id="google-user-profile"
+              class="google-user-profile"
+              style="display: none"
+            >
+              <span id="google-user-email" class="google-user-email"></span>
+              <button
+                id="google-logout-btn"
+                class="google-logout-btn"
+                onclick="logoutGoogle()"
+              >
+                로그아웃
+              </button>
             </div>
+          </div>
+          <!-- 테마 선택기 -->
+          <div class="theme-select-container">
+            <button
+              class="theme-btn"
+              id="theme-auto-btn"
+              onclick="setThemeMode('auto')"
+            >
+              🌓 자동
+            </button>
+            <button
+              class="theme-btn"
+              id="theme-light-btn"
+              onclick="setThemeMode('light')"
+            >
+              ☀️ Light
+            </button>
+            <button
+              class="theme-btn"
+              id="theme-dark-btn"
+              onclick="setThemeMode('dark')"
+            >
+              🌙 Dark
+            </button>
+          </div>
+          <div
+            id="view-mode-indicator"
+            class="view-mode-container"
+            onclick="cycleViewMode()"
+            title="클릭하여 PC/모바일 모드 전환"
+          >
+            <span id="view-mode-icon"></span>
+            <span id="view-mode-text" class="view-mode-label">감지 중...</span>
+          </div>
+          <div class="privacy-toggle-container">
+            <span class="privacy-label">🕶️ Privacy Mode</span>
+            <label class="switch">
+              <input type="checkbox" id="privacy-toggle" />
+              <span class="slider round"></span>
+            </label>
+          </div>
+          <div id="last-updated" class="timestamp">업데이트 확인 중...</div>
         </div>
-        <header>
-            <p class="subtitle">데이터로 보는 스마트한 투자 생활</p>
-        </header>
+      </div>
+      <header>
+        <p class="subtitle">데이터로 보는 스마트한 투자 생활</p>
+      </header>
 
-        <nav class="tabs" role="tablist" aria-label="대시보드 탭">
-            <button class="tab-btn active" role="tab" aria-selected="true" aria-controls="portfolio-tab" onclick="openTab(event, 'portfolio-tab')">📊 포트폴리오</button>
-            <button class="tab-btn" role="tab" aria-selected="false" aria-controls="mdd-tab" onclick="openTab(event, 'mdd-tab')">📉 MDD 분석</button>
-            <button class="tab-btn" role="tab" aria-selected="false" aria-controls="holdings-analysis-tab" onclick="openTab(event, 'holdings-analysis-tab')">💼 My holdings</button>
-            <button class="tab-btn" role="tab" aria-selected="false" aria-controls="sp500-tab" onclick="openTab(event, 'sp500-tab')">🇺🇸 S&P 500</button>
-            <button class="tab-btn" role="tab" aria-selected="false" aria-controls="kospi200-tab" onclick="openTab(event, 'kospi200-tab')">🇰🇷 KOSPI 200</button>
-            <button class="tab-btn" role="tab" aria-selected="false" aria-controls="dividend-tab" onclick="openTab(event, 'dividend-tab')">🎁 배당</button>
-            <button class="tab-btn" role="tab" aria-selected="false" aria-controls="heatmap-tab" onclick="openTab(event, 'heatmap-tab')">🔥 Heatmap</button>
-        </nav>
+      <nav class="tabs" role="tablist" aria-label="대시보드 탭">
+        <button
+          class="tab-btn active"
+          role="tab"
+          aria-selected="true"
+          aria-controls="portfolio-tab"
+          onclick="openTab(event, 'portfolio-tab')"
+        >
+          📊 포트폴리오
+        </button>
+        <button
+          class="tab-btn"
+          role="tab"
+          aria-selected="false"
+          aria-controls="mdd-tab"
+          onclick="openTab(event, 'mdd-tab')"
+        >
+          📉 MDD 분석
+        </button>
+        <button
+          class="tab-btn"
+          role="tab"
+          aria-selected="false"
+          aria-controls="holdings-analysis-tab"
+          onclick="openTab(event, 'holdings-analysis-tab')"
+        >
+          💼 My holdings
+        </button>
+        <button
+          class="tab-btn"
+          role="tab"
+          aria-selected="false"
+          aria-controls="sp500-tab"
+          onclick="openTab(event, 'sp500-tab')"
+        >
+          🇺🇸 S&P 500
+        </button>
+        <button
+          class="tab-btn"
+          role="tab"
+          aria-selected="false"
+          aria-controls="kospi200-tab"
+          onclick="openTab(event, 'kospi200-tab')"
+        >
+          🇰🇷 KOSPI 200
+        </button>
+        <button
+          class="tab-btn"
+          role="tab"
+          aria-selected="false"
+          aria-controls="dividend-tab"
+          onclick="openTab(event, 'dividend-tab')"
+        >
+          🎁 배당
+        </button>
+        <button
+          class="tab-btn"
+          role="tab"
+          aria-selected="false"
+          aria-controls="heatmap-tab"
+          onclick="openTab(event, 'heatmap-tab')"
+        >
+          🔥 Heatmap
+        </button>
+      </nav>
 
-        <!-- 1. 포트폴리오 탭 -->
-        <div id="portfolio-tab" class="tab-content active" role="tabpanel" aria-labelledby="tab-portfolio">
-            <section class="summary-cards" style="position: relative;">
-                <button id="refresh-fab" class="submit-btn refresh-btn-top">새로 갱신 🔄</button>
-                <div class="summary-card">
-                    <span class="label">💰 현재 평가액</span>
-                    <div id="card-eval-val" class="value skeleton">-</div>
-                </div>
-                <div class="summary-card">
-                    <span class="label">💳 총 투자액</span>
-                    <div id="card-invest-val" class="value skeleton">-</div>
-                </div>
-                <div class="summary-card">
-                    <span class="label">💵 수익액</span>
-                    <div id="card-profit-val" class="value skeleton">-</div>
-                </div>
-                <div class="summary-card">
-                    <span class="label">📈 수익률</span>
-                    <div id="card-rate-val" class="value skeleton">-</div>
-                </div>
-                <div class="summary-card">
-                    <span class="label">🌓 일일 변동액(원)</span>
-                    <div id="card-daily-val" class="value skeleton">-</div>
-                </div>
-                <div class="summary-card">
-                    <span class="label">🎁 총 배당금</span>
-                    <div id="card-dividend-val" class="value skeleton">-</div>
-                </div>
-            </section>
+      <!-- 1. 포트폴리오 탭 -->
+      <div
+        id="portfolio-tab"
+        class="tab-content active"
+        role="tabpanel"
+        aria-labelledby="tab-portfolio"
+      >
+        <section class="summary-cards">
+          <button id="refresh-fab" class="submit-btn refresh-btn-top">
+            새로 갱신 🔄
+          </button>
+          <div class="summary-card">
+            <span class="label">💰 현재 평가액</span>
+            <div id="card-eval-val" class="value skeleton">-</div>
+          </div>
+          <div class="summary-card">
+            <span class="label">💳 총 투자액</span>
+            <div id="card-invest-val" class="value skeleton">-</div>
+          </div>
+          <div class="summary-card">
+            <span class="label">💵 수익액</span>
+            <div id="card-profit-val" class="value skeleton">-</div>
+          </div>
+          <div class="summary-card">
+            <span class="label">📈 수익률</span>
+            <div id="card-rate-val" class="value skeleton">-</div>
+          </div>
+          <div class="summary-card">
+            <span class="label">🌓 일일 변동액(원)</span>
+            <div id="card-daily-val" class="value skeleton">-</div>
+          </div>
+          <div class="summary-card">
+            <span class="label">🎁 총 배당금</span>
+            <div id="card-dividend-val" class="value skeleton">-</div>
+          </div>
+        </section>
 
-            <section class="market-cards">
-                <!-- 지수 및 환율 -->
-                <div class="summary-card market-card" id="card-snp">
-                    <span class="label">S&P 500</span>
-                    <div id="card-snp-val" class="value" data-price="7165.08">7,165.08</div>
-                    <div class="market-change"><span id="card-snp-change" class="value-up">+0.80%</span></div>
-                </div>
-                <div class="summary-card market-card" id="card-nasdaq">
-                    <span class="label">Nasdaq</span>
-                    <div id="card-nasdaq-val" class="value" data-price="24836.60">24,836.60</div>
-                    <div class="market-change"><span id="card-nasdaq-change" class="value-up">+1.63%</span></div>
-                </div>
-                <div class="summary-card market-card" id="card-dow">
-                    <span class="label">Dow Jones</span>
-                    <div id="card-dow-val" class="value" data-price="49230.71">49,230.71</div>
-                    <div class="market-change"><span id="card-dow-change" class="value-down">-0.16%</span></div>
-                </div>
-                <div class="summary-card market-card" id="card-kospi">
-                    <span class="label">KOSPI</span>
-                    <div id="card-kospi-val" class="value" data-price="6615.03">6,615.03</div>
-                    <div class="market-change"><span id="card-kospi-change" class="value-up">+2.15%</span></div>
-                </div>
-                <div class="summary-card market-card" id="card-kosdaq">
-                    <span class="label">KOSDAQ</span>
-                    <div id="card-kosdaq-val" class="value" data-price="1226.18">1,226.18</div>
-                    <div class="market-change"><span id="card-kosdaq-change" class="value-up">+1.86%</span></div>
-                </div>
-                <div class="summary-card market-card" id="card-fx">
-                    <span class="label">USD/KRW</span>
-                    <div id="card-fx-val" class="value" data-price="1476.40">1,476.40</div>
-                    <div class="market-change"><span id="card-fx-change">(-)</span></div>
-                </div>
-            </section>
-
-            <div class="main-layout">
-                <div class="content-area">
-                    <section class="card">
-                        <h2 id="slider-title">📈 자산 추이 (History)</h2>
-                        <div class="slider-container">
-                            <div class="slider-wrapper" id="chart-slider">
-                                <!-- 슬라이드 1: 자산 추이 -->
-                                <div class="slide">
-                                    <div class="chart-filter-container">
-                                        <div class="holdings-sort-group" id="history-filter-group">
-                                            <button class="sort-btn" onclick="updateHistoryRange('1M', this)">1달</button>
-                                            <button class="sort-btn" onclick="updateHistoryRange('3M', this)">3달</button>
-                                            <button class="sort-btn" onclick="updateHistoryRange('1Y', this)">1년</button>
-                                            <button class="sort-btn" onclick="updateHistoryRange('YTD', this)">YTD</button>
-                                            <button class="sort-btn" onclick="updateHistoryRange('3Y', this)">3년</button>
-                                            <button class="sort-btn" onclick="updateHistoryRange('5Y', this)">5년</button>
-                                            <button class="sort-btn active" onclick="updateHistoryRange('ALL', this)">전체</button>
-                                        </div>
-                                    </div>
-                                    <canvas id="historyChart"></canvas>
-                                </div>
-                                <!-- 슬라이드 2: 리스크 분석 -->
-                                <div class="slide">
-                                    <div class="chart-filter-container">
-                                        <div class="holdings-sort-group" id="bubble-filter-group">
-                                            <button class="sort-btn active" onclick="filterBubbleChart('ALL', this)">전체</button>
-                                            <button class="sort-btn" onclick="filterBubbleChart('KRW', this)">원화</button>
-                                            <button class="sort-btn" onclick="filterBubbleChart('USD', this)">달러</button>
-                                        </div>
-                                    </div>
-                                    <canvas id="bubbleChart"></canvas>
-                                </div>
-                            </div>
-                            
-                            <!-- 슬라이더 컨트롤 -->
-                            <button class="slider-btn prev" onclick="moveSlider(-1)">❮</button>
-                            <button class="slider-btn next" onclick="moveSlider(1)">❯</button>
-
-                            <!-- 슬라이더 인디케이터 -->
-                            <div class="slider-nav">
-                                <div class="slider-dot active" onclick="goSlide(0)"></div>
-                                <div class="slider-dot" onclick="goSlide(1)"></div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section class="card">
-                        <h2>📊 계좌별 요약</h2>
-                        <div class="chart-container-sm" style="margin-bottom: 2rem;"><canvas id="summaryChart"></canvas></div>
-                        <div class="table-wrapper">
-                            <table id="summary-table">
-                                <thead>
-                                    <tr><th>계좌명</th><th>평가금</th><th>투자금</th><th>수입액</th><th>수익률</th><th>일일변동</th></tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>
-                        </div>
-                    </section>
-
-                    <section class="card">
-                        <div class="holdings-header">
-                            <h2>📋 보유 종목 (Holdings)</h2>
-                        </div>
-
-                        <!-- 테이블 뷰 -->
-                        <div id="holdings-table-view" class="table-wrapper">
-                            <table id="holdings-table">
-                                <thead>
-                                    <tr>
-                                        <th scope="col" onclick="sortHoldings('name')" style="cursor:pointer">종목명↕</th>
-                                        <th scope="col" onclick="sortHoldings('weight')" style="cursor:pointer">비중↕</th>
-                                        <th scope="col" onclick="sortHoldings('returnRate')" style="cursor:pointer">수익률↕</th>
-                                        <th scope="col" onclick="sortHoldings('profit')" style="cursor:pointer">수익액↕</th>
-                                        <th scope="col" onclick="sortHoldings('eval')" style="cursor:pointer">평가금↕</th>
-                                        <th scope="col" onclick="sortHoldings('dailyChange')" style="cursor:pointer">일일변동↕</th>
-                                    </tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>
-                        </div>
-                    </section>
-                </div>
-
-                <aside class="sidebar-area">
-                    <section class="card">
-                        <h2>✍️ 매매 기록</h2>
-                        <form id="transaction-form" class="transaction-grid">
-                            <div class="input-group">
-                                <label>계좌</label>
-                                <select id="account-select" required>
-                                    <option value="">선택하세요</option>
-                                    <option value="AJM">AJM</option>
-                                    <option value="AJMjr">AJMjr</option>
-                                    <option value="JJG-w-AJM">JJG-w-AJM</option>
-                                    <option value="JJG-w-KKO">JJG-w-KKO</option>
-                                    <option value="JJG-w-AJMjr">JJG-w-AJMjr</option>
-                                    <option value="JJG-w-AJM-ISA">JJG-w-AJM-ISA</option>
-                                    <option value="JJG-w-KKO-ISA">JJG-w-KKO-ISA</option>
-                                </select>
-                            </div>
-                            <div class="input-group">
-                                <label>종류</label>
-                                <select id="type-select" required>
-                                    <option value="매수">매수 🟢</option>
-                                    <option value="매도">매도 🔴</option>
-                                    <option value="배당금">배당금 💰</option>
-                                    <option value="현금입금">현금입금 📥</option>
-                                    <option value="현금출금">현금출금 📤</option>
-                                </select>
-                            </div>
-                            <div class="input-group">
-                                <label>통화</label>
-                                <select id="currency-select"><option value="KRW">KRW 🇰🇷</option><option value="USD">USD 🇺🇸</option></select>
-                            </div>
-                            <div class="input-group"><label>날짜</label><input type="date" id="date-input" required></div>
-                            <div class="input-group" id="stock-group">
-                                <label>종목명 / 티커</label>
-                                <select id="stock-name-select">
-                                    <option value="">보유 종목 선택</option>
-                                    <option value="DIRECT">직접 입력 (신규)</option>
-                                </select>
-                                <div id="direct-input-container" style="display:none; flex-direction:column; gap:0.5rem; margin-top:0.5rem;">
-                                    <input type="text" id="stock-name-input" placeholder="신규 종목명 (예: 삼성전자)">
-                                    <input type="text" id="stock-ticker-input" placeholder="티커 (예: 005930 또는 AAPL)">
-                                </div>
-                            </div>
-                            <div class="input-group" id="price-group"><label>단가</label><input type="number" step="any" id="price-input"></div>
-                            <div class="input-group"><label id="qty-label">수량/금액</label><input type="number" step="any" id="quantity-input" required></div>
-                            <button type="submit" class="submit-btn">기록하기 🐕</button>
-                        </form>
-                    </section>
-                </aside>
+        <section class="market-cards">
+          <!-- 지수 및 환율 -->
+          <div class="summary-card market-card" id="card-snp">
+            <span class="label">S&P 500</span>
+            <div id="card-snp-val" class="value" data-price="7165.08">
+              7,165.08
             </div>
-        </div>
+            <div class="market-change">
+              <span id="card-snp-change" class="value-up">+0.80%</span>
+            </div>
+          </div>
+          <div class="summary-card market-card" id="card-nasdaq">
+            <span class="label">Nasdaq</span>
+            <div id="card-nasdaq-val" class="value" data-price="24836.60">
+              24,836.60
+            </div>
+            <div class="market-change">
+              <span id="card-nasdaq-change" class="value-up">+1.63%</span>
+            </div>
+          </div>
+          <div class="summary-card market-card" id="card-dow">
+            <span class="label">Dow Jones</span>
+            <div id="card-dow-val" class="value" data-price="49230.71">
+              49,230.71
+            </div>
+            <div class="market-change">
+              <span id="card-dow-change" class="value-down">-0.16%</span>
+            </div>
+          </div>
+          <div class="summary-card market-card" id="card-kospi">
+            <span class="label">KOSPI</span>
+            <div id="card-kospi-val" class="value" data-price="6615.03">
+              6,615.03
+            </div>
+            <div class="market-change">
+              <span id="card-kospi-change" class="value-up">+2.15%</span>
+            </div>
+          </div>
+          <div class="summary-card market-card" id="card-kosdaq">
+            <span class="label">KOSDAQ</span>
+            <div id="card-kosdaq-val" class="value" data-price="1226.18">
+              1,226.18
+            </div>
+            <div class="market-change">
+              <span id="card-kosdaq-change" class="value-up">+1.86%</span>
+            </div>
+          </div>
+          <div class="summary-card market-card" id="card-fx">
+            <span class="label">USD/KRW</span>
+            <div id="card-fx-val" class="value" data-price="1476.40">
+              1,476.40
+            </div>
+            <div class="market-change">
+              <span id="card-fx-change">(-)</span>
+            </div>
+          </div>
+        </section>
 
-        <!-- 2. MDD 분석 탭 -->
-        <div id="mdd-tab" class="tab-content" role="tabpanel">
+        <div class="main-layout">
+          <div class="content-area">
             <section class="card">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap: wrap; gap: 1rem;">
-                    <h2>📉 종목 하락장 분석 (MDD & Recovery)</h2>
-                    <div class="mdd-search-container" style="display:flex; gap:0.5rem; width:100%; max-width:300px">
-                        <input type="text" id="mdd-ticker" placeholder="Ticker (예: TSLA)" style="flex:1">
-                        <button id="mdd-analyze-btn" onclick="analyzeMDD()" class="submit-btn" style="margin:0; padding:0 1.5rem">분석 🔍</button>
+              <h2 id="slider-title">📈 자산 추이 (History)</h2>
+              <div class="slider-container">
+                <div class="slider-wrapper" id="chart-slider">
+                  <!-- 슬라이드 1: 자산 추이 -->
+                  <div class="slide">
+                    <div class="chart-filter-container">
+                      <div
+                        class="holdings-sort-group"
+                        id="history-filter-group"
+                      >
+                        <button
+                          class="sort-btn"
+                          onclick="updateHistoryRange('1M', this)"
+                        >
+                          1달
+                        </button>
+                        <button
+                          class="sort-btn"
+                          onclick="updateHistoryRange('3M', this)"
+                        >
+                          3달
+                        </button>
+                        <button
+                          class="sort-btn"
+                          onclick="updateHistoryRange('1Y', this)"
+                        >
+                          1년
+                        </button>
+                        <button
+                          class="sort-btn"
+                          onclick="updateHistoryRange('YTD', this)"
+                        >
+                          YTD
+                        </button>
+                        <button
+                          class="sort-btn"
+                          onclick="updateHistoryRange('3Y', this)"
+                        >
+                          3년
+                        </button>
+                        <button
+                          class="sort-btn"
+                          onclick="updateHistoryRange('5Y', this)"
+                        >
+                          5년
+                        </button>
+                        <button
+                          class="sort-btn active"
+                          onclick="updateHistoryRange('ALL', this)"
+                        >
+                          전체
+                        </button>
+                      </div>
                     </div>
+                    <div
+                      class="custom-legend-container"
+                      id="history-legend-container"
+                    ></div>
+                    <canvas id="historyChart"></canvas>
+                  </div>
+                  <!-- 슬라이드 2: 리스크 분석 -->
+                  <div class="slide">
+                    <div class="chart-filter-container">
+                      <div class="holdings-sort-group" id="bubble-filter-group">
+                        <button
+                          class="sort-btn active"
+                          onclick="filterBubbleChart('ALL', this)"
+                        >
+                          전체
+                        </button>
+                        <button
+                          class="sort-btn"
+                          onclick="filterBubbleChart('KRW', this)"
+                        >
+                          원화
+                        </button>
+                        <button
+                          class="sort-btn"
+                          onclick="filterBubbleChart('USD', this)"
+                        >
+                          달러
+                        </button>
+                      </div>
+                    </div>
+                    <canvas id="bubbleChart"></canvas>
+                  </div>
                 </div>
 
-                <div class="mdd-grid">
-                    <div class="mdd-main-area">
-                        <!-- 요약 정보 -->
-                        <div id="mdd-summary-content" class="mdd-summary-container"></div>
-                        
-                        <!-- 주가 및 낙폭 차트 -->
-                        <div class="card" style="background:rgba(0,0,0,0.2); border:none; padding:1rem">
-                            <h3 style="font-size:0.9rem; color:var(--text-muted); margin-bottom:1rem">Price History & Drawdown</h3>
-                            <div class="chart-container-md"><canvas id="mddChart"></canvas></div>
-                        </div>
+                <!-- 슬라이더 컨트롤 -->
+                <button class="slider-btn prev" onclick="moveSlider(-1)">
+                  ❮
+                </button>
+                <button class="slider-btn next" onclick="moveSlider(1)">
+                  ❯
+                </button>
 
-                        <!-- 회복 기간 차트 -->
-                        <div class="card" style="background:rgba(0,0,0,0.2); border:none; padding:1rem">
-                            <h3 style="font-size:0.9rem; color:var(--text-muted); margin-bottom:1rem">Recovery Duration Analysis</h3>
-                            <div class="chart-container-sm"><canvas id="recoveryChart"></canvas></div>
-                        </div>
-                    </div>
-
-                    <aside class="mdd-sidebar">
-                        <div class="stats-table-card">
-                            <h3>📊 구간별 회복 확률</h3>
-                            <div class="table-wrapper">
-                                <table style="font-size:0.85rem">
-                                    <thead>
-                                        <tr><th>하락폭</th><th>확률</th><th>평균일</th><th>목표가</th></tr>
-                                    </thead>
-                                    <tbody id="mdd-stats-tbody">
-                                        <tr><td colspan="4" style="text-align:center; padding:2rem; color:var(--text-muted)">티커를 입력하고 분석을 시작하세요 🐕</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                            <p style="font-size:0.75rem; color:var(--text-muted); margin-top:1rem; line-height:1.4">
-                                * 과거 데이터를 바탕으로 한 시뮬레이션 결과입니다. 미래 수익을 보장하지 않습니다.
-                            </p>
-                        </div>
-                    </aside>
+                <!-- 슬라이더 인디케이터 -->
+                <div class="slider-nav">
+                  <div class="slider-dot active" onclick="goSlide(0)"></div>
+                  <div class="slider-dot" onclick="goSlide(1)"></div>
                 </div>
+              </div>
             </section>
-        </div>
 
-        <!-- 2.5. My Holdings 분석 탭 -->
-        <div id="holdings-analysis-tab" class="tab-content" role="tabpanel">
-            <section class="mdd-container">
-                <div class="mdd-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-                    <div>
-                        <h2 class="section-title">💼 내 보유 종목 상세 분석</h2>
-                        <p id="holdings-analysis-status" class="status-msg">포트폴리오 데이터를 로딩 중...</p>
-                    </div>
-                    <button class="submit-btn" onclick="refreshHoldingsAnalysis()" style="margin: 0; width: auto; padding: 0.5rem 1rem;">새로 갱신 🔄</button>
+            <section class="card">
+              <h2 id="summary-slider-title">📊 계좌별 요약 (자산 비중)</h2>
+              <div class="slider-container">
+                <div class="slider-wrapper" id="summary-chart-slider">
+                  <!-- 슬라이드 1: 계좌별 요약 (바 차트) -->
+                  <div class="slide slide-sm">
+                    <canvas id="summaryChart"></canvas>
+                  </div>
+                  <!-- 슬라이드 2: 계좌별 평가액 (파이 차트) -->
+                  <div class="slide slide-sm">
+                    <canvas id="summaryPieChart"></canvas>
+                  </div>
                 </div>
-                
-                <div class="card glass">
-                    <div class="table-wrapper">
-                        <table id="holdings-analysis-table">
-                            <thead>
-                                <tr>
-                                    <th scope="col" style="cursor:pointer" onclick="sortHoldingsAnalysis('name')">종목명↕</th>
-                                    <th scope="col" style="cursor:pointer" onclick="sortHoldingsAnalysis('weight')">비중↕</th>
-                                    <th scope="col" style="cursor:pointer" onclick="sortHoldingsAnalysis('price')">현재가↕</th>
-                                    <th scope="col" style="cursor:pointer" onclick="sortHoldingsAnalysis('change')">변동률↕</th>
-                                    <th scope="col" style="cursor:pointer" onclick="sortHoldingsAnalysis('returnRate')">수익률↕</th>
-                                    <th scope="col" style="cursor:pointer" onclick="sortHoldingsAnalysis('mdd')">MDD↕</th>
-                                    <th scope="col" style="cursor:pointer" onclick="sortHoldingsAnalysis('recoveryProb')">회복확률↕</th>
-                                    <th scope="col" style="cursor:pointer" onclick="sortHoldingsAnalysis('rsi')">RSI(14)↕</th>
-                                    <th scope="col" style="cursor:pointer" onclick="sortHoldingsAnalysis('dividendYield')">분배율/배당률↕</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- script.js에서 데이터 채워짐 -->
-                            </tbody>
-                        </table>
-                    </div>
-                    <div style="margin-top: 1rem; font-size: 0.8rem; color: var(--text-muted);">
-                        * 본 데이터는 야후 파이낸스 실시간 API를 통해 분석됩니다. (ETF의 경우 배당률은 분배율을 의미합니다.)
-                    </div>
+
+                <!-- 슬라이더 컨트롤 -->
+                <button class="slider-btn prev" onclick="moveSummarySlider(-1)">
+                  ❮
+                </button>
+                <button class="slider-btn next" onclick="moveSummarySlider(1)">
+                  ❯
+                </button>
+
+                <!-- 슬라이더 인디케이터 -->
+                <div class="slider-nav" id="summary-slider-dots">
+                  <div
+                    class="slider-dot active"
+                    onclick="goSummarySlide(0)"
+                  ></div>
+                  <div class="slider-dot" onclick="goSummarySlide(1)"></div>
                 </div>
+              </div>
+
+              <div class="table-wrapper" style="margin-top: 1.5rem">
+                <table id="summary-table">
+                  <thead>
+                    <tr>
+                      <th>계좌명</th>
+                      <th>평가금</th>
+                      <th>투자금</th>
+                      <th>수입액</th>
+                      <th>수익률</th>
+                      <th>일일변동</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
             </section>
-        </div>
 
-        <!-- 3. S&P 500 탭 -->
-        <div id="sp500-tab" class="tab-content" role="tabpanel">
-            <section class="mdd-container">
-                <div class="mdd-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-                    <div>
-                        <h2 class="section-title">🇺🇸 S&P 500 상위 100 분석</h2>
-                        <p id="sp500-status" class="status-msg">데이터 로딩 대기 중...</p>
-                    </div>
-                    <button class="submit-btn" onclick="refreshSP500()" style="margin: 0; width: auto; padding: 0.5rem 1rem;">새로 갱신 🔄</button>
-                </div>
-                
-                <div class="card glass">
-                    <div class="table-wrapper">
-                        <table id="sp500-table">
-                            <thead>
-                                <tr>
-                                    <th scope="col" onclick="sortSP500('rank')" style="cursor:pointer">순위↕</th>
-                                    <th scope="col" onclick="sortSP500('name')" style="cursor:pointer">종목명↕</th>
-                                    <th scope="col" onclick="sortSP500('marketCap')" style="cursor:pointer">시가 총액↕</th>
-                                    <th scope="col" onclick="sortSP500('price')" style="cursor:pointer">현재가↕</th>
-                                    <th scope="col" onclick="sortSP500('change')" style="cursor:pointer">변동률↕</th>
-                                    <th scope="col" onclick="sortSP500('mdd')" style="cursor:pointer">MDD↕</th>
-                                    <th scope="col" onclick="sortSP500('recoveryProb')" style="cursor:pointer">회복확률↕</th>
-                                    <th scope="col" onclick="sortSP500('rsi')" style="cursor:pointer">RSI(14)↕</th>
-                                    <th scope="col" onclick="sortSP500('dividendYield')" style="cursor:pointer">배당률↕</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- script.js에서 데이터 채워짐 -->
-                            </tbody>
-                        </table>
-                    </div>
-                    <div style="margin-top: 1rem; font-size: 0.8rem; color: var(--text-muted);">
-                        * RSI 70 이상: <span class="rsi-tag rsi-overbought">과매수</span> / RSI 30 이하: <span class="rsi-tag rsi-oversold">과매도</span>
-                    </div>
-                </div>
+            <section class="card">
+              <div class="holdings-header">
+                <h2>📋 보유 종목 (Holdings)</h2>
+              </div>
+
+              <!-- 카드 뷰 -->
+              <div
+                id="holdings-cards-view"
+                class="holdings-cards-grid"
+                style="display: none"
+              ></div>
+
+              <!-- 테이블 뷰 -->
+              <div id="holdings-table-view" class="table-wrapper">
+                <table id="holdings-table">
+                  <thead>
+                    <tr>
+                      <th
+                        scope="col"
+                        onclick="sortHoldings('name')"
+                        style="cursor: pointer"
+                      >
+                        종목명↕
+                      </th>
+                      <th
+                        scope="col"
+                        onclick="sortHoldings('weight')"
+                        style="cursor: pointer"
+                      >
+                        비중↕
+                      </th>
+                      <th
+                        scope="col"
+                        onclick="sortHoldings('returnRate')"
+                        style="cursor: pointer"
+                      >
+                        수익률↕
+                      </th>
+                      <th
+                        scope="col"
+                        onclick="sortHoldings('profit')"
+                        style="cursor: pointer"
+                      >
+                        수익액↕
+                      </th>
+                      <th
+                        scope="col"
+                        onclick="sortHoldings('eval')"
+                        style="cursor: pointer"
+                      >
+                        평가금↕
+                      </th>
+                      <th
+                        scope="col"
+                        onclick="sortHoldings('dailyChange')"
+                        style="cursor: pointer"
+                      >
+                        일일변동↕
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
             </section>
-        </div>
+          </div>
 
-        <!-- 4. KOSPI 200 탭 -->
-        <div id="kospi200-tab" class="tab-content" role="tabpanel">
-            <section class="mdd-container">
-                <div class="mdd-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-                    <div>
-                        <h2 class="section-title">🇰🇷 KOSPI 200 상위 100 분석</h2>
-                        <p id="kospi200-status" class="status-msg">데이터 로딩 대기 중...</p>
-                    </div>
-                    <button class="submit-btn" onclick="refreshKOSPI200()" style="margin: 0; width: auto; padding: 0.5rem 1rem;">새로 갱신 🔄</button>
+          <aside class="sidebar-area">
+            <!-- 🎧 AI 포트폴리오 브리핑 팟캐스트 -->
+            <section class="card podcast-card">
+              <div
+                class="podcast-header"
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  margin-bottom: 1rem;
+                "
+              >
+                <h2
+                  style="
+                    margin: 0;
+                    font-size: 1.1rem;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                  "
+                >
+                  <span>🎧 AI 브리핑 팟캐스트</span>
+                </h2>
+                <button
+                  id="podcast-refresh-btn"
+                  class="podcast-action-btn"
+                  title="AI 브리핑 새로 갱신"
+                  style="
+                    background: none;
+                    border: none;
+                    font-size: 1.1rem;
+                    cursor: pointer;
+                    transition: transform 0.3s;
+                  "
+                  onclick="refreshPodcast()"
+                >
+                  🔄
+                </button>
+              </div>
+              <div
+                class="podcast-content"
+                style="display: flex; flex-direction: column; gap: 0.8rem"
+              >
+                <div
+                  class="waveform-container"
+                  id="podcast-waveform"
+                  style="
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    height: 35px;
+                    background: rgba(15, 23, 42, 0.4);
+                    border-radius: 8px;
+                    padding: 0 1rem;
+                    overflow: hidden;
+                    gap: 3px;
+                  "
+                >
+                  <div
+                    class="waveform-bar"
+                    style="
+                      flex: 1;
+                      height: 20%;
+                      background: var(--primary);
+                      border-radius: 3px;
+                      transition: height 0.15s ease;
+                    "
+                  ></div>
+                  <div
+                    class="waveform-bar"
+                    style="
+                      flex: 1;
+                      height: 30%;
+                      background: var(--primary);
+                      border-radius: 3px;
+                      transition: height 0.15s ease;
+                    "
+                  ></div>
+                  <div
+                    class="waveform-bar"
+                    style="
+                      flex: 1;
+                      height: 15%;
+                      background: var(--primary);
+                      border-radius: 3px;
+                      transition: height 0.15s ease;
+                    "
+                  ></div>
+                  <div
+                    class="waveform-bar"
+                    style="
+                      flex: 1;
+                      height: 40%;
+                      background: var(--primary);
+                      border-radius: 3px;
+                      transition: height 0.15s ease;
+                    "
+                  ></div>
+                  <div
+                    class="waveform-bar"
+                    style="
+                      flex: 1;
+                      height: 25%;
+                      background: var(--primary);
+                      border-radius: 3px;
+                      transition: height 0.15s ease;
+                    "
+                  ></div>
+                  <div
+                    class="waveform-bar"
+                    style="
+                      flex: 1;
+                      height: 50%;
+                      background: var(--primary);
+                      border-radius: 3px;
+                      transition: height 0.15s ease;
+                    "
+                  ></div>
+                  <div
+                    class="waveform-bar"
+                    style="
+                      flex: 1;
+                      height: 20%;
+                      background: var(--primary);
+                      border-radius: 3px;
+                      transition: height 0.15s ease;
+                    "
+                  ></div>
+                  <div
+                    class="waveform-bar"
+                    style="
+                      flex: 1;
+                      height: 35%;
+                      background: var(--primary);
+                      border-radius: 3px;
+                      transition: height 0.15s ease;
+                    "
+                  ></div>
+                  <div
+                    class="waveform-bar"
+                    style="
+                      flex: 1;
+                      height: 15%;
+                      background: var(--primary);
+                      border-radius: 3px;
+                      transition: height 0.15s ease;
+                    "
+                  ></div>
+                  <div
+                    class="waveform-bar"
+                    style="
+                      flex: 1;
+                      height: 10%;
+                      background: var(--primary);
+                      border-radius: 3px;
+                      transition: height 0.15s ease;
+                    "
+                  ></div>
                 </div>
-                
-                <div class="card glass">
-                    <div class="table-wrapper">
-                        <table id="kospi200-table">
-                            <thead>
-                                <tr>
-                                    <th scope="col" onclick="sortKOSPI200('rank')" style="cursor:pointer">순위↕</th>
-                                    <th scope="col" onclick="sortKOSPI200('name')" style="cursor:pointer">종목명↕</th>
-                                    <th scope="col" onclick="sortKOSPI200('marketCap')" style="cursor:pointer">시가 총액↕</th>
-                                    <th scope="col" onclick="sortKOSPI200('price')" style="cursor:pointer">현재가↕</th>
-                                    <th scope="col" onclick="sortKOSPI200('change')" style="cursor:pointer">변동률↕</th>
-                                    <th scope="col" onclick="sortKOSPI200('mdd')" style="cursor:pointer">MDD↕</th>
-                                    <th scope="col" onclick="sortKOSPI200('recoveryProb')" style="cursor:pointer">회복확률↕</th>
-                                    <th scope="col" onclick="sortKOSPI200('rsi')" style="cursor:pointer">RSI(14)↕</th>
-                                    <th scope="col" onclick="sortKOSPI200('dividendYield')" style="cursor:pointer">배당률↕</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- script.js에서 데이터 채워짐 -->
-                            </tbody>
-                        </table>
-                    </div>
-                    <div style="margin-top: 1rem; font-size: 0.8rem; color: var(--text-muted);">
-                        * RSI 70 이상: <span class="rsi-tag rsi-overbought">과매수</span> / RSI 30 이하: <span class="rsi-tag rsi-oversold">과매도</span>
-                    </div>
+                <div
+                  class="podcast-info"
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    font-size: 0.75rem;
+                    color: var(--text-muted);
+                  "
+                >
+                  <span id="podcast-status-text">재생 대기 중</span>
+                  <span id="podcast-time">00:00 / 00:00</span>
                 </div>
+                <div
+                  class="podcast-controls"
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 0.8rem;
+                    margin-top: 0.2rem;
+                  "
+                >
+                  <button
+                    id="podcast-play-btn"
+                    class="submit-btn"
+                    style="
+                      margin: 0;
+                      padding: 0.5rem 1rem;
+                      font-size: 0.85rem;
+                      flex: 0 0 auto;
+                      display: flex;
+                      align-items: center;
+                      gap: 0.3rem;
+                    "
+                    onclick="togglePodcast()"
+                  >
+                    <span id="play-icon">▶</span>
+                    <span id="play-text">재생</span>
+                  </button>
+                  <div
+                    class="podcast-progress-container"
+                    id="podcast-progress-container"
+                    style="
+                      flex: 1;
+                      height: 6px;
+                      background: rgba(255, 255, 255, 0.1);
+                      border-radius: 3px;
+                      cursor: pointer;
+                      position: relative;
+                    "
+                  >
+                    <div
+                      id="podcast-progress-bar"
+                      style="
+                        height: 100%;
+                        width: 0%;
+                        background: var(--primary);
+                        border-radius: 3px;
+                        transition: width 0.1s linear;
+                      "
+                    ></div>
+                  </div>
+                </div>
+                <div
+                  id="podcast-subtitle"
+                  class="podcast-subtitle"
+                  style="
+                    font-size: 0.8rem;
+                    background: rgba(0, 0, 0, 0.2);
+                    border-radius: 8px;
+                    padding: 0.6rem;
+                    min-height: 48px;
+                    max-height: 120px;
+                    overflow-y: auto;
+                    border: 1px solid var(--border-color);
+                    color: var(--text-main);
+                    font-style: italic;
+                    line-height: 1.4;
+                    display: flex;
+                    align-items: center;
+                    text-align: left;
+                  "
+                >
+                  "재생 버튼을 누르면 오늘의 보유 자산 및 최신 시장 전망 브리핑
+                  팟캐스트가 시작됩니다."
+                </div>
+              </div>
             </section>
-        </div>
 
-        <!-- 6. 배당 탭 -->
-        <div id="dividend-tab" class="tab-content" role="tabpanel">
-            <section class="mdd-container">
-                <div class="calendar-header-wrapper" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
-                    <h2 class="section-title">📅 배당 캘린더</h2>
-                    <div class="calendar-nav-group" style="display: flex; align-items: center; gap: 1rem; background: var(--card-bg); padding: 0.5rem 1rem; border-radius: 8px;">
-                        <button class="calendar-nav-btn" onclick="changeDividendMonth(-1)" style="background: none; border: none; color: var(--text-main); cursor: pointer; font-size: 1.2rem;">❮</button>
-                        <h3 id="current-calendar-month" style="margin: 0; min-width: 120px; text-align: center; font-size: 1.1rem;">2024년 5월</h3>
-                        <button class="calendar-nav-btn" onclick="changeDividendMonth(1)" style="background: none; border: none; color: var(--text-main); cursor: pointer; font-size: 1.2rem;">❯</button>
-                    </div>
+            <section class="card" style="margin-top: 1.5rem">
+              <h2>✍️ 매매 기록</h2>
+              <form
+                id="transaction-form"
+                class="transaction-grid"
+                data-tx-type="매수"
+              >
+                <div class="input-group">
+                  <label>💳 계좌</label>
+                  <select id="account-select" required>
+                    <option value="">선택하세요</option>
+                    <option value="AJM">AJM</option>
+                    <option value="AJMjr">AJMjr</option>
+                    <option value="JJG-w-AJM">JJG-w-AJM</option>
+                    <option value="JJG-w-KKO">JJG-w-KKO</option>
+                    <option value="JJG-w-AJMjr">JJG-w-AJMjr</option>
+                    <option value="JJG-w-AJM-ISA">JJG-w-AJM-ISA</option>
+                    <option value="JJG-w-KKO-ISA">JJG-w-KKO-ISA</option>
+                  </select>
                 </div>
-                
-                <div class="card glass calendar-card" style="padding: 1rem;">
-                    <div class="calendar-grid-header" style="display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: bold; margin-bottom: 0.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
-                        <div class="day-name sun" style="color: #ff6b6b;">일</div>
-                        <div class="day-name">월</div>
-                        <div class="day-name">화</div>
-                        <div class="day-name">수</div>
-                        <div class="day-name">목</div>
-                        <div class="day-name">금</div>
-                        <div class="day-name sat" style="color: #4dabf7;">토</div>
-                    </div>
-                    <div id="calendar-grid" class="calendar-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--border-color); border: 1px solid var(--border-color);">
-                        <!-- 달력 날짜가 동적으로 생성됨 -->
-                    </div>
+                <div class="input-group">
+                  <label>🏷️ 종류</label>
+                  <select id="type-select" required>
+                    <option value="매수">매수 🟢</option>
+                    <option value="매도">매도 🔴</option>
+                    <option value="배당금">배당금 💰</option>
+                    <option value="현금입금">현금입금 📥</option>
+                    <option value="현금출금">현금출금 📤</option>
+                  </select>
                 </div>
-
-                <div class="card glass" style="margin-top: 2rem;">
-                    <h3 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                        <span>📝 배당 지급 상세 내역</span>
-                        <span id="selected-date-label" style="font-size: 0.9rem; font-weight: normal; color: var(--text-muted);">(날짜를 선택하세요)</span>
-                    </h3>
-                    <div class="table-wrapper">
-                        <table id="dividend-detail-table">
-                            <thead>
-                                <tr>
-                                    <th>지급일</th>
-                                    <th>종목명</th>
-                                    <th>주식수</th>
-                                    <th>1주당 배당금</th>
-                                    <th>총 배당금</th>
-                                </tr>
-                            </thead>
-                            <tbody id="dividend-detail-body">
-                                <tr>
-                                    <td colspan="5" class="empty-msg" style="text-align: center; padding: 2rem; color: var(--text-muted);">해당 월의 배당 내역이 없습니다.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div style="margin-top: 1rem; font-size: 0.8rem; color: var(--text-muted); line-height: 1.4;">
-                        * 배당 정보는 Yahoo Finance API를 통해 수집됩니다.<br>
-                        * 기업/운용사의 공식 발표 후 API에 반영되기까지 시차가 발생할 수 있으며, 이로 인해 최근/예정 배당 내역이 누락되어 보일 수 있습니다. (특히 월배당 ETF)
-                    </div>
+                <div class="input-group">
+                  <label>💱 통화</label>
+                  <select id="currency-select">
+                    <option value="KRW">KRW 🇰🇷</option>
+                    <option value="USD">USD 🇺🇸</option>
+                  </select>
                 </div>
+                <div class="input-group">
+                  <label>📅 날짜</label>
+                  <input type="date" id="date-input" required />
+                </div>
+                <div class="input-group" id="stock-group">
+                  <label>🔍 종목명 / 티커</label>
+                  <select id="stock-name-select">
+                    <option value="">보유 종목 선택</option>
+                    <option value="DIRECT">직접 입력 (신규)</option>
+                  </select>
+                  <div id="direct-input-container">
+                    <input
+                      type="text"
+                      id="stock-name-input"
+                      placeholder="신규 종목명"
+                    />
+                    <input
+                      type="text"
+                      id="stock-ticker-input"
+                      placeholder="티커 (예: AAPL)"
+                    />
+                  </div>
+                </div>
+                <div class="input-group" id="price-group">
+                  <label>💵 단가</label>
+                  <input type="number" step="any" id="price-input" />
+                </div>
+                <div class="input-group" id="quantity-group">
+                  <label id="qty-label">🔢 수량/금액</label>
+                  <input
+                    type="number"
+                    step="any"
+                    id="quantity-input"
+                    required
+                  />
+                </div>
+                <button type="submit" class="submit-btn">
+                  💾 거래 기록 저장
+                </button>
+              </form>
             </section>
+          </aside>
         </div>
+      </div>
 
-        <!-- 6. 히트맵 탭 -->
-        <div id="heatmap-tab" class="tab-content" role="tabpanel">
-            <section class="mdd-container">
-                <h2 class="section-title">🔥 자산 변동 히트맵</h2>
-                <div class="card glass heatmap-scroll-container">
-                    <div id="heatmap-container" class="heatmap-wrapper">
-                        <!-- script.js에서 렌더링 -->
-                    </div>
+      <!-- 2. MDD 분석 탭 -->
+      <div id="mdd-tab" class="tab-content" role="tabpanel">
+        <section class="card">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 1.5rem;
+              flex-wrap: wrap;
+              gap: 1rem;
+            "
+          >
+            <h2>📉 종목 하락장 분석 (MDD & Recovery)</h2>
+            <div
+              class="mdd-search-container"
+              style="display: flex; gap: 0.5rem; width: 100%; max-width: 300px"
+            >
+              <input
+                type="text"
+                id="mdd-ticker"
+                placeholder="Ticker (예: TSLA)"
+                style="flex: 1"
+              />
+              <button
+                id="mdd-analyze-btn"
+                onclick="analyzeMDD()"
+                class="submit-btn"
+                style="margin: 0; padding: 0 1.5rem"
+              >
+                분석 🔍
+              </button>
+            </div>
+          </div>
+
+          <div class="mdd-grid">
+            <div class="mdd-main-area">
+              <!-- 요약 정보 -->
+              <div id="mdd-summary-content" class="mdd-summary-container"></div>
+
+              <!-- 주가 및 낙폭 차트 -->
+              <div
+                class="card"
+                style="
+                  background: rgba(0, 0, 0, 0.2);
+                  border: none;
+                  padding: 1rem;
+                "
+              >
+                <h3
+                  style="
+                    font-size: 0.9rem;
+                    color: var(--text-muted);
+                    margin-bottom: 1rem;
+                  "
+                >
+                  Price History & Drawdown
+                </h3>
+                <div class="chart-container-md">
+                  <canvas id="mddChart"></canvas>
                 </div>
-                <div class="heatmap-legend" style="margin-top: 1rem; display: flex; align-items: center; gap: 1rem; font-size: 0.85rem; color: var(--text-muted);">
-                    <span>레전드:</span>
-                    <div style="display: flex; align-items: center; gap: 0.3rem;"><div class="hm-cell hm-up-3"></div> 하락</div>
-                    <div style="display: flex; align-items: center; gap: 0.3rem;"><div class="hm-cell hm-empty"></div> 변동없음/데이터없음</div>
-                    <div style="display: flex; align-items: center; gap: 0.3rem;"><div class="hm-cell hm-down-3"></div> 상승</div>
-                    <span style="margin-left: 0.5rem;">* 빨간색: 상승 / 파란색: 하락</span>
+              </div>
+
+              <!-- 회복 기간 차트 -->
+              <div
+                class="card"
+                style="
+                  background: rgba(0, 0, 0, 0.2);
+                  border: none;
+                  padding: 1rem;
+                "
+              >
+                <h3
+                  style="
+                    font-size: 0.9rem;
+                    color: var(--text-muted);
+                    margin-bottom: 1rem;
+                  "
+                >
+                  Recovery Duration Analysis
+                </h3>
+                <div class="chart-container-sm">
+                  <canvas id="recoveryChart"></canvas>
                 </div>
-            </section>
-        </div>
+              </div>
+            </div>
+
+            <aside class="mdd-sidebar">
+              <div class="stats-table-card">
+                <h3>📊 구간별 회복 확률</h3>
+                <div class="table-wrapper">
+                  <table style="font-size: 0.85rem">
+                    <thead>
+                      <tr>
+                        <th>하락폭</th>
+                        <th>확률</th>
+                        <th>평균일</th>
+                        <th>목표가</th>
+                      </tr>
+                    </thead>
+                    <tbody id="mdd-stats-tbody">
+                      <tr>
+                        <td
+                          colspan="4"
+                          style="
+                            text-align: center;
+                            padding: 2rem;
+                            color: var(--text-muted);
+                          "
+                        >
+                          티커를 입력하고 분석을 시작하세요 🐕
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p
+                  style="
+                    font-size: 0.75rem;
+                    color: var(--text-muted);
+                    margin-top: 1rem;
+                    line-height: 1.4;
+                  "
+                >
+                  * 과거 데이터를 바탕으로 한 시뮬레이션 결과입니다. 미래 수익을
+                  보장하지 않습니다.
+                </p>
+              </div>
+            </aside>
+          </div>
+        </section>
+      </div>
+
+      <!-- 2.5. My Holdings 분석 탭 -->
+      <div id="holdings-analysis-tab" class="tab-content" role="tabpanel">
+        <section class="mdd-container">
+          <div
+            class="mdd-header"
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              flex-wrap: wrap;
+              gap: 1rem;
+            "
+          >
+            <div>
+              <h2 class="section-title">💼 내 보유 종목 상세 분석</h2>
+              <p id="holdings-analysis-status" class="status-msg">
+                포트폴리오 데이터를 로딩 중...
+              </p>
+            </div>
+            <button
+              class="submit-btn"
+              onclick="refreshHoldingsAnalysis()"
+              style="margin: 0; width: auto; padding: 0.5rem 1rem"
+            >
+              새로 갱신 🔄
+            </button>
+          </div>
+
+          <div class="card glass">
+            <div class="table-wrapper">
+              <table id="holdings-analysis-table">
+                <thead>
+                  <tr>
+                    <th
+                      scope="col"
+                      style="cursor: pointer"
+                      onclick="sortHoldingsAnalysis('name')"
+                    >
+                      종목명↕
+                    </th>
+                    <th
+                      scope="col"
+                      style="cursor: pointer"
+                      onclick="sortHoldingsAnalysis('weight')"
+                    >
+                      비중↕
+                    </th>
+                    <th
+                      scope="col"
+                      style="cursor: pointer"
+                      onclick="sortHoldingsAnalysis('price')"
+                    >
+                      현재가↕
+                    </th>
+                    <th
+                      scope="col"
+                      style="cursor: pointer"
+                      onclick="sortHoldingsAnalysis('change')"
+                    >
+                      변동률↕
+                    </th>
+                    <th
+                      scope="col"
+                      style="cursor: pointer"
+                      onclick="sortHoldingsAnalysis('returnRate')"
+                    >
+                      수익률↕
+                    </th>
+                    <th
+                      scope="col"
+                      style="cursor: pointer"
+                      onclick="sortHoldingsAnalysis('mdd')"
+                    >
+                      MDD↕
+                    </th>
+                    <th
+                      scope="col"
+                      style="cursor: pointer"
+                      onclick="sortHoldingsAnalysis('recoveryProb')"
+                    >
+                      회복확률↕
+                    </th>
+                    <th
+                      scope="col"
+                      style="cursor: pointer"
+                      onclick="sortHoldingsAnalysis('rsi')"
+                    >
+                      RSI(14)↕
+                    </th>
+                    <th
+                      scope="col"
+                      style="cursor: pointer"
+                      onclick="sortHoldingsAnalysis('dividendYield')"
+                    >
+                      분배율/배당률↕
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- script.js에서 데이터 채워짐 -->
+                </tbody>
+              </table>
+            </div>
+            <div
+              style="
+                margin-top: 1rem;
+                font-size: 0.8rem;
+                color: var(--text-muted);
+              "
+            >
+              * 본 데이터는 야후 파이낸스 실시간 API를 통해 분석됩니다. (ETF의
+              경우 배당률은 분배율을 의미합니다.)
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- 3. S&P 500 탭 -->
+      <div id="sp500-tab" class="tab-content" role="tabpanel">
+        <section class="mdd-container">
+          <div
+            class="mdd-header"
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              flex-wrap: wrap;
+              gap: 1rem;
+            "
+          >
+            <div>
+              <h2 class="section-title">🇺🇸 S&P 500 상위 100 분석</h2>
+              <p id="sp500-status" class="status-msg">데이터 로딩 대기 중...</p>
+            </div>
+            <button
+              class="submit-btn"
+              onclick="refreshSP500()"
+              style="margin: 0; width: auto; padding: 0.5rem 1rem"
+            >
+              새로 갱신 🔄
+            </button>
+          </div>
+
+          <div class="card glass">
+            <div class="table-wrapper">
+              <table id="sp500-table">
+                <thead>
+                  <tr>
+                    <th
+                      scope="col"
+                      onclick="sortSP500('rank')"
+                      style="cursor: pointer"
+                    >
+                      순위↕
+                    </th>
+                    <th
+                      scope="col"
+                      onclick="sortSP500('name')"
+                      style="cursor: pointer"
+                    >
+                      종목명↕
+                    </th>
+                    <th
+                      scope="col"
+                      onclick="sortSP500('marketCap')"
+                      style="cursor: pointer"
+                    >
+                      시가 총액↕
+                    </th>
+                    <th
+                      scope="col"
+                      onclick="sortSP500('price')"
+                      style="cursor: pointer"
+                    >
+                      현재가↕
+                    </th>
+                    <th
+                      scope="col"
+                      onclick="sortSP500('change')"
+                      style="cursor: pointer"
+                    >
+                      변동률↕
+                    </th>
+                    <th
+                      scope="col"
+                      onclick="sortSP500('mdd')"
+                      style="cursor: pointer"
+                    >
+                      MDD↕
+                    </th>
+                    <th
+                      scope="col"
+                      onclick="sortSP500('recoveryProb')"
+                      style="cursor: pointer"
+                    >
+                      회복확률↕
+                    </th>
+                    <th
+                      scope="col"
+                      onclick="sortSP500('rsi')"
+                      style="cursor: pointer"
+                    >
+                      RSI(14)↕
+                    </th>
+                    <th
+                      scope="col"
+                      onclick="sortSP500('dividendYield')"
+                      style="cursor: pointer"
+                    >
+                      배당률↕
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- script.js에서 데이터 채워짐 -->
+                </tbody>
+              </table>
+            </div>
+            <div
+              style="
+                margin-top: 1rem;
+                font-size: 0.8rem;
+                color: var(--text-muted);
+              "
+            >
+              * RSI 70 이상:
+              <span class="rsi-tag rsi-overbought">과매수</span> / RSI 30 이하:
+              <span class="rsi-tag rsi-oversold">과매도</span>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- 4. KOSPI 200 탭 -->
+      <div id="kospi200-tab" class="tab-content" role="tabpanel">
+        <section class="mdd-container">
+          <div
+            class="mdd-header"
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              flex-wrap: wrap;
+              gap: 1rem;
+            "
+          >
+            <div>
+              <h2 class="section-title">🇰🇷 KOSPI 200 상위 100 분석</h2>
+              <p id="kospi200-status" class="status-msg">
+                데이터 로딩 대기 중...
+              </p>
+            </div>
+            <button
+              class="submit-btn"
+              onclick="refreshKOSPI200()"
+              style="margin: 0; width: auto; padding: 0.5rem 1rem"
+            >
+              새로 갱신 🔄
+            </button>
+          </div>
+
+          <div class="card glass">
+            <div class="table-wrapper">
+              <table id="kospi200-table">
+                <thead>
+                  <tr>
+                    <th
+                      scope="col"
+                      onclick="sortKOSPI200('rank')"
+                      style="cursor: pointer"
+                    >
+                      순위↕
+                    </th>
+                    <th
+                      scope="col"
+                      onclick="sortKOSPI200('name')"
+                      style="cursor: pointer"
+                    >
+                      종목명↕
+                    </th>
+                    <th
+                      scope="col"
+                      onclick="sortKOSPI200('marketCap')"
+                      style="cursor: pointer"
+                    >
+                      시가 총액↕
+                    </th>
+                    <th
+                      scope="col"
+                      onclick="sortKOSPI200('price')"
+                      style="cursor: pointer"
+                    >
+                      현재가↕
+                    </th>
+                    <th
+                      scope="col"
+                      onclick="sortKOSPI200('change')"
+                      style="cursor: pointer"
+                    >
+                      변동률↕
+                    </th>
+                    <th
+                      scope="col"
+                      onclick="sortKOSPI200('mdd')"
+                      style="cursor: pointer"
+                    >
+                      MDD↕
+                    </th>
+                    <th
+                      scope="col"
+                      onclick="sortKOSPI200('recoveryProb')"
+                      style="cursor: pointer"
+                    >
+                      회복확률↕
+                    </th>
+                    <th
+                      scope="col"
+                      onclick="sortKOSPI200('rsi')"
+                      style="cursor: pointer"
+                    >
+                      RSI(14)↕
+                    </th>
+                    <th
+                      scope="col"
+                      onclick="sortKOSPI200('dividendYield')"
+                      style="cursor: pointer"
+                    >
+                      배당률↕
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- script.js에서 데이터 채워짐 -->
+                </tbody>
+              </table>
+            </div>
+            <div
+              style="
+                margin-top: 1rem;
+                font-size: 0.8rem;
+                color: var(--text-muted);
+              "
+            >
+              * RSI 70 이상:
+              <span class="rsi-tag rsi-overbought">과매수</span> / RSI 30 이하:
+              <span class="rsi-tag rsi-oversold">과매도</span>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- 6. 배당 탭 -->
+      <div id="dividend-tab" class="tab-content" role="tabpanel">
+        <section class="mdd-container">
+          <div
+            class="calendar-header-wrapper"
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 1.5rem;
+              flex-wrap: wrap;
+              gap: 1rem;
+            "
+          >
+            <h2 class="section-title">📅 배당 캘린더</h2>
+            <div
+              class="calendar-nav-group"
+              style="
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                background: var(--card-bg);
+                padding: 0.5rem 1rem;
+                border-radius: 8px;
+              "
+            >
+              <button
+                class="calendar-nav-btn"
+                onclick="changeDividendMonth(-1)"
+                style="
+                  background: none;
+                  border: none;
+                  color: var(--text-main);
+                  cursor: pointer;
+                  font-size: 1.2rem;
+                "
+              >
+                ❮
+              </button>
+              <h3
+                id="current-calendar-month"
+                style="
+                  margin: 0;
+                  min-width: 120px;
+                  text-align: center;
+                  font-size: 1.1rem;
+                "
+              >
+                2024년 5월
+              </h3>
+              <button
+                class="calendar-nav-btn"
+                onclick="changeDividendMonth(1)"
+                style="
+                  background: none;
+                  border: none;
+                  color: var(--text-main);
+                  cursor: pointer;
+                  font-size: 1.2rem;
+                "
+              >
+                ❯
+              </button>
+            </div>
+          </div>
+
+          <div class="card glass calendar-card" style="padding: 1rem">
+            <div
+              class="calendar-grid-header"
+              style="
+                display: grid;
+                grid-template-columns: repeat(7, 1fr);
+                text-align: center;
+                font-weight: bold;
+                margin-bottom: 0.5rem;
+                border-bottom: 1px solid var(--border-color);
+                padding-bottom: 0.5rem;
+              "
+            >
+              <div class="day-name sun" style="color: #ff6b6b">일</div>
+              <div class="day-name">월</div>
+              <div class="day-name">화</div>
+              <div class="day-name">수</div>
+              <div class="day-name">목</div>
+              <div class="day-name">금</div>
+              <div class="day-name sat" style="color: #4dabf7">토</div>
+            </div>
+            <div
+              id="calendar-grid"
+              class="calendar-grid"
+              style="
+                display: grid;
+                grid-template-columns: repeat(7, 1fr);
+                gap: 1px;
+                background: var(--border-color);
+                border: 1px solid var(--border-color);
+              "
+            >
+              <!-- 달력 날짜가 동적으로 생성됨 -->
+            </div>
+          </div>
+
+          <div class="card glass" style="margin-top: 2rem">
+            <h3
+              style="
+                margin-bottom: 1rem;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+              "
+            >
+              <span>📝 배당 지급 상세 내역</span>
+              <span
+                id="selected-date-label"
+                style="
+                  font-size: 0.9rem;
+                  font-weight: normal;
+                  color: var(--text-muted);
+                "
+                >(날짜를 선택하세요)</span
+              >
+            </h3>
+            <div class="table-wrapper">
+              <table id="dividend-detail-table">
+                <thead>
+                  <tr>
+                    <th>지급일</th>
+                    <th>종목명</th>
+                    <th>주식수</th>
+                    <th>1주당 배당금</th>
+                    <th>총 배당금</th>
+                  </tr>
+                </thead>
+                <tbody id="dividend-detail-body">
+                  <tr>
+                    <td colspan="5" class="empty-msg table-empty-message">
+                      해당 월의 배당 내역이 없습니다.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="dividend-disclaimer">
+              * 배당 정보는 Yahoo Finance API를 통해 수집됩니다.<br />
+              * 기업/운용사의 공식 발표 후 API에 반영되기까지 시차가 발생할 수
+              있으며, 이로 인해 최근/예정 배당 내역이 누락되어 보일 수 있습니다.
+              (특히 월배당 ETF)
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- 6. 히트맵 탭 -->
+      <div id="heatmap-tab" class="tab-content" role="tabpanel">
+        <section class="mdd-container">
+          <div class="section-header-row">
+            <h2 class="section-title">🔥 자산 변동 히트맵</h2>
+            <div id="heatmap-stats" class="heatmap-stats-badge"></div>
+            <div class="heatmap-controls">
+              <button
+                class="sort-btn active"
+                onclick="toggleHeatmapSort('desc')"
+                id="hm-sort-desc"
+              >
+                최신순
+              </button>
+              <button
+                class="sort-btn"
+                onclick="toggleHeatmapSort('asc')"
+                id="hm-sort-asc"
+              >
+                과거순
+              </button>
+            </div>
+          </div>
+          <div class="card glass heatmap-scroll-container">
+            <div id="heatmap-container" class="heatmap-wrapper">
+              <!-- script.js에서 렌더링 -->
+            </div>
+          </div>
+          <div class="heatmap-legend">
+            <span>레전드:</span>
+            <div class="heatmap-legend-item">
+              <div class="hm-cell hm-up-3"></div>
+              상승
+            </div>
+            <div class="heatmap-legend-item">
+              <div class="hm-cell hm-empty"></div>
+              변동없음/데이터없음
+            </div>
+            <div class="heatmap-legend-item">
+              <div class="hm-cell hm-down-3"></div>
+              하락
+            </div>
+            <span class="legend-note">* 빨간색: 상승 / 파란색: 하락</span>
+          </div>
+        </section>
+      </div>
     </div>
 
     <!-- Stock Detail Modal -->
-    <div id="stock-modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-label="종목 상세 정보" onclick="closeStockModal(event)">
-        <div class="modal-container" id="stock-modal">
-            <div class="modal-header">
-                <div class="modal-title-row">
-                    <div class="modal-icon" id="modal-icon"></div>
-                    <div>
-                        <div class="modal-ticker-row">
-                            <span class="modal-ticker" id="modal-ticker"></span>
-                            <span class="modal-currency-badge" id="modal-currency"></span>
-                        </div>
-                        <div class="modal-company" id="modal-company"></div>
-                    </div>
-                </div>
-                <button class="modal-close" onclick="closeStockModal()">✕</button>
+    <div
+      id="stock-modal-overlay"
+      class="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="종목 상세 정보"
+      onclick="closeStockModal(event)"
+    >
+      <div class="modal-container" id="stock-modal">
+        <div class="modal-header">
+          <div class="modal-title-row">
+            <div class="modal-icon" id="modal-icon"></div>
+            <div>
+              <div class="modal-ticker-row">
+                <span class="modal-ticker" id="modal-ticker"></span>
+                <span class="modal-currency-badge" id="modal-currency"></span>
+              </div>
+              <div class="modal-company" id="modal-company"></div>
             </div>
-
-            <div class="modal-price-section">
-                <div class="modal-current-price" id="modal-current-price"></div>
-                <div class="modal-price-change">
-                    <span id="modal-price-diff"></span>
-                    <span id="modal-price-pct"></span>
-                    <span class="modal-market-badge">🕐 시장 정보</span>
-                </div>
-            </div>
-
-            <div class="modal-stats-grid">
-                <div class="modal-stat-card">
-                    <div class="modal-stat-label"><span class="stat-icon">#</span> Shares</div>
-                    <div class="modal-stat-value" id="modal-shares"></div>
-                </div>
-                <div class="modal-stat-card">
-                    <div class="modal-stat-label"><span class="stat-icon">$</span> Avg Cost</div>
-                    <div class="modal-stat-value" id="modal-avg-cost"></div>
-                    <div class="modal-stat-sub" id="modal-avg-cost-sub"></div>
-                </div>
-                <div class="modal-stat-card">
-                    <div class="modal-stat-label"><span class="stat-icon">⊙</span> Total Value</div>
-                    <div class="modal-stat-value" id="modal-total-value"></div>
-                    <div class="modal-stat-sub" id="modal-total-value-sub"></div>
-                </div>
-                <div class="modal-stat-card highlight-card">
-                    <div class="modal-stat-label"><span class="stat-icon">↗</span> Today's P/L</div>
-                    <div class="modal-stat-value" id="modal-today-pl"></div>
-                    <div class="modal-stat-sub" id="modal-today-pl-sub"></div>
-                </div>
-            </div>
-
-
-            <div class="modal-chart-section">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.5rem; flex-wrap:wrap; gap: 0.5rem;">
-                    <h3 class="modal-chart-title" style="margin:0;">Performance History</h3>
-                    <div class="chart-filter-container" style="margin:0;">
-                        <div class="holdings-sort-group" id="modal-chart-filter-group">
-                            <button class="sort-btn" onclick="updateModalChartRange('5d', this)">5일</button>
-                            <button class="sort-btn active" onclick="updateModalChartRange('1mo', this)">1달</button>
-                            <button class="sort-btn" onclick="updateModalChartRange('6mo', this)">6개월</button>
-                            <button class="sort-btn" onclick="updateModalChartRange('1y', this)">1년</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-chart-wrapper">
-                    <canvas id="modal-intraday-chart"></canvas>
-                </div>
-            </div>
-
-            <div class="modal-bottom-grid">
-                <div class="modal-info-card">
-                    <h4>주식/ETF 정보</h4>
-                    <div class="modal-info-row"><span>시가총액</span><span id="modal-market-cap"></span></div>
-                    <div class="modal-info-row"><span>52주 최고가</span><span id="modal-52w-high"></span></div>
-                    <div class="modal-info-row"><span>현재 MDD</span><span id="modal-mdd"></span></div>
-                    <div class="modal-info-row"><span>RSI(14)</span><span id="modal-rsi"></span></div>
-                </div>
-                <div class="modal-info-card">
-                    <h4>Your Position</h4>
-                    <div class="modal-info-row"><span>Market Value</span><span id="modal-market-value"></span></div>
-                    <div class="modal-info-row"><span>Cost Basis</span><span id="modal-cost-basis"></span></div>
-                    <div class="modal-info-row"><span>Total Gain/Loss</span><span id="modal-total-gain" class=""></span></div>
-                    <div class="modal-info-row"><span>Return</span><span id="modal-return" class=""></span></div>
-                </div>
-            </div>
+          </div>
+          <button class="modal-close" onclick="closeStockModal()">✕</button>
         </div>
+
+        <div class="modal-price-section">
+          <div class="modal-current-price" id="modal-current-price"></div>
+          <div class="modal-price-change">
+            <span id="modal-price-diff"></span>
+            <span id="modal-price-pct"></span>
+            <span class="modal-market-badge">🕐 시장 정보</span>
+          </div>
+        </div>
+
+        <div class="modal-stats-grid">
+          <div class="modal-stat-card">
+            <div class="modal-stat-label">
+              <span class="stat-icon">#</span> Shares
+            </div>
+            <div class="modal-stat-value" id="modal-shares"></div>
+          </div>
+          <div class="modal-stat-card">
+            <div class="modal-stat-label">
+              <span class="stat-icon">$</span> Avg Cost
+            </div>
+            <div class="modal-stat-value" id="modal-avg-cost"></div>
+            <div class="modal-stat-sub" id="modal-avg-cost-sub"></div>
+          </div>
+          <div class="modal-stat-card">
+            <div class="modal-stat-label">
+              <span class="stat-icon">⊙</span> Total Value
+            </div>
+            <div class="modal-stat-value" id="modal-total-value"></div>
+            <div class="modal-stat-sub" id="modal-total-value-sub"></div>
+          </div>
+          <div class="modal-stat-card highlight-card">
+            <div class="modal-stat-label">
+              <span class="stat-icon">↗</span> Today's P/L
+            </div>
+            <div class="modal-stat-value" id="modal-today-pl"></div>
+            <div class="modal-stat-sub" id="modal-today-pl-sub"></div>
+          </div>
+        </div>
+
+        <div class="modal-chart-section">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 0.5rem;
+              flex-wrap: wrap;
+              gap: 0.5rem;
+            "
+          >
+            <h3 class="modal-chart-title" style="margin: 0">
+              Performance History
+            </h3>
+            <div class="chart-filter-container" style="margin: 0">
+              <div class="holdings-sort-group" id="modal-chart-filter-group">
+                <button
+                  class="sort-btn"
+                  onclick="updateModalChartRange('5d', this)"
+                >
+                  5일
+                </button>
+                <button
+                  class="sort-btn active"
+                  onclick="updateModalChartRange('1mo', this)"
+                >
+                  1달
+                </button>
+                <button
+                  class="sort-btn"
+                  onclick="updateModalChartRange('6mo', this)"
+                >
+                  6개월
+                </button>
+                <button
+                  class="sort-btn"
+                  onclick="updateModalChartRange('1y', this)"
+                >
+                  1년
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="modal-chart-wrapper">
+            <canvas id="modal-intraday-chart"></canvas>
+          </div>
+        </div>
+
+        <div class="modal-bottom-grid">
+          <div class="modal-info-card">
+            <h4>주식/ETF 정보</h4>
+            <div class="modal-info-row">
+              <span>시가총액</span><span id="modal-market-cap"></span>
+            </div>
+            <div class="modal-info-row">
+              <span>52주 최고가</span><span id="modal-52w-high"></span>
+            </div>
+            <div class="modal-info-row">
+              <span>현재 MDD</span><span id="modal-mdd"></span>
+            </div>
+            <div class="modal-info-row">
+              <span>RSI(14)</span><span id="modal-rsi"></span>
+            </div>
+          </div>
+          <div class="modal-info-card">
+            <h4>Your Position</h4>
+            <div class="modal-info-row">
+              <span>Market Value</span><span id="modal-market-value"></span>
+            </div>
+            <div class="modal-info-row">
+              <span>Cost Basis</span><span id="modal-cost-basis"></span>
+            </div>
+            <div class="modal-info-row">
+              <span>Total Gain/Loss</span
+              ><span id="modal-total-gain" class=""></span>
+            </div>
+            <div class="modal-info-row">
+              <span>Return</span><span id="modal-return" class=""></span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- 맨 위로 가기 버튼 -->
-    <button id="scroll-to-top" class="scroll-to-top" title="맨 위로 가기" style="display: none;">⬆️</button>
+    <button
+      id="scroll-to-top"
+      class="scroll-to-top"
+      title="맨 위로 가기"
+      style="display: none"
+    >
+      ⬆️
+    </button>
 
     <!-- Scripts -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <script src="config.js"></script>
     <script src="script.js"></script>
-</body>
+  </body>
 </html>

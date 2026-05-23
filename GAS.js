@@ -4,17 +4,18 @@
 
 // ===== 계좌 매핑 (단일 소스) =====
 var ACCOUNT_MAP = {
-  "AJM": "1YNMIqwg6mJjUFGtWEMRSPKNCJGcPMfKgyg_S0gkEVFw",
-  "AJMjr": "1aN52-xHUQm5ZmQOk6I9HLTVxCKMeMuYQoGcNlxCEIEI",
+  AJM: "1YNMIqwg6mJjUFGtWEMRSPKNCJGcPMfKgyg_S0gkEVFw",
+  AJMjr: "1aN52-xHUQm5ZmQOk6I9HLTVxCKMeMuYQoGcNlxCEIEI",
   "JJG-w-AJM": "1vdWQhHIEHk2mZHPCDzDnbDhYoqYCFE7m8LRk8xaXOUs",
   "JJG-w-KKO": "1Q0q2v60zcf-mfuQS8MiO1pBfSFo3YxVIZ7yo2TWBX3s",
   "JJG-w-AJMjr": "1m2zurh2hmMgYOWMo-t7BNagu2AkyK2EoygdMS594mj0",
   "JJG-w-AJM-ISA": "1Q1Sw-Z2doUvJNw1bAh351b8ZR9UFVbtnAsg5M6Js7sg",
-  "JJG-w-KKO-ISA": "1GRz4BgS0SF5bsl7D2oo9z0BNkvqob9b2Mzd3QYVrVjY"
+  "JJG-w-KKO-ISA": "1GRz4BgS0SF5bsl7D2oo9z0BNkvqob9b2Mzd3QYVrVjY",
 };
 
 // ===== API Key (Script Properties에서 관리 권장) =====
-var API_KEY = PropertiesService.getScriptProperties().getProperty('API_KEY') || '';
+var API_KEY =
+  PropertiesService.getScriptProperties().getProperty("API_KEY") || "";
 
 function doPost(e) {
   try {
@@ -32,7 +33,9 @@ function doPost(e) {
 
     // 💡 1. [프록시/명령 처리] 계좌 기록보다 먼저 확인
     if (data.command === "proxy_yahoo" && data.url) {
-      return ContentService.createTextOutput(UrlFetchApp.fetch(data.url).getContentText());
+      return ContentService.createTextOutput(
+        UrlFetchApp.fetch(data.url).getContentText(),
+      );
     }
 
     if (data.command === "refresh_market") {
@@ -45,14 +48,18 @@ function doPost(e) {
           try {
             var ss = SpreadsheetApp.openById(ACCOUNT_MAP[acc]);
             updateMarketData(ss);
-          } catch(err) { /* ignore error for single account */ }
+          } catch (err) {
+            /* ignore error for single account */
+          }
         }
         return createResponse("All Accounts Refreshed");
       }
     }
 
     if (data.url) {
-      return ContentService.createTextOutput(UrlFetchApp.fetch(data.url).getContentText());
+      return ContentService.createTextOutput(
+        UrlFetchApp.fetch(data.url).getContentText(),
+      );
     }
 
     // 💡 2. [매매 기록 저장] account 정보가 필요한 요청
@@ -64,7 +71,8 @@ function doPost(e) {
     var ss = SpreadsheetApp.openById(ssId);
     var sheet = ss.getSheetByName("record") || ss.getSheetByName("거래기록");
 
-    if (!sheet) throw new Error("'record' 또는 '거래기록' 시트를 찾을 수 없습니다.");
+    if (!sheet)
+      throw new Error("'record' 또는 '거래기록' 시트를 찾을 수 없습니다.");
 
     var lastRow = sheet.getLastRow();
     var nextRow = lastRow + 1;
@@ -78,7 +86,7 @@ function doPost(e) {
     if (type === "현금입금" || type === "현금출금" || type === "배당금") {
       var originalName = stockName;
       stockName = "현금";
-      stockCode = (type === "배당금" ? originalName : "현금");
+      stockCode = type === "배당금" ? originalName : "현금";
     }
     if (type.includes("매도") || type.includes("출금")) {
       qty = -Math.abs(qty);
@@ -87,32 +95,35 @@ function doPost(e) {
     if (["현금입금", "현금출금", "배당금"].includes(type)) {
       if (price === 0) {
         price = Math.abs(qty);
-        qty = (qty < 0 ? -1 : 1);
+        qty = qty < 0 ? -1 : 1;
       }
     }
 
     var total = price * qty;
 
     var rowData = [
-      data.date,          // A: 날짜
-      stockName,          // B: 종목명
-      stockCode,          // C: 종목코드
-      data.currency,      // D: 통화
-      type,               // E: 종류
-      (data.currency == "KRW" ? price : ""), // F: 가격원
-      price,              // G: 가격외
-      qty,                // H: 수량
-      (data.currency == "KRW" ? total : ""), // I: 총액원
-      total,              // J: 총액외
-      "",                 // K: 보유수량
-      ""                  // L: 환율
+      data.date, // A: 날짜
+      stockName, // B: 종목명
+      stockCode, // C: 종목코드
+      data.currency, // D: 통화
+      type, // E: 종류
+      data.currency == "KRW" ? price : "", // F: 가격원
+      price, // G: 가격외
+      qty, // H: 수량
+      data.currency == "KRW" ? total : "", // I: 총액원
+      total, // J: 총액외
+      "", // K: 보유수량
+      "", // L: 환율
     ];
 
     sheet.getRange(nextRow, 1, 1, 12).setValues([rowData]);
 
     if (data.currency == "USD") {
       var rateCell = sheet.getRange(nextRow, 12);
-      var formula = '=IFERROR(INDEX(GOOGLEFINANCE("CURRENCY:USDKRW", "' + data.date + '"), 2, 2), GOOGLEFINANCE("CURRENCY:USDKRW"))';
+      var formula =
+        '=IFERROR(INDEX(GOOGLEFINANCE("CURRENCY:USDKRW", "' +
+        data.date +
+        '"), 2, 2), GOOGLEFINANCE("CURRENCY:USDKRW"))';
       rateCell.setFormula(formula);
 
       SpreadsheetApp.flush();
@@ -126,7 +137,9 @@ function doPost(e) {
       sheet.getRange(lastRow, 11).copyTo(sheet.getRange(nextRow, 11));
       var maxCols = sheet.getMaxColumns();
       if (maxCols >= 13) {
-        sheet.getRange(lastRow, 13, 1, maxCols - 12).copyTo(sheet.getRange(nextRow, 13));
+        sheet
+          .getRange(lastRow, 13, 1, maxCols - 12)
+          .copyTo(sheet.getRange(nextRow, 13));
       }
 
       var typeValues = sheet.getRange(1, 5, lastRow, 1).getValues();
@@ -141,13 +154,29 @@ function doPost(e) {
 
       if (sourceRow === -1) sourceRow = lastRow;
 
-      sheet.getRange(sourceRow, 6).copyTo(sheet.getRange(nextRow, 6));
-      sheet.getRange(sourceRow, 9).copyTo(sheet.getRange(nextRow, 9));
+      sheet
+        .getRange(sourceRow, 6)
+        .copyTo(
+          sheet.getRange(nextRow, 6),
+          SpreadsheetApp.CopyPasteType.PASTE_FORMATS,
+          false,
+        );
+      sheet
+        .getRange(sourceRow, 9)
+        .copyTo(
+          sheet.getRange(nextRow, 9),
+          SpreadsheetApp.CopyPasteType.PASTE_FORMATS,
+          false,
+        );
+
+      if (data.currency === "USD") {
+        sheet.getRange(nextRow, 6).setFormula("=G" + nextRow + "*L" + nextRow);
+        sheet.getRange(nextRow, 9).setFormula("=J" + nextRow + "*L" + nextRow);
+      }
     }
 
     SpreadsheetApp.flush();
     return createResponse("Success: Record Saved to " + data.account);
-
   } catch (err) {
     return createResponse("Error: " + err.toString());
   }
@@ -155,13 +184,17 @@ function doPost(e) {
 
 function doGet(e) {
   if (e && e.parameter && e.parameter.url) {
-    return ContentService.createTextOutput(UrlFetchApp.fetch(e.parameter.url).getContentText()).setMimeType(ContentService.MimeType.TEXT);
+    return ContentService.createTextOutput(
+      UrlFetchApp.fetch(e.parameter.url).getContentText(),
+    ).setMimeType(ContentService.MimeType.TEXT);
   }
   return createResponse("바둑이 대시보드 연결 성공! 🐾 (계좌 통합 버전)");
 }
 
 function createResponse(msg) {
-  return ContentService.createTextOutput(msg).setMimeType(ContentService.MimeType.TEXT);
+  return ContentService.createTextOutput(msg).setMimeType(
+    ContentService.MimeType.TEXT,
+  );
 }
 
 /**
@@ -172,7 +205,7 @@ function refreshAllAccounts() {
     try {
       var ss = SpreadsheetApp.openById(ACCOUNT_MAP[acc]);
       updateMarketData(ss);
-    } catch(e) {
+    } catch (e) {
       Logger.log("Error refreshing " + acc + ": " + e.toString());
     }
   }
@@ -185,12 +218,12 @@ function createTimeDrivenTriggers() {
   var triggers = ScriptApp.getProjectTriggers();
   for (var i = 0; i < triggers.length; i++) {
     var handler = triggers[i].getHandlerFunction();
-    if (handler === 'refreshAllAccounts') {
+    if (handler === "refreshAllAccounts") {
       ScriptApp.deleteTrigger(triggers[i]);
     }
   }
 
-  ScriptApp.newTrigger('refreshAllAccounts')
+  ScriptApp.newTrigger("refreshAllAccounts")
     .timeBased()
     .everyMinutes(30)
     .create();

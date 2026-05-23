@@ -1,0 +1,50 @@
+module.exports = [
+  {
+    languageOptions: {
+      sourceType: "commonjs",
+      globals: {
+        window: "readonly",
+        document: "readonly",
+        console: "readonly",
+        localStorage: "readonly",
+        fetch: "readonly",
+        setTimeout: "readonly",
+        setInterval: "readonly",
+        Chart: "readonly",
+        CONFIG: "readonly",
+        location: "readonly",
+        Event: "readonly",
+        Promise: "readonly",
+        HTMLElement: "readonly",
+        customElements: "readonly",
+        AbortController: "readonly",
+        AbortSignal: "readonly",
+        clearTimeout: "readonly",
+        clearInterval: "readonly",
+        SpeechSynthesisUtterance: "readonly",
+        Papa: "readonly",
+        process: "readonly",
+        TextDecoder: "readonly",
+        require: "readonly",
+        module: "readonly",
+        Buffer: "readonly",
+        ChartDataLabels: "readonly",
+        google: "readonly",
+        alert: "readonly",
+      },
+    },
+    rules: {
+      "no-undef": "warn",
+      "no-unused-vars": [
+        "warn",
+        {
+          vars: "all",
+          args: "none",
+          varsIgnorePattern:
+            "^(openTab|changeDividendMonth|sortHoldingsAnalysis|cycleViewMode|sortSP500|sortKOSPI200|refreshHoldingsAnalysis|refreshSP500|refreshKOSPI200|analyzeMDD|closeStockModal|updateModalChartRange|updateHistoryRange|filterBubbleChart|moveSlider|switchHoldingsView|toggleHeatmapSort|moveSummarySlider|goSummarySlide|setThemeMode|togglePodcast|refreshPodcast|loginGoogle|logoutGoogle)$",
+        },
+      ],
+      "no-redeclare": "warn",
+    },
+  },
+];
