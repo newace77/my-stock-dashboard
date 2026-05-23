@@ -790,19 +790,19 @@ body.force-pc .container {
     font-size: 0.65rem;
   }
 
-  /* 상단 요약 카드(6장) 및 마켓 카드(6장) 공통 최적화 - 한 줄로 고정 */
+  /* 상단 요약 카드(6장) 및 마켓 카드(6장) 공통 최적화 - 3열 4행 배치 */
   body:not(.force-pc) .summary-cards,
   body:not(.force-pc) .market-cards {
-    grid-template-columns: repeat(6, 1fr) !important;
-    gap: 0.2rem !important;
-    margin-bottom: 1.5rem;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 0.4rem !important;
+    margin-bottom: 1.2rem;
   }
 
   body:not(.force-pc) .summary-card,
   body:not(.force-pc) .market-card {
-    padding: 0.4rem 0.1rem !important;
-    border-radius: 6px;
-    min-height: 55px;
+    padding: 0.6rem 0.4rem !important;
+    border-radius: 8px;
+    min-height: 70px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -810,30 +810,30 @@ body.force-pc .container {
     text-align: center;
   }
 
-  /* 라벨 크기 조절 (더 넓은 범위로 유동적 조절) */
+  /* 라벨 크기 조절 (더 읽기 쉬운 크기로 고정) */
   body:not(.force-pc) .summary-card .label,
   body:not(.force-pc) .market-card .label {
-    font-size: clamp(0.35rem, 2vw, 0.85rem) !important; /* 최소~최대 폭 확대 */
-    margin-bottom: 0.1rem !important;
+    font-size: 0.75rem !important;
+    margin-bottom: 0.15rem !important;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     width: 100%;
   }
 
-  /* 수치 크기 조절 (더 넓은 범위로 유동적 조절) */
+  /* 수치 크기 조절 (더 선명하고 읽기 쉬운 크기로 고정) */
   body:not(.force-pc) .summary-card .value,
   body:not(.force-pc) .market-card .value {
-    font-size: clamp(0.5rem, 3.2vw, 1.3rem) !important; /* 최소~최대 폭 확대 */
+    font-size: 1.05rem !important;
     font-weight: 800;
     letter-spacing: -0.03em;
-    line-height: 1.1;
+    line-height: 1.2;
   }
 
   /* 변화율 등 하단 텍스트 */
   body:not(.force-pc) .market-change {
-    font-size: clamp(0.35rem, 1.8vw, 0.7rem) !important;
-    margin-top: 0.05rem;
+    font-size: 0.7rem !important;
+    margin-top: 0.1rem;
   }
 
   /* 모바일에서 큰 숫자 축약 표시 */
