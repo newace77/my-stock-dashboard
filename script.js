@@ -2928,6 +2928,24 @@ function closeStockModal(e) {
   }
 }
 
+function openSettingsModal() {
+  const overlay = document.getElementById("settings-modal-overlay");
+  if (overlay) {
+    overlay.classList.add("active");
+    document.body.style.overflow = "hidden";
+  }
+}
+
+function closeSettingsModal(e) {
+  if (e && e.target !== e.currentTarget && e.target.className !== "modal-close")
+    return;
+  const overlay = document.getElementById("settings-modal-overlay");
+  if (overlay) {
+    overlay.classList.remove("active");
+    document.body.style.overflow = "auto";
+  }
+}
+
 async function fetchModalChartData(ticker, range) {
   const ctx = document.getElementById("modal-intraday-chart").getContext("2d");
   if (intradayChart) intradayChart.destroy();

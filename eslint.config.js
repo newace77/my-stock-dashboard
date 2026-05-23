@@ -41,7 +41,7 @@ module.exports = [
           vars: "all",
           args: "none",
           varsIgnorePattern:
-            "^(openTab|changeDividendMonth|sortHoldingsAnalysis|cycleViewMode|sortSP500|sortKOSPI200|refreshHoldingsAnalysis|refreshSP500|refreshKOSPI200|analyzeMDD|closeStockModal|updateModalChartRange|updateHistoryRange|filterBubbleChart|moveSlider|switchHoldingsView|toggleHeatmapSort|moveSummarySlider|goSummarySlide|setThemeMode|togglePodcast|refreshPodcast|loginGoogle|logoutGoogle)$",
+            "^(openTab|changeDividendMonth|sortHoldingsAnalysis|cycleViewMode|sortSP500|sortKOSPI200|refreshHoldingsAnalysis|refreshSP500|refreshKOSPI200|analyzeMDD|closeStockModal|updateModalChartRange|updateHistoryRange|filterBubbleChart|moveSlider|switchHoldingsView|toggleHeatmapSort|moveSummarySlider|goSummarySlide|setThemeMode|togglePodcast|refreshPodcast|loginGoogle|logoutGoogle|openSettingsModal|closeSettingsModal)$",
         },
       ],
       "no-redeclare": "warn",

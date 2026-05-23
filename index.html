@@ -83,46 +83,15 @@
               </button>
             </div>
           </div>
-          <!-- 테마 선택기 -->
-          <div class="theme-select-container">
-            <button
-              class="theme-btn"
-              id="theme-auto-btn"
-              onclick="setThemeMode('auto')"
-            >
-              🌓 자동
-            </button>
-            <button
-              class="theme-btn"
-              id="theme-light-btn"
-              onclick="setThemeMode('light')"
-            >
-              ☀️ Light
-            </button>
-            <button
-              class="theme-btn"
-              id="theme-dark-btn"
-              onclick="setThemeMode('dark')"
-            >
-              🌙 Dark
-            </button>
-          </div>
-          <div
-            id="view-mode-indicator"
-            class="view-mode-container"
-            onclick="cycleViewMode()"
-            title="클릭하여 PC/모바일 모드 전환"
+          <!-- 설정 버튼 -->
+          <button
+            id="settings-btn"
+            class="settings-btn"
+            onclick="openSettingsModal()"
+            title="설정 창 열기"
           >
-            <span id="view-mode-icon"></span>
-            <span id="view-mode-text" class="view-mode-label">감지 중...</span>
-          </div>
-          <div class="privacy-toggle-container">
-            <span class="privacy-label">🕶️ Privacy Mode</span>
-            <label class="switch">
-              <input type="checkbox" id="privacy-toggle" />
-              <span class="slider round"></span>
-            </label>
-          </div>
+            ⚙️ 설정
+          </button>
           <div id="last-updated" class="timestamp">업데이트 확인 중...</div>
         </div>
       </div>
@@ -1524,6 +1493,81 @@
             <span class="legend-note">* 빨간색: 상승 / 파란색: 하락</span>
           </div>
         </section>
+      </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div
+      id="settings-modal-overlay"
+      class="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="설정"
+      onclick="closeSettingsModal(event)"
+    >
+      <div class="modal-container settings-modal-container" id="settings-modal">
+        <div class="modal-header">
+          <h2 style="margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
+            ⚙️ 설정
+          </h2>
+          <button class="modal-close" onclick="closeSettingsModal()">✕</button>
+        </div>
+        <div class="settings-content" style="display: flex; flex-direction: column; gap: 1.2rem; margin-top: 1.5rem;">
+          <!-- 테마 선택기 -->
+          <div class="setting-item">
+            <span style="font-weight: 600; font-size: 0.9rem; color: var(--text-main);">🌓 화면 테마</span>
+            <div class="theme-select-container">
+              <button
+                class="theme-btn"
+                id="theme-auto-btn"
+                onclick="setThemeMode('auto')"
+              >
+                🌓 자동
+              </button>
+              <button
+                class="theme-btn"
+                id="theme-light-btn"
+                onclick="setThemeMode('light')"
+              >
+                ☀️ Light
+              </button>
+              <button
+                class="theme-btn"
+                id="theme-dark-btn"
+                onclick="setThemeMode('dark')"
+              >
+                🌙 Dark
+              </button>
+            </div>
+          </div>
+          
+          <!-- PC/모바일 모드 전환 -->
+          <div class="setting-item">
+            <span style="font-weight: 600; font-size: 0.9rem; color: var(--text-main);">🖥️ 뷰 모드</span>
+            <div
+              id="view-mode-indicator"
+              class="view-mode-container"
+              onclick="cycleViewMode()"
+              title="클릭하여 PC/모바일 모드 전환"
+              style="cursor: pointer;"
+            >
+              <span id="view-mode-icon"></span>
+              <span id="view-mode-text" class="view-mode-label">감지 중...</span>
+            </div>
+          </div>
+          
+          <!-- Privacy Mode 스위치 -->
+          <div class="setting-item">
+            <span style="font-weight: 600; font-size: 0.9rem; color: var(--text-main);">🕶️ 프라이버시 모드</span>
+            <div class="privacy-toggle-container">
+              <span class="privacy-label">Privacy Mode</span>
+              <label class="switch">
+                <input type="checkbox" id="privacy-toggle" />
+                <span class="slider round"></span>
+              </label>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 

@@ -2618,3 +2618,50 @@ body.force-pc .container {
     height: 90%;
   }
 }
+
+/* ===== Settings Panel UI ===== */
+.settings-btn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+  padding: 0.4rem 0.8rem;
+  border-radius: 99px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  transition: var(--transition);
+}
+
+.settings-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+[data-theme="light"] .settings-btn {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .settings-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.settings-modal-container {
+  max-width: 420px !important;
+}
+
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 1rem;
+}
+
+.setting-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
