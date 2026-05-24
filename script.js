@@ -403,7 +403,7 @@ function formatValueByMode(val, isKRW = true) {
   if (isKRW) {
     if (absNum >= 100000000) {
       result =
-        sign + (absNum / 100000000).toFixed(1).replace(/\.0$/, "") + "억";
+        sign + (absNum / 100000000).toFixed(1) + "억(원)";
     } else if (absNum >= 10000) {
       result = sign + (absNum / 10000).toFixed(0) + "만";
     } else {
@@ -3063,6 +3063,248 @@ function updateModalChartRange(range, btn) {
     .forEach((b) => b.classList.remove("active"));
   btn.classList.add("active");
   fetchModalChartData(currentModalItem.ticker, range);
+}
+
+let currentMarketId = null;
+let currentMarketRange = "1mo";
+let marketChart = null;
+
+const marketInfo = {
+  snp: { name: "S&P 500", ticker: "^GSPC", icon: "🇺🇸" },
+  nasdaq: { name: "Nasdaq", ticker: "^IXIC", icon: "🇺🇸" },
+  dow: { name: "Dow Jones", ticker: "^DJI", icon: "🇺🇸" },
+  kospi: { name: "KOSPI", ticker: "^KS11", icon: "🇰🇷" },
+  kosdaq: { name: "KOSDAQ", ticker: "^KQ11", icon: "🇰🇷" },
+  fx: { name: "USD/KRW", ticker: "KRW=X", icon: "💵" }
+};
+
+async function openMarketModal(marketId) {
+  const info = marketInfo[marketId];
+  if (!info) return;
+
+  currentMarketId = marketId;
+  currentMarketRange = "1mo";
+
+  const iconEl = document.getElementById("market-modal-icon");
+  const tickerEl = document.getElementById("market-modal-ticker");
+  const nameEl = document.getElementById("market-modal-name");
+
+  if (iconEl) iconEl.textContent = info.icon;
+  if (tickerEl) tickerEl.textContent = info.ticker;
+  if (nameEl) nameEl.textContent = info.name;
+
+  const valEl = document.getElementById(`card-${marketId}-val`);
+  const chgEl = document.getElementById(`card-${marketId}-change`);
+  const modalPriceEl = document.getElementById("market-modal-current-price");
+  const modalDiffEl = document.getElementById("market-modal-price-diff");
+  const modalPctEl = document.getElementById("market-modal-price-pct");
+
+  if (modalPriceEl && valEl) {
+    modalPriceEl.textContent = valEl.textContent;
+  }
+
+  if (chgEl) {
+    const chgText = chgEl.textContent || "";
+    if (modalPctEl) {
+      modalPctEl.textContent = chgText;
+      modalPctEl.className = chgEl.classList.contains("value-up") ? "value-up" : chgEl.classList.contains("value-down") ? "value-down" : "";
+    }
+    if (modalDiffEl) {
+      modalDiffEl.textContent = "";
+    }
+  }
+
+  const filterGroup = document.getElementById("market-modal-chart-filter-group");
+  if (filterGroup) {
+    filterGroup.querySelectorAll(".sort-btn").forEach((btn) => {
+      if (btn.getAttribute("onclick") && btn.getAttribute("onclick").includes("'1mo'")) {
+        btn.classList.add("active");
+      } else {
+        btn.classList.remove("active");
+      }
+    });
+  }
+
+  const overlay = document.getElementById("market-modal-overlay");
+  if (overlay) {
+    overlay.classList.add("active");
+    document.body.style.overflow = "hidden";
+  }
+
+  await fetchMarketChartData(info.ticker, currentMarketRange);
+}
+
+function closeMarketModal(e) {
+  if (e && e.target !== e.currentTarget && e.target.className !== "modal-close") {
+    return;
+  }
+  const overlay = document.getElementById("market-modal-overlay");
+  if (overlay) {
+    overlay.classList.remove("active");
+    document.body.style.overflow = "auto";
+  }
+  if (marketChart) {
+    marketChart.destroy();
+    marketChart = null;
+  }
+}
+
+async function updateMarketModalChartRange(range, btn) {
+  if (!currentMarketId) return;
+  currentMarketRange = range;
+
+  if (btn) {
+    const parent = btn.parentElement;
+    if (parent) {
+      parent.querySelectorAll(".sort-btn").forEach((b) => b.classList.remove("active"));
+    }
+    btn.classList.add("active");
+  }
+
+  const info = marketInfo[currentMarketId];
+  if (info) {
+    await fetchMarketChartData(info.ticker, range);
+  }
+}
+
+async function fetchMarketChartData(ticker, range) {
+  const canvas = document.getElementById("market-modal-chart");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  if (marketChart) marketChart.destroy();
+
+  marketChart = new Chart(ctx, {
+    type: "line",
+    data: { labels: [], datasets: [] },
+    options: {
+      plugins: { title: { display: true, text: "데이터 로딩 중..." } },
+    },
+  });
+
+  try {
+    let interval = "1d";
+    if (range === "1d") interval = "2m";
+    else if (range === "5d") interval = "15m";
+    else if (range === "5y") interval = "1wk";
+
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=${interval}&range=${range}`;
+    const res = await fetchWithFallback(url, true);
+
+    if (res && res.type === "json") {
+      const chartData = res.data.chart?.result?.[0];
+      if (!chartData) throw new Error("차트 데이터 결과가 비어있습니다.");
+
+      const timestamps = chartData.timestamp || [];
+      const prices = chartData.indicators?.quote?.[0]?.close || [];
+
+      const validPoints = [];
+      for (let i = 0; i < timestamps.length; i++) {
+        if (prices[i] !== null && prices[i] !== undefined) {
+          validPoints.push({
+            x: timestamps[i] * 1000,
+            y: prices[i]
+          });
+        }
+      }
+
+      if (validPoints.length === 0) {
+        throw new Error("유효한 종가 데이터가 없습니다.");
+      }
+
+      const labels = validPoints.map((pt) => {
+        const date = new Date(pt.x);
+        if (range === "1d") {
+          return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+        } else if (range === "5d") {
+          return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:00`;
+        } else {
+          return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+        }
+      });
+
+      const dataPrices = validPoints.map((pt) => pt.y);
+      const isPositive = dataPrices[dataPrices.length - 1] >= dataPrices[0];
+      const color = isPositive ? "#4ade80" : "#fb7185";
+      const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+      gradient.addColorStop(
+        0,
+        isPositive ? "rgba(74,222,128,0.2)" : "rgba(251,113,133,0.2)"
+      );
+      gradient.addColorStop(
+        1,
+        getThemeColor("rgba(255,255,255,0)", "rgba(0,0,0,0)")
+      );
+
+      marketChart.destroy();
+      marketChart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              data: dataPrices,
+              borderColor: color,
+              borderWidth: 2,
+              fill: true,
+              backgroundColor: gradient,
+              tension: 0.1,
+              pointRadius: 0,
+              pointHitRadius: 10,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { grid: { display: false }, ticks: { maxTicksLimit: 6 } },
+            y: {
+              position: "right",
+              grid: {
+                color: getThemeColor(
+                  "rgba(0, 0, 0, 0.05)",
+                  "rgba(255, 255, 255, 0.05)"
+                ),
+              },
+            },
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              mode: "index",
+              intersect: false,
+              callbacks: {
+                label: function(context) {
+                  let val = context.parsed.y;
+                  if (ticker === "KRW=X") {
+                    return `환율: ${val.toFixed(2)}원`;
+                  } else {
+                    return `지수: ${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                  }
+                }
+              }
+            },
+          },
+        },
+      });
+    } else {
+      throw new Error("올바르지 않은 응답 포맷");
+    }
+  } catch (e) {
+    logger.warn("Market Chart data load failed", e);
+    if (marketChart) {
+      marketChart.destroy();
+      marketChart = new Chart(ctx, {
+        type: "line",
+        data: { labels: [], datasets: [] },
+        options: {
+          plugins: {
+            title: { display: true, text: "차트 데이터를 불러오지 못했습니다." },
+          },
+        },
+      });
+    }
+  }
 }
 
 // -------------------------------------------------------------------------

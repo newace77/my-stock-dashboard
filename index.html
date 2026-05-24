@@ -204,7 +204,7 @@
 
         <section class="market-cards">
           <!-- 지수 및 환율 -->
-          <div class="summary-card market-card" id="card-snp">
+          <div class="summary-card market-card" id="card-snp" onclick="openMarketModal('snp')">
             <span class="label">S&P 500</span>
             <div id="card-snp-val" class="value" data-price="7165.08">
               7,165.08
@@ -213,7 +213,7 @@
               <span id="card-snp-change" class="value-up">+0.80%</span>
             </div>
           </div>
-          <div class="summary-card market-card" id="card-nasdaq">
+          <div class="summary-card market-card" id="card-nasdaq" onclick="openMarketModal('nasdaq')">
             <span class="label">Nasdaq</span>
             <div id="card-nasdaq-val" class="value" data-price="24836.60">
               24,836.60
@@ -222,7 +222,7 @@
               <span id="card-nasdaq-change" class="value-up">+1.63%</span>
             </div>
           </div>
-          <div class="summary-card market-card" id="card-dow">
+          <div class="summary-card market-card" id="card-dow" onclick="openMarketModal('dow')">
             <span class="label">Dow Jones</span>
             <div id="card-dow-val" class="value" data-price="49230.71">
               49,230.71
@@ -231,7 +231,7 @@
               <span id="card-dow-change" class="value-down">-0.16%</span>
             </div>
           </div>
-          <div class="summary-card market-card" id="card-kospi">
+          <div class="summary-card market-card" id="card-kospi" onclick="openMarketModal('kospi')">
             <span class="label">KOSPI</span>
             <div id="card-kospi-val" class="value" data-price="6615.03">
               6,615.03
@@ -240,7 +240,7 @@
               <span id="card-kospi-change" class="value-up">+2.15%</span>
             </div>
           </div>
-          <div class="summary-card market-card" id="card-kosdaq">
+          <div class="summary-card market-card" id="card-kosdaq" onclick="openMarketModal('kosdaq')">
             <span class="label">KOSDAQ</span>
             <div id="card-kosdaq-val" class="value" data-price="1226.18">
               1,226.18
@@ -249,7 +249,7 @@
               <span id="card-kosdaq-change" class="value-up">+1.86%</span>
             </div>
           </div>
-          <div class="summary-card market-card" id="card-fx">
+          <div class="summary-card market-card" id="card-fx" onclick="openMarketModal('fx')">
             <span class="label">USD/KRW</span>
             <div id="card-fx-val" class="value" data-price="1476.40">
               1,476.40
@@ -1566,6 +1566,111 @@
                 <span class="slider round"></span>
               </label>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Market Detail Modal -->
+    <div
+      id="market-modal-overlay"
+      class="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="지수 및 환율 상세 정보"
+      onclick="closeMarketModal(event)"
+    >
+      <div class="modal-container" id="market-modal">
+        <div class="modal-header">
+          <div class="modal-title-row">
+            <div class="modal-icon" id="market-modal-icon">📈</div>
+            <div>
+              <div class="modal-ticker-row">
+                <span class="modal-ticker" id="market-modal-ticker"></span>
+              </div>
+              <div class="modal-company" id="market-modal-name"></div>
+            </div>
+          </div>
+          <button class="modal-close" onclick="closeMarketModal()">✕</button>
+        </div>
+
+        <div class="modal-price-section">
+          <div class="modal-current-price" id="market-modal-current-price">-</div>
+          <div class="modal-price-change">
+            <span id="market-modal-price-diff">-</span>
+            <span id="market-modal-price-pct">-</span>
+          </div>
+        </div>
+
+        <div class="modal-chart-section">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 0.5rem;
+              flex-wrap: wrap;
+              gap: 0.5rem;
+            "
+          >
+            <h3 class="modal-chart-title" style="margin: 0">
+              시장 지수 추이
+            </h3>
+            <div class="chart-filter-container" style="margin: 0">
+              <div class="holdings-sort-group" id="market-modal-chart-filter-group">
+                <button
+                  class="sort-btn"
+                  onclick="updateMarketModalChartRange('1d', this)"
+                >
+                  1일
+                </button>
+                <button
+                  class="sort-btn"
+                  onclick="updateMarketModalChartRange('5d', this)"
+                >
+                  5일
+                </button>
+                <button
+                  class="sort-btn active"
+                  onclick="updateMarketModalChartRange('1mo', this)"
+                >
+                  1달
+                </button>
+                <button
+                  class="sort-btn"
+                  onclick="updateMarketModalChartRange('3mo', this)"
+                >
+                  3달
+                </button>
+                <button
+                  class="sort-btn"
+                  onclick="updateMarketModalChartRange('6mo', this)"
+                >
+                  6개월
+                </button>
+                <button
+                  class="sort-btn"
+                  onclick="updateMarketModalChartRange('ytd', this)"
+                >
+                  YTD
+                </button>
+                <button
+                  class="sort-btn"
+                  onclick="updateMarketModalChartRange('1y', this)"
+                >
+                  1년
+                </button>
+                <button
+                  class="sort-btn"
+                  onclick="updateMarketModalChartRange('5y', this)"
+                >
+                  5년
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="modal-chart-wrapper">
+            <canvas id="market-modal-chart"></canvas>
           </div>
         </div>
       </div>
