@@ -373,6 +373,16 @@ function maskValue(val, isName = false) {
  * @returns {string} 반응형 클래스가 적용된 HTML 문자열
  */
 /**
+ * 금액을 #.#억원 단위로 포맷팅
+ * @param {number|string} val
+ * @returns {string}
+ */
+function formatToEokWon(val) {
+  const num = parseSafeFloat(val);
+  return (num / 100000000).toFixed(1) + "억원";
+}
+
+/**
  * 금액 포맷팅 (모바일: 만/억 단위, PC: 전체 숫자)
  * @param {number|string} val
  * @param {boolean} isKRW
@@ -3362,7 +3372,7 @@ function renderSummaryPieChart(labels, evals) {
             label: (ctx) => {
               const label = ctx.label || "";
               const value = ctx.raw;
-              const formattedValue = formatValueByMode(value, true);
+              const formattedValue = formatToEokWon(value);
               const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
               const percentage = ((value / total) * 100).toFixed(1);
               return `${label}: ${maskValue(formattedValue)} (${percentage}%)`;
@@ -3382,8 +3392,8 @@ function renderSummaryPieChart(labels, evals) {
             const total = context.dataset.data.reduce((a, b) => a + b, 0);
             const percentage = ((value / total) * 100).toFixed(1) + "%";
 
-            const eokAmount = (value / 100000000).toFixed(1) + "억";
-            const formattedEok = isPrivacyMode ? "●.●억" : eokAmount;
+            const eokAmount = (value / 100000000).toFixed(1) + "억원";
+            const formattedEok = isPrivacyMode ? "●.●억원" : eokAmount;
 
             return `${label}\n${percentage}\n(${formattedEok})`;
           },
@@ -3479,13 +3489,7 @@ function renderSummaryChart(labels, invests, evals) {
           },
           ticks: {
             callback: function (value) {
-              if (
-                window.innerWidth <= 768 &&
-                !document.body.classList.contains("force-pc")
-              ) {
-                return (value / 100000000).toFixed(0) + "억";
-              }
-              return value.toLocaleString();
+              return formatToEokWon(value);
             },
           },
         },
@@ -3534,7 +3538,7 @@ function renderSummaryChart(labels, invests, evals) {
             label: (ctx) => {
               const label = ctx.dataset.label || "";
               const value = ctx.raw;
-              const formattedValue = formatValueByMode(value, true);
+              const formattedValue = formatToEokWon(value);
               return `${label}: ${maskValue(formattedValue)}`;
             },
           },
@@ -3679,13 +3683,7 @@ function renderHistoryChartWithRange() {
           },
           ticks: {
             callback: function (value) {
-              if (
-                window.innerWidth <= 768 &&
-                !document.body.classList.contains("force-pc")
-              ) {
-                return (value / 100000000).toFixed(0) + "억";
-              }
-              return value.toLocaleString();
+              return formatToEokWon(value);
             },
           },
         },
@@ -3699,7 +3697,7 @@ function renderHistoryChartWithRange() {
             label: (ctx) => {
               const label = ctx.dataset.label || "";
               const value = ctx.raw;
-              const formattedValue = formatValueByMode(value, true);
+              const formattedValue = formatToEokWon(value);
               return `${label}: ${maskValue(formattedValue)}`;
             },
           },
