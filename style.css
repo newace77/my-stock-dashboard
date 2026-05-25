@@ -2689,9 +2689,10 @@ body.force-pc .container {
   padding-bottom: 0;
 }
 
-/* 모바일에서 지수/환율 팝업 기간 필터 버튼 wrap 처리 */
+/* 모바일에서 지수/환율 팝업 및 메인 자산 추이 그래프 기간 필터 버튼 wrap 처리 */
 @media (max-width: 768px), body.force-mobile {
-  body:not(.force-pc) #market-modal-chart-filter-group {
+  body:not(.force-pc) #market-modal-chart-filter-group,
+  body:not(.force-pc) #history-filter-group {
     flex-wrap: wrap;
     justify-content: center;
     gap: 0.3rem 0.2rem;
