@@ -772,27 +772,39 @@
                   <input type="date" id="date-input" required />
                 </div>
                 <div class="input-group" id="stock-group">
-                  <label>🔍 종목명 / 티커</label>
-                  <select id="stock-name-select">
-                    <option value="">보유 종목 선택</option>
-                    <option value="DIRECT">직접 입력 (신규)</option>
-                  </select>
-                  <div id="direct-input-container">
+                  <label>🔍 종목 검색 / 입력</label>
+                  <input
+                    type="text"
+                    id="stock-search-input"
+                    list="ticker-suggestions"
+                    placeholder="종목명 또는 티커 입력"
+                  />
+                  <datalist id="ticker-suggestions"></datalist>
+                  <div id="direct-input-container" style="display: none; margin-top: 8px; gap: 8px;">
                     <input
                       type="text"
                       id="stock-name-input"
-                      placeholder="신규 종목명"
+                      placeholder="종목명"
                     />
                     <input
                       type="text"
                       id="stock-ticker-input"
-                      placeholder="티커 (예: AAPL)"
+                      placeholder="티커"
                     />
                   </div>
                 </div>
                 <div class="input-group" id="price-group">
                   <label>💵 단가</label>
                   <input type="number" step="any" id="price-input" />
+                </div>
+                <div class="input-group" id="usd-rate-group" style="display: none;">
+                  <label>💱 적용 환율 (USD/KRW)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    id="usd-rate-input"
+                    placeholder="환율 (자동 조회)"
+                  />
                 </div>
                 <div class="input-group" id="quantity-group">
                   <label id="qty-label">🔢 수량/금액</label>
