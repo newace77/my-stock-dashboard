@@ -1457,8 +1457,8 @@ async function fetchData(force = false) {
 
     const [summaryRes, holdingsRes, historyRes] = await Promise.all([
       fetchWithFallback(addTs(CONFIG.summaryURL), false, ["총 평가금", "총 투자금"]),
-      fetchWithFallback(addTs(CONFIG.holdingsURL), false, ["종목명", "평가금"]),
-      fetchWithFallback(addTs(CONFIG.historyURL), false, ["날짜", "평가금"]),
+      fetchWithFallback(addTs(CONFIG.holdingsURL), false, ["종목명", "Ticker"]),
+      fetchWithFallback(addTs(CONFIG.historyURL), false, ["일자", "평가금"]),
     ]);
 
     if (summaryRes?.data || holdingsRes?.data) {
