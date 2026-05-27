@@ -183,6 +183,11 @@ function doPost(e) {
 }
 
 function doGet(e) {
+  // API Key 검증 (설정된 경우에만 체크)
+  if (API_KEY && e.parameter.apiKey !== API_KEY) {
+    return createResponse("Error: Unauthorized - Invalid API Key");
+  }
+
   if (e && e.parameter && e.parameter.url) {
     return ContentService.createTextOutput(
       UrlFetchApp.fetch(e.parameter.url).getContentText(),

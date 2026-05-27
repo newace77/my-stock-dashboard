@@ -1892,9 +1892,10 @@ async function fetchWithFallback(targetUrl, isYahoo = false, requiredKeywords = 
   const timeoutId = setTimeout(() => controller.abort(), 15000); // 전체 타임아웃 15초로 연장
 
   const fetchTask = async (url, options = {}) => {
+    const signal = options.signal || controller.signal;
     const response = await fetch(url, {
       ...options,
-      signal: controller.signal,
+      signal: signal,
     });
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const text = await response.text();
@@ -1951,17 +1952,11 @@ async function fetchWithFallback(targetUrl, isYahoo = false, requiredKeywords = 
   const tasks = [];
 
   // 1. GAS 프록시 우선 시도 (CORS 및 레이트 리밋 우회)
+  // GET 요청을 사용하여 브라우저 리디렉션 시 바디 손실 문제(POST -> GET 전환) 방지
   if (CONFIG.gasURL) {
-    tasks.push(
-      fetchTask(CONFIG.gasURL, {
-        method: "POST",
-        body: JSON.stringify({
-          command: "proxy_yahoo",
-          url: targetUrl,
-          apiKey: CONFIG.gasApiKey || "",
-        }),
-      }),
-    );
+    const apiKey = CONFIG.gasApiKey || "";
+    const gasProxyUrl = `${CONFIG.gasURL}?url=${encodeURIComponent(targetUrl)}&apiKey=${encodeURIComponent(apiKey)}`;
+    tasks.push(fetchTask(gasProxyUrl));
   }
 
   // 2. 공용 프록시 시도 (인코딩된 URL 사용)
@@ -1976,8 +1971,16 @@ async function fetchWithFallback(targetUrl, isYahoo = false, requiredKeywords = 
     tasks.push(fetchTask(proxy));
   });
 
-  // 3. 직접 호출 시도 (CORS 허용된 경우 대비, 짧은 타임아웃)
-  tasks.push(fetchTask(targetUrl, { signal: AbortSignal.timeout(3000) }));
+  // 3. 직접 호출 시도 (CORS 허용된 경우 대비, 8초 타임아웃)
+  let directSignal;
+  try {
+    directSignal = AbortSignal.timeout(8000);
+  } catch (e) {
+    const directController = new AbortController();
+    setTimeout(() => directController.abort(), 8000);
+    directSignal = directController.signal;
+  }
+  tasks.push(fetchTask(targetUrl, { signal: directSignal }));
 
   try {
     // 가장 빨리 성공하는 작업 결과 반환
