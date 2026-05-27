@@ -1456,9 +1456,9 @@ async function fetchData(force = false) {
       url ? url + (url.includes("?") ? "&" : "?") + "t=" + ts : url;
 
     const [summaryRes, holdingsRes, historyRes] = await Promise.all([
-      fetchWithFallback(addTs(CONFIG.summaryURL)),
-      fetchWithFallback(addTs(CONFIG.holdingsURL)),
-      fetchWithFallback(addTs(CONFIG.historyURL)),
+      fetchWithFallback(addTs(CONFIG.summaryURL), false, ["총 평가금", "총 투자금"]),
+      fetchWithFallback(addTs(CONFIG.holdingsURL), false, ["종목명", "평가금"]),
+      fetchWithFallback(addTs(CONFIG.historyURL), false, ["날짜", "평가금"]),
     ]);
 
     if (summaryRes?.data || holdingsRes?.data) {
@@ -1748,7 +1748,7 @@ function refreshKOSPI200() {
 /**
  * 프록시 레이싱(Racing) 기법을 사용하여 가장 빠른 응답을 반환하는 패치 함수
  */
-async function fetchWithFallback(targetUrl, isYahoo = false) {
+async function fetchWithFallback(targetUrl, isYahoo = false, requiredKeywords = []) {
   if (!targetUrl) return null;
 
   const controller = new AbortController();
@@ -1773,6 +1773,16 @@ async function fetchWithFallback(targetUrl, isYahoo = false) {
       throw new Error("Invalid data received (HTML or Unauthorized)");
     }
 
+    // 1.1 JSON 에러 응답 필터링 (일부 프록시의 JSON 에러 문자열 방지)
+    if (
+      text.trim().startsWith("{") &&
+      (text.includes('"error"') || text.includes('"Error"')) &&
+      !text.includes('"chart"') &&
+      !text.includes('"result"')
+    ) {
+      throw new Error("Proxy error response received: " + text.substring(0, 100));
+    }
+
     // 2. JSON 데이터인 경우 (야후 파이낸스 등)
     if (
       text.trim().startsWith("{") &&
@@ -1783,6 +1793,14 @@ async function fetchWithFallback(targetUrl, isYahoo = false) {
 
     // 3. CSV 데이터인 경우 (구글 시트)
     if (text.includes(",") || text.includes("\t")) {
+      // 구글 시트 데이터의 경우 필수 키워드가 모두 있는지 검증
+      if (requiredKeywords && requiredKeywords.length > 0) {
+        const hasAllKeywords = requiredKeywords.every((kw) => text.includes(kw));
+        if (!hasAllKeywords) {
+          throw new Error("CSV data is missing required keywords: " + requiredKeywords.join(", "));
+        }
+      }
+
       const result = Papa.parse(text, { header: false, skipEmptyLines: true });
       if (result.data && result.data.length > 1) {
         // 최소 헤더 + 1개 행 이상

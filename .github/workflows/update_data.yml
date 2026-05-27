@@ -34,10 +34,20 @@ jobs:
           cat << 'EOF' > update_snapshot.js
           const fs = require('fs');
 
+          // Fallback to config.js if env variables are not present
+          let localConfig = {};
+          try {
+              const configContent = fs.readFileSync('config.js', 'utf8');
+              const runInContext = new Function('window', configContent + '\nreturn window.CONFIG || CONFIG;');
+              localConfig = runInContext({});
+          } catch (e) {
+              console.warn('Warning: Failed to parse config.js, using env variables only:', e.message);
+          }
+
           const CONFIG = {
-              summary: process.env.SUMMARY_URL,
-              holdings: process.env.HOLDINGS_URL,
-              history: process.env.HISTORY_URL
+              summary: process.env.SUMMARY_URL || localConfig.summaryURL,
+              holdings: process.env.HOLDINGS_URL || localConfig.holdingsURL,
+              history: process.env.HISTORY_URL || localConfig.historyURL
           };
 
           async function fetchCSV(name, url) {
@@ -85,10 +95,13 @@ jobs:
           async function run() {
               try {
                   console.log('Fetching data from Google Sheets...');
+                  const ts = Date.now();
+                  const addTs = (url) => url ? url + (url.includes("?") ? "&" : "?") + "t=" + ts : url;
+
                   const [s, h, hist] = await Promise.all([
-                      fetchCSV('Summary', CONFIG.summary),
-                      fetchCSV('Holdings', CONFIG.holdings),
-                      fetchCSV('History', CONFIG.history)
+                      fetchCSV('Summary', addTs(CONFIG.summary)),
+                      fetchCSV('Holdings', addTs(CONFIG.holdings)),
+                      fetchCSV('History', addTs(CONFIG.history))
                   ]);
                   
                   if (!s || !h || !hist) {
