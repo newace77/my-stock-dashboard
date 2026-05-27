@@ -1477,11 +1477,31 @@ async function fetchData(force = false) {
       throw new Error("Empty response from all proxies");
     }
   } catch (err) {
-    logger.warn("실시간 로드 실패", err);
-    showToast(
-      "데이터 갱신 실패. 시트의 '웹에 게시' 상태를 확인하세요.",
-      "error",
-    );
+    logger.warn("실시간 로드 실패, 로컬 스냅샷 로드 시도...", err);
+    try {
+      const response = await fetch(
+        CONFIG.snapshotURL + "?t=" + new Date().getTime(),
+      );
+      if (response.ok) {
+        const snapshot = await response.json();
+        renderFromData(snapshot);
+        // 캐시도 스냅샷 데이터로 갱신하여 꼬인 상태 해결
+        localStorage.setItem(CACHE_KEY, JSON.stringify({
+          ...snapshot,
+          timestamp: new Date().getTime()
+        }));
+        updateTimestamp(false, "Snapshot");
+        logger.log("로컬 스냅샷 데이터 로드 및 캐시 갱신 완료");
+      } else {
+        throw new Error("Snapshot load failed: " + response.statusText);
+      }
+    } catch (snapshotErr) {
+      logger.error("로컬 스냅샷 로드 최종 실패:", snapshotErr);
+      showToast(
+        "데이터 갱신 실패. 시트의 '웹에 게시' 상태를 확인하세요.",
+        "error",
+      );
+    }
   }
 }
 
@@ -3606,18 +3626,44 @@ function renderHistoryChartWithRange() {
 
     filteredData = data.filter((row) => {
       let dateStr = row[HISTORY_COL.DATE];
-      // 구글 시트의 "YY. MM. DD" 형식을 "20YY-MM-DD" 로 변환하여 파싱 에러 방지
-      if (
-        typeof dateStr === "string" &&
-        /^\d{2}\.\s*\d{2}\.\s*\d{2}$/.test(dateStr)
-      ) {
-        dateStr = "20" + dateStr.replace(/\.\s*/g, "-");
+      if (typeof dateStr === "string") {
+        let cleanStr = dateStr.trim();
+        if (cleanStr.endsWith(".")) {
+          cleanStr = cleanStr.slice(0, -1).trim();
+        }
+        const match = cleanStr.match(/^(\d{2,4})\.\s*(\d{1,2})\.\s*(\d{1,2})$/);
+        if (match) {
+          let year = match[1];
+          let month = match[2].padStart(2, "0");
+          let day = match[3].padStart(2, "0");
+          if (year.length === 2) year = "20" + year;
+          dateStr = `${year}-${month}-${day}`;
+        }
       }
-      return new Date(dateStr) >= cutoff;
+      const parsedDate = new Date(dateStr);
+      if (isNaN(parsedDate.getTime())) return false;
+      return parsedDate >= cutoff;
     });
   }
 
-  const labels = filteredData.map((row) => row[HISTORY_COL.DATE]);
+  const labels = filteredData.map((row) => {
+    let dateStr = row[HISTORY_COL.DATE];
+    if (typeof dateStr === "string") {
+      let cleanStr = dateStr.trim();
+      if (cleanStr.endsWith(".")) {
+        cleanStr = cleanStr.slice(0, -1).trim();
+      }
+      const match = cleanStr.match(/^(\d{2,4})\.\s*(\d{1,2})\.\s*(\d{1,2})$/);
+      if (match) {
+        let year = match[1];
+        let month = match[2].padStart(2, "0");
+        let day = match[3].padStart(2, "0");
+        if (year.length === 4) year = year.slice(-2);
+        return `${year}.${month}.${day}`;
+      }
+    }
+    return dateStr;
+  });
   const evals = filteredData.map((row) =>
     parseSafeFloat(row[HISTORY_COL.EVAL_TOTAL]),
   );
