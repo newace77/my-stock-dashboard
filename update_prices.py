@@ -81,9 +81,14 @@ def get_usd_krw_rate():
 def get_stock_data(ticker):
     """최근 종가와 전일 대비 변동률(%)을 함께 반환합니다."""
     try:
+        # 거래소 접두사 제거 (예: KRX:086790 -> 086790, NYSEARCA:VOO -> VOO)
+        clean_ticker = ticker
+        if ":" in ticker:
+            clean_ticker = ticker.split(":")[-1]
+
         today = datetime.date.today()
         start_date = today - datetime.timedelta(days=12)
-        df = fdr.DataReader(ticker, start=start_date.strftime('%Y-%m-%d'))
+        df = fdr.DataReader(clean_ticker, start=start_date.strftime('%Y-%m-%d'))
         if not df.empty and len(df) >= 1:
             current_price = float(df['Close'].iloc[-1])
             daily_change = 0.0
