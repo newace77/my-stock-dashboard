@@ -6,6 +6,12 @@ if (window.CONFIG && window.CONFIG.supabaseURL) {
   window.CONFIG.supabaseURL = window.CONFIG.supabaseURL.replace(/\/rest\/v1\/?$/, "");
 }
 
+// 야후 파이낸스 티커 인코딩 헬퍼 함수 (=X 형태의 특수 티커 이중 인코딩 및 디코딩 오작동 방지)
+function encodeYahooTicker(ticker) {
+  if (!ticker) return "";
+  return encodeURIComponent(ticker).replace(/%3D/g, "=");
+}
+
 // Google OAuth 2.0 글로벌 상태 변수
 let googleAccessToken = null;
 let googleUserEmail = null;
@@ -562,7 +568,7 @@ async function syncDividendDataAndRender() {
 
       const cleanTicker = h.ticker.trim();
       const formattedTicker = formatTicker(cleanTicker);
-      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(formattedTicker)}?interval=1d&range=5y&events=div`; // 5년치로 단축
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeYahooTicker(formattedTicker)}?interval=1d&range=5y&events=div`; // 5년치로 단축
 
       try {
         const result = await fetchWithFallback(url, true);
@@ -858,7 +864,7 @@ async function fetchHoldingsAnalysisData(force = false) {
           }
 
           // 1. 기본 정보 및 히스토리 (10년치 + 배당 정보) - 캐시 방지 파라미터 추가
-          const historyUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=10y&events=div&_=${Date.now()}`;
+          const historyUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeYahooTicker(ticker)}?interval=1d&range=10y&events=div&_=${Date.now()}`;
           const historyRes = await fetchWithFallback(historyUrl, true);
 
           if (historyRes && historyRes.type === "json") {
@@ -2185,7 +2191,7 @@ async function analyzeMDD() {
     analyzeBtn.disabled = true;
     analyzeBtn.innerHTML = "⏳ 데이터 로드 중...";
 
-    const yahooURL = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?period1=${p1}&period2=${p2}&interval=1d&events=history`;
+    const yahooURL = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeYahooTicker(ticker)}?period1=${p1}&period2=${p2}&interval=1d&events=history`;
     const data = await fetchWithFallback(yahooURL, true);
 
     if (!data)
@@ -2523,7 +2529,7 @@ async function updateMarketCharts() {
 
         try {
           // 티커 인코딩 적용하여 특수문자(^ 등)로 인한 프록시 에러 방지
-          const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(m.ticker)}?interval=1d&range=1d&_=${Date.now()}`;
+          const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeYahooTicker(m.ticker)}?interval=1d&range=1d&_=${Date.now()}`;
           const result = await fetchWithFallback(targetUrl, true);
 
           if (result && result.type === "json") {
@@ -3309,7 +3315,7 @@ async function fetchModalChartData(ticker, range) {
     if (range === "1d") interval = "5m";
     else if (range === "5d") interval = "30m";
 
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(formattedTicker)}?interval=${interval}&range=${range}`;
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeYahooTicker(formattedTicker)}?interval=${interval}&range=${range}`;
     const res = await fetchWithFallback(url, true);
 
     if (res && res.type === "json") {
@@ -3556,7 +3562,7 @@ async function fetchMarketChartData(ticker, range) {
     else if (range === "5d") interval = "15m";
     else if (range === "5y") interval = "1wk";
 
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=${interval}&range=${range}`;
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeYahooTicker(ticker)}?interval=${interval}&range=${range}`;
     const res = await fetchWithFallback(url, true);
 
     if (res && res.type === "json") {
@@ -4649,7 +4655,7 @@ async function updateLivePrices(dataArray, isKorean = false) {
       batch.map(async (item) => {
         try {
           const ticker = formatTicker(item.ticker);
-          const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d&_=${Date.now()}`;
+          const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeYahooTicker(ticker)}?interval=1d&range=1d&_=${Date.now()}`;
           const res = await fetchWithFallback(url, true);
 
           if (res && res.type === "json") {
@@ -5400,7 +5406,7 @@ async function getHistoricalExchangeRate(dateStr) {
     const endTs = Math.floor(dateObj.getTime() / 1000) + 86400 * 3;
     
     const ticker = "USDKRW=X";
-    const yahooURL = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?period1=${startTs}&period2=${endTs}&interval=1d&events=history`;
+    const yahooURL = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeYahooTicker(ticker)}?period1=${startTs}&period2=${endTs}&interval=1d&events=history`;
     
     const res = await fetchWithFallback(yahooURL, true);
     if (res && res.type === "json") {
