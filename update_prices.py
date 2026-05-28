@@ -2,6 +2,31 @@ import os
 import re
 import sys
 import datetime
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
+
+# Monkey-patch requests to disable SSL verification
+import requests
+original_request = requests.Session.request
+def unverified_request(self, method, url, **kwargs):
+    kwargs['verify'] = False
+    return original_request(self, method, url, **kwargs)
+requests.Session.request = unverified_request
+
+# Monkey-patch httpx to disable SSL verification
+import httpx
+original_httpx_client_init = httpx.Client.__init__
+def unverified_httpx_client_init(self, *args, **kwargs):
+    kwargs['verify'] = False
+    original_httpx_client_init(self, *args, **kwargs)
+httpx.Client.__init__ = unverified_httpx_client_init
+
+original_httpx_async_client_init = httpx.AsyncClient.__init__
+def unverified_httpx_async_client_init(self, *args, **kwargs):
+    kwargs['verify'] = False
+    original_httpx_async_client_init(self, *args, **kwargs)
+httpx.AsyncClient.__init__ = unverified_httpx_async_client_init
+
 import FinanceDataReader as fdr
 from supabase import create_client, Client
 
@@ -71,16 +96,68 @@ def get_stock_data(ticker):
         print(f"⚠️ {ticker} 가격 수집 실패: {e}")
     return None, None
 
+def get_market_indices():
+    indices = {
+        "snp": {"ticker": "US500"},
+        "nasdaq": {"ticker": "IXIC"},
+        "dow": {"ticker": "DJI"},
+        "kospi": {"ticker": "KS11"},
+        "kosdaq": {"ticker": "KQ11"},
+    }
+    result = {}
+    print("📊 [FDR] 해외 및 국내 지수 데이터 수집 중...")
+    for key, val in indices.items():
+        try:
+            today = datetime.date.today()
+            start_date = today - datetime.timedelta(days=12)
+            df = fdr.DataReader(val["ticker"], start=start_date.strftime('%Y-%m-%d'))
+            if not df.empty and len(df) >= 1:
+                price = float(df['Close'].iloc[-1])
+                change = 0.0
+                if len(df) >= 2:
+                    prev = float(df['Close'].iloc[-2])
+                    if prev > 0:
+                        change = ((price - prev) / prev) * 100.0
+                result[key] = {
+                    "price": price,
+                    "change": round(change, 2)
+                }
+                print(f"   -> {key} 수집 성공: {price:.2f} ({change:+.2f}%)")
+        except Exception as e:
+            print(f"   ⚠️ {key} ({val['ticker']}) 수집 실패: {e}")
+    return result
+
 def main():
     print("🚀 자산 및 주가 동기화 배치 시작...")
     
     # 최신 환율 가져오기
     usd_krw_rate = get_usd_krw_rate()
     
-    # 3. Supabase에서 모든 거래 기록 가져오기
+    # 해외/국내 지수 가져오기
+    market_indices = get_market_indices()
+    market_indices["fx"] = {
+        "price": usd_krw_rate,
+        "change": 0.0
+    }
+    
+    # 3. Supabase에서 모든 거래 기록 가져오기 (1000개 제한 극복을 위한 페이지네이션 적용)
+    txs = []
+    start = 0
+    limit = 1000
     try:
-        res = supabase.table("transactions").select("*").order("date", desc=False).order("created_at", desc=False).execute()
-        txs = res.data
+        while True:
+            res = supabase.table("transactions")\
+                .select("*")\
+                .order("date", desc=False)\
+                .order("created_at", desc=False)\
+                .range(start, start + limit - 1)\
+                .execute()
+            if not res.data:
+                break
+            txs.extend(res.data)
+            if len(res.data) < limit:
+                break
+            start += limit
     except Exception as e:
         print(f"❌ 거래기록 조회 실패: {e}")
         return
@@ -133,6 +210,7 @@ def main():
                 holdings[ticker] = {
                     'qty': 0.0,
                     'cost_sum_krw': 0.0,
+                    'cost_sum_foreign': 0.0,
                     'name': stock_name,
                     'currency': currency
                 }
@@ -142,7 +220,8 @@ def main():
             if tx_type == "매수":
                 h['qty'] += qty
                 h['cost_sum_krw'] += total_krw
-                acc_info['cash_krw'] -= total_krw
+                h['cost_sum_foreign'] += total_foreign
+                acc_info['cash_krw'] -= abs(total_krw)
             elif tx_type == "매도":
                 old_qty = h['qty']
                 sell_qty = abs(qty)
@@ -151,8 +230,11 @@ def main():
                     avg_price_krw = h['cost_sum_krw'] / old_qty
                     h['cost_sum_krw'] -= avg_price_krw * sell_qty
                     
+                    avg_price_foreign_tmp = h['cost_sum_foreign'] / old_qty
+                    h['cost_sum_foreign'] -= avg_price_foreign_tmp * sell_qty
+                    
                 h['qty'] += qty
-                acc_info['cash_krw'] += total_krw
+                acc_info['cash_krw'] += abs(total_krw)
                 
             if h['qty'] <= 0.0001:
                 del holdings[ticker]
@@ -216,16 +298,31 @@ def main():
         for ticker, h in acc_info['holdings'].items():
             qty = h['qty']
             cost_krw = h['cost_sum_krw']
+            cost_foreign = h.get('cost_sum_foreign', cost_krw)
             currency = h['currency']
+            
             avg_price_krw = cost_krw / qty if qty > 0 else 0.0
-            avg_price_foreign = avg_price_krw / usd_krw_rate if currency == 'USD' else avg_price_krw
+            avg_price_foreign = cost_foreign / qty if qty > 0 else 0.0
             
             current_price_foreign = ticker_prices.get(ticker, 0.0)
+            
+            # current_price_foreign이 0일 경우 평단가 기준으로 임시 계산
+            if current_price_foreign == 0.0:
+                current_price_foreign = avg_price_foreign
+                
             current_price_krw = current_price_foreign * usd_krw_rate if currency == 'USD' else current_price_foreign
             
             eval_krw = qty * current_price_krw
             profit_krw = eval_krw - cost_krw
-            return_rate = (profit_krw / cost_krw * 100.0) if cost_krw > 0 else 0.0
+            
+            # 현지 통화 기준으로 수익률 계산 (미국 주식은 USD, 한국 주식은 KRW)
+            if currency == 'USD':
+                eval_foreign = qty * current_price_foreign
+                profit_foreign = eval_foreign - cost_foreign
+                return_rate = (profit_foreign / cost_foreign * 100.0) if cost_foreign > 0 else 0.0
+            else:
+                return_rate = (profit_krw / cost_krw * 100.0) if cost_krw > 0 else 0.0
+                
             weight = (eval_krw / eval_total * 100.0) if eval_total > 0 else 0.0
             daily_change = ticker_changes.get(ticker, 0.0)
             
@@ -373,9 +470,22 @@ def main():
             ]
             holdings_data.append(row)
             
-        # C. History 어댑팅
-        res_history = supabase.table("asset_history").select("*").order("record_date", desc=False).execute()
-        history_list = res_history.data or []
+        # C. History 어댑팅 (1000개 제한 극복을 위한 페이지네이션 적용)
+        history_list = []
+        start_hist = 0
+        limit = 1000
+        while True:
+            res_history = supabase.table("asset_history")\
+                .select("*")\
+                .order("record_date", desc=False)\
+                .range(start_hist, start_hist + limit - 1)\
+                .execute()
+            if not res_history.data:
+                break
+            history_list.extend(res_history.data)
+            if len(res_history.data) < limit:
+                break
+            start_hist += limit
         history_data = [
             ["일자", "총 평가금", "총 투자금", "총 수입액", "", "", "", "", "", "", "", "총 배당금"]
         ]
@@ -394,6 +504,8 @@ def main():
             "summary": summary_data,
             "holdings": holdings_data,
             "history": history_data,
+            "usd_krw_rate": usd_krw_rate,
+            "market_indices": market_indices,
             "timestamp": int(datetime.datetime.now().timestamp() * 1000)
         }
         

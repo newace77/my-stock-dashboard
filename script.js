@@ -33,7 +33,7 @@ function initGoogleAuth() {
       callback: handleTokenResponse,
     });
   } else {
-    console.error("Google Identity Services SDK가 아직 로드되지 않았습니다.");
+    console.warn("Google Identity Services SDK가 아직 완전히 로드되지 않았습니다. (지연 로딩 중 또는 차단됨)");
   }
 
   // LocalStorage로부터 세션 복원 시도
@@ -232,7 +232,8 @@ function safeValue(val, isName = false) {
 function isKoreanStock(ticker) {
   if (!ticker) return false;
   const cleaned = String(ticker).replace("KRX:", "").trim();
-  return /^\d{6}$/.test(cleaned);
+  // 6자리 숫자이거나 숫자로 시작하고 문자가 섞인 6자리 코드(예: 0183J0)인 경우 한국 주식/ETF로 판단
+  return /^[0-9][A-Z0-9]{5}$/i.test(cleaned);
 }
 
 /**
@@ -307,6 +308,7 @@ const logger = {
 let globalHoldings = [];
 let usdKrwRate = 1400; // USD/KRW 환율 (기본값, Summary 시트에서 갱신)
 let usdKrwRateUpdatedAt = 0; // 환율 최근 갱신 시각 (ms)
+let globalMarketIndices = null; // 지수 및 환율 백업 캐시 (CORS/방화벽 대비용)
 let isPrivacyMode = localStorage.getItem("privacy_mode") === "true";
 let userViewMode = localStorage.getItem("user_view_mode") || "auto";
 
@@ -1478,26 +1480,34 @@ async function fetchData(force = false) {
       // TTM 배당금 비동기 조회
       const ttmDividend = await fetchTTMDividend();
       
-      // A. Summary 어댑팅
+      // A. Summary 어댑팅 (PC/모바일 공통 콤마 포맷 적용)
       const summaryData = [
         ["계좌명", "평가금", "투자금", "수입액", "수익률", "일일변동률", "일일변동액", "", "", "", "", "배당금"]
       ];
       let sumEval = 0, sumInvest = 0, sumProfit = 0, sumDailyAmt = 0;
+      let sumDividend = 0;
       summaryList.forEach(item => {
-        sumEval += parseFloat(item.eval_total) || 0;
-        sumInvest += parseFloat(item.invest_total) || 0;
-        sumProfit += parseFloat(item.profit) || 0;
-        sumDailyAmt += parseFloat(item.daily_change_amt) || 0;
+        const evalTotal = parseFloat(item.eval_total) || 0;
+        const investTotal = parseFloat(item.invest_total) || 0;
+        const profit = parseFloat(item.profit) || 0;
+        const dailyChangeAmt = parseFloat(item.daily_change_amt) || 0;
+        const dividend = parseFloat(item.dividend) || 0;
+
+        sumEval += evalTotal;
+        sumInvest += investTotal;
+        sumProfit += profit;
+        sumDailyAmt += dailyChangeAmt;
+        sumDividend += dividend;
         
         const row = [];
         row[0] = item.account_name;
-        row[1] = item.eval_total;
-        row[2] = item.invest_total;
-        row[3] = item.profit;
-        row[4] = item.return_rate + "%";
-        row[5] = item.daily_change_pct + "%";
-        row[6] = item.daily_change_amt;
-        row[11] = item.dividend;
+        row[1] = Math.round(evalTotal).toLocaleString('ko-KR');
+        row[2] = Math.round(investTotal).toLocaleString('ko-KR');
+        row[3] = Math.round(profit).toLocaleString('ko-KR');
+        row[4] = (parseFloat(item.return_rate) || 0).toFixed(2) + "%";
+        row[5] = (parseFloat(item.daily_change_pct) || 0).toFixed(2) + "%";
+        row[6] = Math.round(dailyChangeAmt).toLocaleString('ko-KR');
+        row[11] = Math.round(dividend).toLocaleString('ko-KR');
         summaryData.push(row);
       });
       
@@ -1507,34 +1517,94 @@ async function fetchData(force = false) {
       
       const totalRow = [];
       totalRow[0] = "합계";
-      totalRow[1] = sumEval;
-      totalRow[2] = sumInvest;
-      totalRow[3] = sumProfit;
+      totalRow[1] = Math.round(sumEval).toLocaleString('ko-KR');
+      totalRow[2] = Math.round(sumInvest).toLocaleString('ko-KR');
+      totalRow[3] = Math.round(sumProfit).toLocaleString('ko-KR');
       totalRow[4] = sumReturnRate.toFixed(2) + "%";
       totalRow[5] = sumDailyPct.toFixed(2) + "%";
-      totalRow[6] = sumDailyAmt;
-      totalRow[11] = ttmDividend;
+      totalRow[6] = Math.round(sumDailyAmt).toLocaleString('ko-KR');
+      totalRow[11] = Math.round(sumDividend).toLocaleString('ko-KR');
       summaryData.push(totalRow);
       
-      // B. Holdings 어댑팅
+      // B. Holdings 어댑팅 (종목별 합산 처리 및 비중 재계산)
       const holdingsData = [
         ["종목명", "Ticker", "", "수량", "매수금액", "평균단가", "현재가", "수익률", "평가금액", "비중", "일일변동", "", "", "", "평가손익"]
       ];
+
+      const aggregatedHoldings = {};
+      let totalEvalKrw = 0;
+
       holdingsList.forEach(item => {
-        const costBasisKrw = (parseFloat(item.eval_krw) || 0) - (parseFloat(item.profit) || 0);
-        
+        const ticker = item.ticker;
+        const evalKrw = parseFloat(item.eval_krw) || 0;
+        const profit = parseFloat(item.profit) || 0;
+        const quantity = parseFloat(item.quantity) || 0;
+        const costBasisKrw = evalKrw - profit;
+        const currency = item.currency || 'KRW';
+        const isUSD = currency === 'USD';
+
+        totalEvalKrw += evalKrw;
+
+        if (!aggregatedHoldings[ticker]) {
+          aggregatedHoldings[ticker] = {
+            stock_name: item.stock_name,
+            ticker: ticker,
+            quantity: 0,
+            costBasisKrw: 0,
+            eval_krw: 0,
+            profit: 0,
+            costBasisForeign: 0,
+            evalForeign: 0,
+            current_price: parseFloat(item.current_price) || 0,
+            daily_change: parseFloat(item.daily_change) || 0,
+            currency: currency
+          };
+        }
+
+        const h = aggregatedHoldings[ticker];
+        h.quantity += quantity;
+        h.costBasisKrw += costBasisKrw;
+        h.eval_krw += evalKrw;
+        h.profit += profit;
+
+        const itemAvgPrice = parseFloat(item.avg_price) || 0;
+        const itemCurrentPrice = parseFloat(item.current_price) || 0;
+
+        let costBasisForeignItem = 0;
+        let evalForeignItem = 0;
+        if (isUSD) {
+          costBasisForeignItem = itemAvgPrice > 0 ? (quantity * itemAvgPrice) : (costBasisKrw / (usdKrwRate || 1350.0));
+          evalForeignItem = itemCurrentPrice > 0 ? (quantity * itemCurrentPrice) : (evalKrw / (usdKrwRate || 1350.0));
+        } else {
+          costBasisForeignItem = costBasisKrw;
+          evalForeignItem = evalKrw;
+        }
+
+        h.costBasisForeign += costBasisForeignItem;
+        h.evalForeign += evalForeignItem;
+      });
+
+      Object.values(aggregatedHoldings).forEach(h => {
         const row = [];
-        row[0] = item.stock_name;
-        row[1] = item.ticker;
-        row[3] = item.quantity;
-        row[4] = costBasisKrw;
-        row[5] = item.avg_price;
-        row[6] = item.current_price;
-        row[7] = item.return_rate + "%";
-        row[8] = item.eval_krw;
-        row[9] = item.weight + "%";
-        row[10] = item.daily_change + "%";
-        row[14] = item.profit;
+        row[0] = h.stock_name;
+        row[1] = h.ticker;
+        row[2] = h.currency;
+        row[3] = h.quantity;
+        row[4] = h.costBasisKrw;
+        row[5] = h.quantity > 0 ? (h.currency === 'USD' ? h.costBasisForeign / h.quantity : h.costBasisKrw / h.quantity) : 0;
+        row[6] = h.current_price;
+
+        const returnRate = h.currency === 'USD'
+          ? (h.costBasisForeign > 0 ? ((h.evalForeign - h.costBasisForeign) / h.costBasisForeign) * 100 : 0)
+          : (h.costBasisKrw > 0 ? (h.profit / h.costBasisKrw) * 100 : 0);
+          
+        row[7] = returnRate.toFixed(2) + "%";
+        row[8] = h.eval_krw;
+
+        const weight = totalEvalKrw > 0 ? (h.eval_krw / totalEvalKrw) * 100 : 0;
+        row[9] = weight.toFixed(2) + "%";
+        row[10] = h.daily_change + "%";
+        row[14] = h.profit;
         holdingsData.push(row);
       });
       
@@ -1552,10 +1622,20 @@ async function fetchData(force = false) {
         historyData.push(row);
       });
       
+      if (historyList && historyList.length > 0) {
+        const latestHistory = historyList[historyList.length - 1];
+        if (latestHistory && latestHistory.usd_krw_rate) {
+          usdKrwRate = parseFloat(latestHistory.usd_krw_rate);
+          usdKrwRateUpdatedAt = Date.now();
+        }
+      }
+
       const freshData = {
         summary: summaryData,
         holdings: holdingsData,
         history: historyData,
+        usd_krw_rate: usdKrwRate,
+        market_indices: globalMarketIndices,
         timestamp: new Date().getTime(),
       };
       
@@ -1624,7 +1704,28 @@ async function fetchData(force = false) {
 
 // 데이터를 받아서 각 컴포넌트에 뿌려주는 통합 함수
 function renderFromData(data) {
+  if (!data) {
+    logger.warn("renderFromData: data is null or undefined");
+    return;
+  }
   logger.log("데이터 렌더링 시작...", Object.keys(data));
+  
+  try {
+    if (data.usd_krw_rate) {
+      usdKrwRate = parseFloat(data.usd_krw_rate);
+      usdKrwRateUpdatedAt = Date.now();
+      logger.log(`렌더러: 환율 복원 완료 -> ${usdKrwRate}원`);
+    }
+    if (data.market_indices) {
+      globalMarketIndices = data.market_indices;
+      if (globalMarketIndices && typeof globalMarketIndices === "object") {
+        logger.log("렌더러: 지수 캐시 복원 완료", Object.keys(globalMarketIndices));
+      }
+    }
+  } catch (e) {
+    logger.warn("렌더러: 환율/지수 복원 중 오류 발생:", e);
+  }
+
   try {
     if (data.summary) {
       renderSummary(
@@ -2397,31 +2498,45 @@ async function updateMarketCharts() {
         const valEl = document.getElementById(`card-${m.id}-val`);
         const chgEl = document.getElementById(`card-${m.id}-change`);
 
-        // 티커 중복 인코딩 방지: fetchWithFallback에서 전체 URL을 인코딩하므로 여기서는 원본 유지
-        const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${m.ticker}?interval=1d&range=1d&_=${Date.now()}`;
+        let lastPrice = null;
+        let changePercent = null;
 
-        const result = await fetchWithFallback(targetUrl, true);
+        try {
+          // 티커 중복 인코딩 방지: fetchWithFallback에서 전체 URL을 인코딩하므로 여기서는 원본 유지
+          const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${m.ticker}?interval=1d&range=1d&_=${Date.now()}`;
+          const result = await fetchWithFallback(targetUrl, true);
 
-        if (result && result.type === "json") {
-          const meta = result.data.chart?.result?.[0]?.meta;
-          if (meta) {
-            const lastPrice = meta.regularMarketPrice;
+          if (result && result.type === "json") {
+            const meta = result.data.chart?.result?.[0]?.meta;
+            if (meta) {
+              lastPrice = meta.regularMarketPrice;
 
-            // 우선적으로 API에서 제공하는 공식 변화율 사용 (더 정확함)
-            let changePercent = null;
-            if (
-              meta.regularMarketChangePercent !== undefined &&
-              meta.regularMarketChangePercent !== null
-            ) {
-              changePercent = meta.regularMarketChangePercent.toFixed(2);
-            } else {
-              const prevClose = meta.chartPreviousClose || meta.previousClose;
-              if (lastPrice && prevClose) {
-                changePercent = ((lastPrice / prevClose - 1) * 100).toFixed(2);
+              // 우선적으로 API에서 제공하는 공식 변화율 사용 (더 정확함)
+              if (
+                meta.regularMarketChangePercent !== undefined &&
+                meta.regularMarketChangePercent !== null
+              ) {
+                changePercent = meta.regularMarketChangePercent.toFixed(2);
+              } else {
+                const prevClose = meta.chartPreviousClose || meta.previousClose;
+                if (lastPrice && prevClose) {
+                  changePercent = ((lastPrice / prevClose - 1) * 100).toFixed(2);
+                }
               }
             }
+          }
+        } catch (e) {
+          logger.warn(`실시간 지수 데이터 페칭 실패 (${m.id}):`, e);
+        }
 
-            if (lastPrice !== undefined && changePercent !== null) {
+        // 백업 데이터 캐시(data_snapshot.json에 저장된 FDR 수집값) 폴백
+        if ((lastPrice === null || lastPrice === undefined) && globalMarketIndices && globalMarketIndices[m.id]) {
+          lastPrice = globalMarketIndices[m.id].price;
+          changePercent = globalMarketIndices[m.id].change;
+          logger.log(`지수 데이터 백업 복원 성공 (${m.id}): ${lastPrice} (${changePercent}%)`);
+        }
+
+        if (lastPrice !== null && lastPrice !== undefined && changePercent !== null && changePercent !== undefined) {
               const isPositive = parseFloat(changePercent) >= 0;
 
               if (valEl) {
@@ -2458,8 +2573,6 @@ async function updateMarketCharts() {
               }
               return;
             }
-          }
-        }
       } catch (e) {
         logger.error(`🚨 ${m.id} 업데이트 오류:`, e);
       }
@@ -2614,6 +2727,9 @@ function processHoldingsData(data) {
   // 매매 기록용 자동완성 제안 갱신
   updateDatalistSuggestions();
 
+  const aggregated = {};
+  let totalEvalKrw = 0;
+
   data.forEach((row, i) => {
     const nameValue = row[HOLDINGS_COL.NAME] || "";
     // 헤더 및 메타데이터 행 건너뛰기
@@ -2625,7 +2741,6 @@ function processHoldingsData(data) {
     )
       return;
 
-    // 한국 주식 여부 (6자리 숫자 티커 또는 특정 종목명)
     const tickerValue = row[HOLDINGS_COL.TICKER] || "";
     const isKRW =
       isKoreanStock(tickerValue) || nameValue.toLowerCase().includes("plus50");
@@ -2633,6 +2748,9 @@ function processHoldingsData(data) {
 
     const weight = parseSafeFloat(row[HOLDINGS_COL.WEIGHT]);
     const evalKRW = parseSafeFloat(row[HOLDINGS_COL.EVAL_KRW]);
+    const profit = parseSafeFloat(row[HOLDINGS_COL.PROFIT]);
+    const costBasis = parseSafeFloat(row[HOLDINGS_COL.COST_BASIS]) || (evalKRW - profit);
+    const shares = parseSafeFloat(row[HOLDINGS_COL.SHARES]);
 
     // 데이터 로드 중인 행이거나 유효하지 않은 데이터 건너뛰기
     if (
@@ -2646,28 +2764,91 @@ function processHoldingsData(data) {
       ? rawTicker.split(":").pop()
       : rawTicker;
 
+    if (!ticker) return;
+
+    totalEvalKrw += evalKRW;
+
+    if (!aggregated[ticker]) {
+      aggregated[ticker] = {
+        name: nameValue,
+        ticker: ticker,
+        currency: currency,
+        shares: 0,
+        costBasis: 0,
+        eval: 0,
+        profit: 0,
+        costBasisForeign: 0,
+        evalForeign: 0,
+        currentPrice: parseSafeFloat(row[HOLDINGS_COL.CURRENT_PRICE]),
+        dailyChange: parseSafeFloat(row[HOLDINGS_COL.DAILY_CHANGE])
+      };
+    }
+
+    const a = aggregated[ticker];
+    a.shares += shares;
+    a.costBasis += costBasis;
+    a.eval += evalKRW;
+    a.profit += profit;
+
+    const currentPriceVal = parseSafeFloat(row[HOLDINGS_COL.CURRENT_PRICE]);
+    if (currentPriceVal > 0) {
+      a.currentPrice = currentPriceVal;
+    }
+    const dailyChangeVal = parseSafeFloat(row[HOLDINGS_COL.DAILY_CHANGE]);
+    if (dailyChangeVal !== 0) {
+      a.dailyChange = dailyChangeVal;
+    }
+
+    const rawAvgCost = parseSafeFloat(row[HOLDINGS_COL.AVG_COST]);
+    const rawCurrentPrice = parseSafeFloat(row[HOLDINGS_COL.CURRENT_PRICE]);
+    const isUSD = currency === "USD";
+
+    let costBasisForeignItem = 0;
+    let evalForeignItem = 0;
+    if (isUSD) {
+      costBasisForeignItem = rawAvgCost > 0 ? (shares * rawAvgCost) : (costBasis / (usdKrwRate || 1350.0));
+      evalForeignItem = rawCurrentPrice > 0 ? (shares * rawCurrentPrice) : (evalKRW / (usdKrwRate || 1350.0));
+    } else {
+      costBasisForeignItem = costBasis;
+      evalForeignItem = evalKRW;
+    }
+
+    a.costBasisForeign += costBasisForeignItem;
+    a.evalForeign += evalForeignItem;
+  });
+
+  // 이제 globalHoldings를 채우고 비중/수익률 계산
+  Object.values(aggregated).forEach(a => {
+    const weight = totalEvalKrw > 0 ? (a.eval / totalEvalKrw) * 100 : 0;
+    
+    const returnRate = a.currency === "USD"
+      ? (a.costBasisForeign > 0 ? ((a.evalForeign - a.costBasisForeign) / a.costBasisForeign) * 100 : 0)
+      : (a.costBasis > 0 ? (a.profit / a.costBasis) * 100 : 0);
+      
+    const avgCost = a.shares > 0
+      ? (a.currency === "USD" ? a.costBasisForeign / a.shares : a.costBasis / a.shares)
+      : 0;
+
     globalHoldings.push({
-      name: row[HOLDINGS_COL.NAME],
-      ticker: ticker,
-      currency,
-      weight,
-      returnRate: parseSafeFloat(row[HOLDINGS_COL.RETURN_RATE]),
-      eval: evalKRW,
-      profit: parseSafeFloat(row[HOLDINGS_COL.PROFIT]),
-      dailyChange: parseSafeFloat(row[HOLDINGS_COL.DAILY_CHANGE]),
-      shares: row[HOLDINGS_COL.SHARES] || "-",
-      avgCost: row[HOLDINGS_COL.AVG_COST] || "-",
-      currentPriceKRW:
-        row[HOLDINGS_COL.CURRENT_PRICE] || row[HOLDINGS_COL.EVAL_KRW] || "-",
+      name: a.name,
+      ticker: a.ticker,
+      currency: a.currency,
+      weight: weight,
+      returnRate: returnRate,
+      eval: a.eval,
+      profit: a.profit,
+      dailyChange: a.dailyChange,
+      shares: a.shares,
+      avgCost: avgCost,
+      currentPriceKRW: a.currentPrice || a.eval || "-",
       display: {
-        weight: row[HOLDINGS_COL.WEIGHT],
-        returnRate: row[HOLDINGS_COL.RETURN_RATE],
-        evalKRW: formatKRWInteger(row[HOLDINGS_COL.EVAL_KRW]),
-        profitKRW: formatKRWInteger(row[HOLDINGS_COL.PROFIT]),
-        dailyChange: row[HOLDINGS_COL.DAILY_CHANGE],
-        currentPrice:
-          row[HOLDINGS_COL.CURRENT_PRICE] || row[HOLDINGS_COL.EVAL_KRW],
-      },
+        weight: weight.toFixed(2) + "%",
+        returnRate: returnRate.toFixed(2) + "%",
+        evalKRW: formatKRWInteger(a.eval),
+        profitKRW: formatKRWInteger(a.profit),
+        dailyChange: a.dailyChange.toFixed(2) + "%",
+        currentPrice: a.currentPrice || a.eval
+      }
     });
   });
 
@@ -2966,12 +3147,12 @@ async function openStockModal(item) {
 
   if (!currencyIsKRW && isExchangeRateValid()) {
     // USD 종목: 달러(메인) + 원화(보조)
-    const avgCostUSD = avgCostNum > 0 ? avgCostNum / usdKrwRate : 0;
+    const avgCostUSD = avgCostNum;
     avgCostEl.textContent = maskValue(
       avgCostUSD > 0 ? fmtUSDabs(avgCostUSD) : item.avgCost || "-",
     );
     avgCostSubEl.textContent = maskValue(
-      avgCostNum > 0 ? fmtKRW(avgCostNum) : "",
+      avgCostUSD > 0 ? fmtKRW(avgCostUSD * usdKrwRate) : "",
     );
 
     const evalUSD = evalKRWNum / usdKrwRate;
@@ -3104,14 +3285,29 @@ async function fetchModalChartData(ticker, range) {
 
   try {
     const formattedTicker = formatTicker(ticker);
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${formattedTicker}?interval=${range === "5d" ? "30m" : "1d"}&range=${range}`;
+    let interval = "1d";
+    if (range === "1d") interval = "5m";
+    else if (range === "5d") interval = "30m";
+
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${formattedTicker}?interval=${interval}&range=${range}`;
     const res = await fetchWithFallback(url, true);
 
     if (res && res.type === "json") {
       const chartData = res.data.chart.result[0];
       const meta = chartData.meta;
-      const timestamps = chartData.timestamp;
-      const prices = chartData.indicators.quote[0].close;
+      const rawTimestamps = chartData.timestamp || [];
+      const rawPrices = chartData.indicators.quote[0].close || [];
+
+      // Filter out null / undefined prices
+      const validPoints = [];
+      for (let i = 0; i < rawTimestamps.length; i++) {
+        if (rawPrices[i] !== null && rawPrices[i] !== undefined) {
+          validPoints.push({
+            ts: rawTimestamps[i],
+            val: rawPrices[i]
+          });
+        }
+      }
 
       // Update meta info in modal if available
       if (meta.marketCap) {
@@ -3127,14 +3323,19 @@ async function fetchModalChartData(ticker, range) {
           : "$" + meta.fiftyTwoWeekHigh.toFixed(2);
       }
 
-      const labels = timestamps.map((ts) => {
-        const date = new Date(ts * 1000);
-        return range === "5d"
-          ? `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:00`
-          : `${date.getMonth() + 1}/${date.getDate()}`;
+      const labels = validPoints.map((pt) => {
+        const date = new Date(pt.ts * 1000);
+        if (range === "1d") {
+          return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+        } else if (range === "5d") {
+          return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:00`;
+        } else {
+          return `${date.getMonth() + 1}/${date.getDate()}`;
+        }
       });
 
-      const isPositive = prices[prices.length - 1] >= prices[0];
+      const prices = validPoints.map((pt) => pt.val);
+      const isPositive = prices.length > 0 ? prices[prices.length - 1] >= prices[0] : true;
       const color = isPositive ? "#4ade80" : "#fb7185";
       const gradient = ctx.createLinearGradient(0, 0, 0, 200);
       gradient.addColorStop(
