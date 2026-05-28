@@ -152,7 +152,8 @@ def main():
                     h['cost_sum_krw'] -= avg_price_krw * sell_qty
                     
                 h['qty'] += qty
-                acc_info['cash_krw'] += total_krw
+                # total_krw가 매도 거래로 인해 음수이므로, 캐시를 더할 때 절대값으로 더해줍니다.
+                acc_info['cash_krw'] += abs(total_krw)
                 
             if h['qty'] <= 0.0001:
                 del holdings[ticker]

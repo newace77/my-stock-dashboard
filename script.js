@@ -555,7 +555,7 @@ async function syncDividendDataAndRender() {
 
       const cleanTicker = h.ticker.trim();
       const formattedTicker = formatTicker(cleanTicker);
-      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${formattedTicker}?interval=1d&range=5y&events=div`; // 5년치로 단축
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(formattedTicker)}?interval=1d&range=5y&events=div`; // 5년치로 단축
 
       try {
         const result = await fetchWithFallback(url, true);
@@ -851,7 +851,7 @@ async function fetchHoldingsAnalysisData(force = false) {
           }
 
           // 1. 기본 정보 및 히스토리 (10년치 + 배당 정보) - 캐시 방지 파라미터 추가
-          const historyUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=10y&events=div&_=${Date.now()}`;
+          const historyUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=10y&events=div&_=${Date.now()}`;
           const historyRes = await fetchWithFallback(historyUrl, true);
 
           if (historyRes && historyRes.type === "json") {
@@ -1888,105 +1888,121 @@ function refreshKOSPI200() {
 async function fetchWithFallback(targetUrl, isYahoo = false, requiredKeywords = []) {
   if (!targetUrl) return null;
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000); // 전체 타임아웃 15초로 연장
-
   const fetchTask = async (url, options = {}) => {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal,
-    });
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    const text = await response.text();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), options.timeout || 8000);
+    
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const text = await response.text();
 
-    // 1. 유효성 검사 (HTML 에러 페이지 필터링)
-    if (
-      !text ||
-      text.length < 20 ||
-      text.includes("<!DOCTYPE") ||
-      text.includes("<html") ||
-      text.includes("Unauthorized")
-    ) {
-      throw new Error("Invalid data received (HTML or Unauthorized)");
-    }
+      // 1. 유효성 검사 (HTML 에러 페이지 필터링)
+      if (
+        !text ||
+        text.length < 20 ||
+        text.includes("<!DOCTYPE") ||
+        text.includes("<html") ||
+        text.includes("Unauthorized")
+      ) {
+        throw new Error("Invalid data received (HTML or Unauthorized)");
+      }
 
-    // 1.1 JSON 에러 응답 필터링 (일부 프록시의 JSON 에러 문자열 방지)
-    if (
-      text.trim().startsWith("{") &&
-      (text.includes('"error"') || text.includes('"Error"')) &&
-      !text.includes('"chart"') &&
-      !text.includes('"result"')
-    ) {
-      throw new Error("Proxy error response received: " + text.substring(0, 100));
-    }
+      // 1.1 JSON 에러 응답 필터링 (일부 프록시의 JSON 에러 문자열 방지)
+      if (
+        text.trim().startsWith("{") &&
+        (text.includes('"error"') || text.includes('"Error"')) &&
+        !text.includes('"chart"') &&
+        !text.includes('"result"')
+      ) {
+        throw new Error("Proxy error response received: " + text.substring(0, 100));
+      }
 
-    // 2. JSON 데이터인 경우 (야후 파이낸스 등)
-    if (
-      text.trim().startsWith("{") &&
-      (text.includes('"chart"') || text.includes('"result"'))
-    ) {
-      return { type: "json", data: JSON.parse(text) };
-    }
+      // 2. JSON 데이터인 경우 (야후 파이낸스 등)
+      if (
+        text.trim().startsWith("{") &&
+        (text.includes('"chart"') || text.includes('"result"'))
+      ) {
+        return { type: "json", data: JSON.parse(text) };
+      }
 
-    // 3. CSV 데이터인 경우 (구글 시트)
-    if (text.includes(",") || text.includes("\t")) {
-      // 구글 시트 데이터의 경우 필수 키워드가 모두 있는지 검증
-      if (requiredKeywords && requiredKeywords.length > 0) {
-        const hasAllKeywords = requiredKeywords.every((kw) => text.includes(kw));
-        if (!hasAllKeywords) {
-          throw new Error("CSV data is missing required keywords: " + requiredKeywords.join(", "));
+      // 3. CSV 데이터인 경우 (구글 시트)
+      if (text.includes(",") || text.includes("\t")) {
+        // 구글 시트 데이터의 경우 필수 키워드가 모두 있는지 검증
+        if (requiredKeywords && requiredKeywords.length > 0) {
+          const hasAllKeywords = requiredKeywords.every((kw) => text.includes(kw));
+          if (!hasAllKeywords) {
+            throw new Error("CSV data is missing required keywords: " + requiredKeywords.join(", "));
+          }
+        }
+
+        const result = Papa.parse(text, { header: false, skipEmptyLines: true });
+        if (result.data && result.data.length > 1) {
+          // 최소 헤더 + 1개 행 이상
+          return { type: "csv", data: result.data };
         }
       }
 
-      const result = Papa.parse(text, { header: false, skipEmptyLines: true });
-      if (result.data && result.data.length > 1) {
-        // 최소 헤더 + 1개 행 이상
-        return { type: "csv", data: result.data };
-      }
+      throw new Error("Parsing failed: Not a valid JSON chart or CSV");
+    } catch (err) {
+      clearTimeout(timeoutId);
+      throw err;
     }
-
-    throw new Error("Parsing failed: Not a valid JSON chart or CSV");
   };
 
-  const tasks = [];
-
-  // 1. GAS 프록시 우선 시도 (CORS 및 레이트 리밋 우회)
-  if (CONFIG.gasURL) {
-    tasks.push(
-      fetchTask(CONFIG.gasURL, {
-        method: "POST",
-        body: JSON.stringify({
-          command: "proxy_yahoo",
-          url: targetUrl,
-          apiKey: CONFIG.gasApiKey || "",
-        }),
-      }),
-    );
+  // 1단계: 구글 시트(isYahoo === false)인 경우 직접 페치 최우선 시도
+  if (!isYahoo) {
+    try {
+      logger.log(`[Fetch] 직접 페치 시도: ${targetUrl}`);
+      return await fetchTask(targetUrl, { timeout: 8000 });
+    } catch (e) {
+      logger.warn(`[Fetch] 직접 페치 실패, GAS 프록시 전환:`, e);
+      if (CONFIG.gasURL) {
+        try {
+          const gasProxyUrl = `${CONFIG.gasURL}?url=${encodeURIComponent(targetUrl)}`;
+          return await fetchTask(gasProxyUrl, { timeout: 8000 });
+        } catch (gasErr) {
+          logger.error(`[Fetch] GAS 프록시를 통한 페치도 실패했습니다:`, gasErr);
+        }
+      }
+    }
   }
 
-  // 2. 공용 프록시 시도 (인코딩된 URL 사용)
+  // 2단계: 야후 파이낸스(isYahoo === true)이거나, 직접 페치/GAS가 모두 실패했을 때
+  // GAS 프록시(GET 방식) 시도
+  if (CONFIG.gasURL) {
+    try {
+      const gasProxyUrl = `${CONFIG.gasURL}?url=${encodeURIComponent(targetUrl)}`;
+      logger.log(`[Fetch] GAS 프록시 시도: ${gasProxyUrl}`);
+      return await fetchTask(gasProxyUrl, { timeout: 10000 });
+    } catch (e) {
+      logger.warn(`[Fetch] GAS 프록시 실패, 공용 프록시 레이싱 전환:`, e);
+    }
+  }
+
+  // 3단계: GAS 프록시마저 실패하거나 설정되지 않은 경우, 공용 프록시 레이싱
   const encodedTarget = encodeURIComponent(targetUrl);
   const publicProxies = [
     `https://api.allorigins.win/raw?url=${encodedTarget}`,
-    `https://corsproxy.io/?${encodedTarget}`, // URL 파라미터 없이 직접 쿼리로 전달
-    `https://api.codetabs.com/v1/proxy?url=${encodedTarget}`,
-    `https://api.cors.lol/?url=${encodedTarget}`,
+    `https://thingproxy.freeboard.io/fetch/${targetUrl}`,
+    `https://api.codetabs.com/v1/proxy?url=${encodedTarget}`
   ];
-  publicProxies.forEach((proxy) => {
-    tasks.push(fetchTask(proxy));
-  });
 
-  // 3. 직접 호출 시도 (CORS 허용된 경우 대비, 짧은 타임아웃)
-  tasks.push(fetchTask(targetUrl, { signal: AbortSignal.timeout(3000) }));
+  const tasks = publicProxies.map((proxy) => fetchTask(proxy, { timeout: 6000 }));
+
+  // 야후 파이낸스가 아니라면 직접 호출도 레이싱에 포함
+  if (!isYahoo) {
+    tasks.push(fetchTask(targetUrl, { timeout: 5000 }));
+  }
 
   try {
-    // 가장 빨리 성공하는 작업 결과 반환
-    const fastestResult = await Promise.any(tasks);
-    clearTimeout(timeoutId);
-    return fastestResult;
+    return await Promise.any(tasks);
   } catch (e) {
-    logger.error("All fetch attempts failed", e);
-    clearTimeout(timeoutId);
+    logger.error("[Fetch] 모든 페치 경로가 실패했습니다.", e);
     return null;
   }
 }
@@ -2061,7 +2077,7 @@ async function analyzeMDD() {
     analyzeBtn.disabled = true;
     analyzeBtn.innerHTML = "⏳ 데이터 로드 중...";
 
-    const yahooURL = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?period1=${p1}&period2=${p2}&interval=1d&events=history`;
+    const yahooURL = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?period1=${p1}&period2=${p2}&interval=1d&events=history`;
     const data = await fetchWithFallback(yahooURL, true);
 
     if (!data)
@@ -2394,8 +2410,8 @@ async function updateMarketCharts() {
         const valEl = document.getElementById(`card-${m.id}-val`);
         const chgEl = document.getElementById(`card-${m.id}-change`);
 
-        // 티커 중복 인코딩 방지: fetchWithFallback에서 전체 URL을 인코딩하므로 여기서는 원본 유지
-        const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${m.ticker}?interval=1d&range=1d&_=${Date.now()}`;
+        // 티커 인코딩 적용하여 특수문자(^ 등)로 인한 프록시 에러 방지
+        const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(m.ticker)}?interval=1d&range=1d&_=${Date.now()}`;
 
         const result = await fetchWithFallback(targetUrl, true);
 
@@ -3101,7 +3117,7 @@ async function fetchModalChartData(ticker, range) {
 
   try {
     const formattedTicker = formatTicker(ticker);
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${formattedTicker}?interval=${range === "5d" ? "30m" : "1d"}&range=${range}`;
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(formattedTicker)}?interval=${range === "5d" ? "30m" : "1d"}&range=${range}`;
     const res = await fetchWithFallback(url, true);
 
     if (res && res.type === "json") {
@@ -3332,7 +3348,7 @@ async function fetchMarketChartData(ticker, range) {
     else if (range === "5d") interval = "15m";
     else if (range === "5y") interval = "1wk";
 
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=${interval}&range=${range}`;
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=${interval}&range=${range}`;
     const res = await fetchWithFallback(url, true);
 
     if (res && res.type === "json") {
@@ -4425,7 +4441,7 @@ async function updateLivePrices(dataArray, isKorean = false) {
       batch.map(async (item) => {
         try {
           const ticker = formatTicker(item.ticker);
-          const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d&_=${Date.now()}`;
+          const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d&_=${Date.now()}`;
           const res = await fetchWithFallback(url, true);
 
           if (res && res.type === "json") {
@@ -5176,7 +5192,7 @@ async function getHistoricalExchangeRate(dateStr) {
     const endTs = Math.floor(dateObj.getTime() / 1000) + 86400 * 3;
     
     const ticker = "USDKRW=X";
-    const yahooURL = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?period1=${startTs}&period2=${endTs}&interval=1d&events=history`;
+    const yahooURL = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?period1=${startTs}&period2=${endTs}&interval=1d&events=history`;
     
     const res = await fetchWithFallback(yahooURL, true);
     if (res && res.type === "json") {
