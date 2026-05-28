@@ -1,6 +1,11 @@
 // 🐶 바둑이의 주식 데이터 처리 스크립트
 // 업데이트: 2026-04-09 (탭 인터페이스 및 MDD 분석 기능 추가)
 
+// CONFIG.supabaseURL 자동 정규화 (/rest/v1 중복 방지)
+if (window.CONFIG && window.CONFIG.supabaseURL) {
+  window.CONFIG.supabaseURL = window.CONFIG.supabaseURL.replace(/\/rest\/v1\/?$/, "");
+}
+
 // Google OAuth 2.0 글로벌 상태 변수
 let googleAccessToken = null;
 let googleUserEmail = null;
