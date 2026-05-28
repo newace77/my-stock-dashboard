@@ -5506,10 +5506,15 @@ function updateDatalistSuggestions() {
   datalist.innerHTML = "";
   const uniqueItems = new Map();
   
-  // 1. 기존 보유 종목 우선 추가
+  // 1. 기존 보유 종목 우선 추가 및 사전에 동적 등록
   if (globalHoldings) {
     globalHoldings.forEach(h => {
       uniqueItems.set(h.ticker, h.name);
+      
+      const tickerUpper = h.ticker.trim().toUpperCase();
+      const info = { ticker: h.ticker, name: h.name, currency: h.currency || (isKoreanStock(h.ticker) ? 'KRW' : 'USD') };
+      stockDictionary[tickerUpper] = info;
+      stockDictionary[h.name.trim().toLowerCase()] = info;
     });
   }
   
