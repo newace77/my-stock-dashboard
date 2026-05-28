@@ -2073,7 +2073,6 @@ async function fetchWithFallback(targetUrl, isYahoo = false, requiredKeywords = 
       }
     }
   }
-  }
 
   // 2단계: 야후 파이낸스(isYahoo === true)이거나, 직접 페치/GAS가 모두 실패했을 때
   // GAS 프록시(GET 방식) 시도
