@@ -58,7 +58,27 @@ CREATE TABLE IF NOT EXISTS public.transactions (
 );
 
 -- RLS (Row Level Security) 설정
-ALTER TABLE public.account_summary DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.holdings DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.asset_history DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.transactions DISABLE ROW LEVEL SECURITY;
+-- 프론트엔드에서는 anon 키만 사용하므로, 읽기 전용 + transactions INSERT만 허용
+ALTER TABLE public.account_summary ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.holdings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.asset_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
+
+-- account_summary: anon은 읽기만 허용 (쓰기는 service_role인 update_prices.py에서만)
+CREATE POLICY "anon_select_account_summary" ON public.account_summary
+  FOR SELECT TO anon USING (true);
+
+-- holdings: anon은 읽기만 허용 (쓰기/삭제는 service_role인 update_prices.py에서만)
+CREATE POLICY "anon_select_holdings" ON public.holdings
+  FOR SELECT TO anon USING (true);
+
+-- asset_history: anon은 읽기만 허용 (쓰기는 service_role인 update_prices.py에서만)
+CREATE POLICY "anon_select_asset_history" ON public.asset_history
+  FOR SELECT TO anon USING (true);
+
+-- transactions: anon은 읽기 + 신규 삽입 허용 (수정/삭제 불가)
+CREATE POLICY "anon_select_transactions" ON public.transactions
+  FOR SELECT TO anon USING (true);
+
+CREATE POLICY "anon_insert_transactions" ON public.transactions
+  FOR INSERT TO anon WITH CHECK (true);

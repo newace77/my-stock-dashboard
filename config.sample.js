@@ -15,8 +15,10 @@ const CONFIG = {
   gasApiKey: "YOUR_API_KEY_HERE",
 
   // Supabase (선택 사항: RSI 데이터 등을 외부 DB에 캐싱할 경우)
+  // ⚠️ 반드시 anon (공개) 키를 사용하세요. service_role 키는 RLS를 우회하므로
+  // 프론트엔드에 절대 노출하지 마세요. service_role 키는 서버 환경(update_prices.py 등)에서만 사용합니다.
   supabaseURL: "",
-  supabaseKey: "",
+  supabaseKey: "", // Supabase anon key (Settings > API > anon public)
   geminiAPIKey: "", // 구글 제미나이 API 키 입력 (선택사항)
   googleClientID: "", // 구글 OAuth 로그인용 Client ID (선택사항)
 };
