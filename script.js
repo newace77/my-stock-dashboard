@@ -1,10 +1,6 @@
 // 🐶 바둑이의 주식 데이터 처리 스크립트
 // 업데이트: 2026-04-09 (탭 인터페이스 및 MDD 분석 기능 추가)
 
-// CONFIG.supabaseURL 자동 정규화 (/rest/v1 중복 방지)
-if (window.CONFIG && window.CONFIG.supabaseURL) {
-  window.CONFIG.supabaseURL = window.CONFIG.supabaseURL.replace(/\/rest\/v1\/?$/, "");
-}
 
 // 야후 파이낸스 티커 인코딩 헬퍼 함수 (=X 형태의 특수 티커 이중 인코딩 및 디코딩 오작동 방지)
 function encodeYahooTicker(ticker) {
@@ -1467,300 +1463,39 @@ async function fetchData(force = false) {
     // 시장 지수 업데이트 (await 하지 않고 백그라운드에서 실행)
     updateMarketCharts();
 
-    if (CONFIG.supabaseURL && CONFIG.supabaseKey) {
-      logger.log("Supabase 데이터 페칭 시작...");
+    // 구글 시트 실시간 데이터 페칭 시작...
+    logger.log("구글 시트 실시간 데이터 페칭 시작...");
+    const ts = new Date().getTime();
+    const addTs = (url) =>
+      url ? url + (url.includes("?") ? "&" : "?") + "t=" + ts : url;
 
-      const fetchHeaders = {
-        apikey: CONFIG.supabaseKey,
-        Authorization: `Bearer ${CONFIG.supabaseKey}`,
-      };
+    const [summaryRes, holdingsRes, historyRes] = await Promise.all([
+      fetchWithFallback(addTs(CONFIG.summaryURL), false, [
+        "총 평가금",
+        "총 투자금",
+      ]),
+      fetchWithFallback(addTs(CONFIG.holdingsURL), false, [
+        "종목명",
+        "Ticker",
+      ]),
+      fetchWithFallback(addTs(CONFIG.historyURL), false, ["일자", "평가금"]),
+    ]);
 
-      const [summaryResponse, holdingsResponse, historyResponse] =
-        await Promise.all([
-          fetch(`${CONFIG.supabaseURL}/rest/v1/account_summary?select=*`, {
-            headers: fetchHeaders,
-          }),
-          fetch(`${CONFIG.supabaseURL}/rest/v1/holdings?select=*`, {
-            headers: fetchHeaders,
-          }),
-          fetch(
-            `${CONFIG.supabaseURL}/rest/v1/asset_history?select=*&order=record_date.asc`,
-            { headers: fetchHeaders },
-          ),
-        ]);
-
-      if (!summaryResponse.ok || !holdingsResponse.ok || !historyResponse.ok) {
-        throw new Error("Supabase REST API request failed");
-      }
-
-      const summaryList = await summaryResponse.json();
-      const holdingsList = await holdingsResponse.json();
-      const historyList = await historyResponse.json();
-
-      // TTM 배당금 비동기 조회
-      const ttmDividend = await fetchTTMDividend();
-
-      // A. Summary 어댑팅 (PC/모바일 공통 콤마 포맷 적용)
-      const summaryData = [
-        [
-          "계좌명",
-          "평가금",
-          "투자금",
-          "수입액",
-          "수익률",
-          "일일변동률",
-          "일일변동액",
-          "",
-          "",
-          "",
-          "",
-          "배당금",
-        ],
-      ];
-      let sumEval = 0,
-        sumInvest = 0,
-        sumProfit = 0,
-        sumDailyAmt = 0;
-      let sumDividend = 0;
-      summaryList.forEach((item) => {
-        const evalTotal = parseFloat(item.eval_total) || 0;
-        const investTotal = parseFloat(item.invest_total) || 0;
-        const profit = parseFloat(item.profit) || 0;
-        const dailyChangeAmt = parseFloat(item.daily_change_amt) || 0;
-        const dividend = parseFloat(item.dividend) || 0;
-
-        sumEval += evalTotal;
-        sumInvest += investTotal;
-        sumProfit += profit;
-        sumDailyAmt += dailyChangeAmt;
-        sumDividend += dividend;
-
-        const row = [];
-        row[0] = item.account_name;
-        row[1] = Math.round(evalTotal).toLocaleString("ko-KR");
-        row[2] = Math.round(investTotal).toLocaleString("ko-KR");
-        row[3] = Math.round(profit).toLocaleString("ko-KR");
-        row[4] = (parseFloat(item.return_rate) || 0).toFixed(2) + "%";
-        row[5] = (parseFloat(item.daily_change_pct) || 0).toFixed(2) + "%";
-        row[6] = Math.round(dailyChangeAmt).toLocaleString("ko-KR");
-        row[11] = Math.round(dividend).toLocaleString("ko-KR");
-        summaryData.push(row);
-      });
-
-      const sumReturnRate = sumInvest > 0 ? (sumProfit / sumInvest) * 100 : 0;
-      const prevSumEval = sumEval - sumDailyAmt;
-      const sumDailyPct =
-        prevSumEval > 0 ? (sumDailyAmt / prevSumEval) * 100 : 0;
-
-      const totalRow = [];
-      totalRow[0] = "합계";
-      totalRow[1] = Math.round(sumEval).toLocaleString("ko-KR");
-      totalRow[2] = Math.round(sumInvest).toLocaleString("ko-KR");
-      totalRow[3] = Math.round(sumProfit).toLocaleString("ko-KR");
-      totalRow[4] = sumReturnRate.toFixed(2) + "%";
-      totalRow[5] = sumDailyPct.toFixed(2) + "%";
-      totalRow[6] = Math.round(sumDailyAmt).toLocaleString("ko-KR");
-      totalRow[11] = Math.round(sumDividend).toLocaleString("ko-KR");
-      summaryData.push(totalRow);
-
-      // B. Holdings 어댑팅 (종목별 합산 처리 및 비중 재계산)
-      const holdingsData = [
-        [
-          "종목명",
-          "Ticker",
-          "",
-          "수량",
-          "매수금액",
-          "평균단가",
-          "현재가",
-          "수익률",
-          "평가금액",
-          "비중",
-          "일일변동",
-          "",
-          "",
-          "",
-          "평가손익",
-        ],
-      ];
-
-      const aggregatedHoldings = {};
-      let totalEvalKrw = 0;
-
-      holdingsList.forEach((item) => {
-        const ticker = item.ticker;
-        const evalKrw = parseFloat(item.eval_krw) || 0;
-        const profit = parseFloat(item.profit) || 0;
-        const quantity = parseFloat(item.quantity) || 0;
-        const costBasisKrw = evalKrw - profit;
-        const currency = item.currency || "KRW";
-        const isUSD = currency === "USD";
-
-        totalEvalKrw += evalKrw;
-
-        if (!aggregatedHoldings[ticker]) {
-          aggregatedHoldings[ticker] = {
-            stock_name: item.stock_name,
-            ticker: ticker,
-            quantity: 0,
-            costBasisKrw: 0,
-            eval_krw: 0,
-            profit: 0,
-            costBasisForeign: 0,
-            evalForeign: 0,
-            current_price: parseFloat(item.current_price) || 0,
-            daily_change: parseFloat(item.daily_change) || 0,
-            currency: currency,
-          };
-        }
-
-        const h = aggregatedHoldings[ticker];
-        h.quantity += quantity;
-        h.costBasisKrw += costBasisKrw;
-        h.eval_krw += evalKrw;
-        h.profit += profit;
-
-        const itemAvgPrice = parseFloat(item.avg_price) || 0;
-        const itemCurrentPrice = parseFloat(item.current_price) || 0;
-
-        let costBasisForeignItem = 0;
-        let evalForeignItem = 0;
-        if (isUSD) {
-          costBasisForeignItem =
-            itemAvgPrice > 0
-              ? quantity * itemAvgPrice
-              : costBasisKrw / (usdKrwRate || 1350.0);
-          evalForeignItem =
-            itemCurrentPrice > 0
-              ? quantity * itemCurrentPrice
-              : evalKrw / (usdKrwRate || 1350.0);
-        } else {
-          costBasisForeignItem = costBasisKrw;
-          evalForeignItem = evalKrw;
-        }
-
-        h.costBasisForeign += costBasisForeignItem;
-        h.evalForeign += evalForeignItem;
-      });
-
-      Object.values(aggregatedHoldings).forEach((h) => {
-        const row = [];
-        row[0] = h.stock_name;
-        row[1] = h.ticker;
-        row[2] = h.currency;
-        row[3] = h.quantity;
-        row[4] = h.costBasisKrw;
-        row[5] =
-          h.quantity > 0
-            ? h.currency === "USD"
-              ? h.costBasisForeign / h.quantity
-              : h.costBasisKrw / h.quantity
-            : 0;
-        row[6] = h.current_price;
-
-        const returnRate =
-          h.currency === "USD"
-            ? h.costBasisForeign > 0
-              ? ((h.evalForeign - h.costBasisForeign) / h.costBasisForeign) *
-                100
-              : 0
-            : h.costBasisKrw > 0
-              ? (h.profit / h.costBasisKrw) * 100
-              : 0;
-
-        row[7] = returnRate.toFixed(2) + "%";
-        row[8] = h.eval_krw;
-
-        const weight = totalEvalKrw > 0 ? (h.eval_krw / totalEvalKrw) * 100 : 0;
-        row[9] = weight.toFixed(2) + "%";
-        row[10] = h.daily_change + "%";
-        row[14] = h.profit;
-        holdingsData.push(row);
-      });
-
-      // C. History 어댑팅
-      const historyData = [
-        [
-          "일자",
-          "총 평가금",
-          "총 투자금",
-          "총 수입액",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "총 배당금",
-        ],
-      ];
-      historyList.forEach((item) => {
-        const row = [];
-        row[0] = item.record_date;
-        row[1] = item.eval_total;
-        row[2] = item.invest_total;
-        row[3] = item.profit;
-        row[11] = item.dividend;
-        historyData.push(row);
-      });
-
-      if (historyList && historyList.length > 0) {
-        const latestHistory = historyList[historyList.length - 1];
-        if (latestHistory && latestHistory.usd_krw_rate) {
-          usdKrwRate = parseFloat(latestHistory.usd_krw_rate);
-          usdKrwRateUpdatedAt = Date.now();
-        }
-      }
-
+    if (summaryRes?.data || holdingsRes?.data) {
       const freshData = {
-        summary: summaryData,
-        holdings: holdingsData,
-        history: historyData,
-        usd_krw_rate: usdKrwRate,
-        market_indices: globalMarketIndices,
+        summary: summaryRes?.data,
+        holdings: holdingsRes?.data,
+        history: historyRes?.data,
         timestamp: new Date().getTime(),
       };
 
       renderFromData(freshData);
       localStorage.setItem(CACHE_KEY, JSON.stringify(freshData));
-      updateTimestamp(true, "Supabase Live");
-      logger.log("Supabase Live 데이터 업데이트 완료");
+      updateTimestamp(true, "Live");
+      logger.log("Live 데이터 업데이트 완료");
       updateDatalistSuggestions();
     } else {
-      // 구글 시트 폴백 로직
-      logger.log("구글 시트 실시간 데이터 페칭 시작...");
-      const ts = new Date().getTime();
-      const addTs = (url) =>
-        url ? url + (url.includes("?") ? "&" : "?") + "t=" + ts : url;
-
-      const [summaryRes, holdingsRes, historyRes] = await Promise.all([
-        fetchWithFallback(addTs(CONFIG.summaryURL), false, [
-          "총 평가금",
-          "총 투자금",
-        ]),
-        fetchWithFallback(addTs(CONFIG.holdingsURL), false, [
-          "종목명",
-          "Ticker",
-        ]),
-        fetchWithFallback(addTs(CONFIG.historyURL), false, ["일자", "평가금"]),
-      ]);
-
-      if (summaryRes?.data || holdingsRes?.data) {
-        const freshData = {
-          summary: summaryRes?.data,
-          holdings: holdingsRes?.data,
-          history: historyRes?.data,
-          timestamp: new Date().getTime(),
-        };
-
-        renderFromData(freshData);
-        localStorage.setItem(CACHE_KEY, JSON.stringify(freshData));
-        updateTimestamp(true, "Live");
-        logger.log("Live 데이터 업데이트 완료");
-      } else {
-        throw new Error("Empty response from all proxies");
-      }
+      throw new Error("Empty response from all proxies");
     }
   } catch (err) {
     logger.warn("실시간 로드 실패, 로컬 스냅샷 로드 시도...", err);
@@ -4583,43 +4318,7 @@ async function handleTransactionSubmit(e) {
     submitBtn.disabled = true;
     submitBtn.textContent = "⏳ 전송 중...";
 
-    // 1. Supabase 직접 Insert (설정된 경우)
-    if (CONFIG.supabaseURL && CONFIG.supabaseKey) {
-      const payload = {
-        date: document.getElementById("date-input").value,
-        stock_name: stockName,
-        stock_code: stockCode,
-        currency: currency,
-        type: type,
-        quantity: quantity,
-        price: price,
-        account: document.getElementById("account-select").value,
-        usd_krw_rate: usdKrwRate,
-      };
-
-      const response = await fetch(
-        `${CONFIG.supabaseURL}/rest/v1/transactions`,
-        {
-          method: "POST",
-          headers: {
-            apikey: CONFIG.supabaseKey,
-            Authorization: `Bearer ${CONFIG.supabaseKey}`,
-            "Content-Type": "application/json",
-            Prefer: "return=minimal",
-          },
-          body: JSON.stringify(payload),
-        },
-      );
-
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(
-          errText || `Supabase insert failed (status ${response.status})`,
-        );
-      }
-    }
-
-    // 2. 구글 시트 기존 전송 (설정된 경우)
+    // 구글 시트 전송 (설정된 경우)
     if (CONFIG.gasURL) {
       const formData = {
         date: document.getElementById("date-input").value,
@@ -5503,40 +5202,7 @@ ${JSON.stringify(mddSummary, null, 2)}
   }
 }
 
-// ===== Supabase 및 스마트 매칭/TTM/환율 추가 기능 =====
-
-// TTM 배당금 비동기 조회
-async function fetchTTMDividend() {
-  if (!CONFIG.supabaseURL || !CONFIG.supabaseKey) return 0;
-
-  const today = new Date();
-  const oneYearAgo = new Date(today.getTime() - 365 * 24 * 60 * 60 * 1000);
-  const oneYearAgoStr = oneYearAgo.toISOString().split("T")[0];
-
-  const url = `${CONFIG.supabaseURL}/rest/v1/transactions?select=*&type=eq.배당금&date=gte.${oneYearAgoStr}`;
-  try {
-    const response = await fetch(url, {
-      headers: {
-        apikey: CONFIG.supabaseKey,
-        Authorization: `Bearer ${CONFIG.supabaseKey}`,
-      },
-    });
-    if (response.ok) {
-      const data = await response.json();
-      let totalTtmDiv = 0;
-      data.forEach((tx) => {
-        const qty = parseFloat(tx.quantity) || 0;
-        const price = parseFloat(tx.price) || 0;
-        const rate = parseFloat(tx.usd_krw_rate) || 1.0;
-        totalTtmDiv += qty * price * rate;
-      });
-      return totalTtmDiv;
-    }
-  } catch (e) {
-    logger.error("TTM Dividend fetch failed:", e);
-  }
-  return 0;
-}
+// ===== 스마트 매칭/환율 추가 기능 =====
 
 // 과거 환율 조회 함수
 async function getHistoricalExchangeRate(dateStr) {

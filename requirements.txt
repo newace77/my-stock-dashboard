@@ -1,5 +1,4 @@
 finance-datareader
-supabase
 pandas
 requests
 cryptography
