@@ -44,7 +44,9 @@ function initGoogleAuth() {
       callback: handleTokenResponse,
     });
   } else {
-    console.warn("Google Identity Services SDK가 아직 완전히 로드되지 않았습니다. (지연 로딩 중 또는 차단됨)");
+    console.warn(
+      "Google Identity Services SDK가 아직 완전히 로드되지 않았습니다. (지연 로딩 중 또는 차단됨)",
+    );
   }
 
   // LocalStorage로부터 세션 복원 시도
@@ -425,8 +427,7 @@ function formatValueByMode(val, isKRW = true) {
 
   if (isKRW) {
     if (absNum >= 100000000) {
-      result =
-        sign + (absNum / 100000000).toFixed(1) + "억(원)";
+      result = sign + (absNum / 100000000).toFixed(1) + "억(원)";
     } else if (absNum >= 10000) {
       result = sign + (absNum / 10000).toFixed(0) + "만";
     } else {
@@ -1468,36 +1469,60 @@ async function fetchData(force = false) {
 
     if (CONFIG.supabaseURL && CONFIG.supabaseKey) {
       logger.log("Supabase 데이터 페칭 시작...");
-      
+
       const fetchHeaders = {
-        'apikey': CONFIG.supabaseKey,
-        'Authorization': `Bearer ${CONFIG.supabaseKey}`
+        apikey: CONFIG.supabaseKey,
+        Authorization: `Bearer ${CONFIG.supabaseKey}`,
       };
-      
-      const [summaryResponse, holdingsResponse, historyResponse] = await Promise.all([
-        fetch(`${CONFIG.supabaseURL}/rest/v1/account_summary?select=*`, { headers: fetchHeaders }),
-        fetch(`${CONFIG.supabaseURL}/rest/v1/holdings?select=*`, { headers: fetchHeaders }),
-        fetch(`${CONFIG.supabaseURL}/rest/v1/asset_history?select=*&order=record_date.asc`, { headers: fetchHeaders })
-      ]);
-      
+
+      const [summaryResponse, holdingsResponse, historyResponse] =
+        await Promise.all([
+          fetch(`${CONFIG.supabaseURL}/rest/v1/account_summary?select=*`, {
+            headers: fetchHeaders,
+          }),
+          fetch(`${CONFIG.supabaseURL}/rest/v1/holdings?select=*`, {
+            headers: fetchHeaders,
+          }),
+          fetch(
+            `${CONFIG.supabaseURL}/rest/v1/asset_history?select=*&order=record_date.asc`,
+            { headers: fetchHeaders },
+          ),
+        ]);
+
       if (!summaryResponse.ok || !holdingsResponse.ok || !historyResponse.ok) {
         throw new Error("Supabase REST API request failed");
       }
-      
+
       const summaryList = await summaryResponse.json();
       const holdingsList = await holdingsResponse.json();
       const historyList = await historyResponse.json();
-      
+
       // TTM 배당금 비동기 조회
       const ttmDividend = await fetchTTMDividend();
-      
+
       // A. Summary 어댑팅 (PC/모바일 공통 콤마 포맷 적용)
       const summaryData = [
-        ["계좌명", "평가금", "투자금", "수입액", "수익률", "일일변동률", "일일변동액", "", "", "", "", "배당금"]
+        [
+          "계좌명",
+          "평가금",
+          "투자금",
+          "수입액",
+          "수익률",
+          "일일변동률",
+          "일일변동액",
+          "",
+          "",
+          "",
+          "",
+          "배당금",
+        ],
       ];
-      let sumEval = 0, sumInvest = 0, sumProfit = 0, sumDailyAmt = 0;
+      let sumEval = 0,
+        sumInvest = 0,
+        sumProfit = 0,
+        sumDailyAmt = 0;
       let sumDividend = 0;
-      summaryList.forEach(item => {
+      summaryList.forEach((item) => {
         const evalTotal = parseFloat(item.eval_total) || 0;
         const investTotal = parseFloat(item.invest_total) || 0;
         const profit = parseFloat(item.profit) || 0;
@@ -1509,50 +1534,67 @@ async function fetchData(force = false) {
         sumProfit += profit;
         sumDailyAmt += dailyChangeAmt;
         sumDividend += dividend;
-        
+
         const row = [];
         row[0] = item.account_name;
-        row[1] = Math.round(evalTotal).toLocaleString('ko-KR');
-        row[2] = Math.round(investTotal).toLocaleString('ko-KR');
-        row[3] = Math.round(profit).toLocaleString('ko-KR');
+        row[1] = Math.round(evalTotal).toLocaleString("ko-KR");
+        row[2] = Math.round(investTotal).toLocaleString("ko-KR");
+        row[3] = Math.round(profit).toLocaleString("ko-KR");
         row[4] = (parseFloat(item.return_rate) || 0).toFixed(2) + "%";
         row[5] = (parseFloat(item.daily_change_pct) || 0).toFixed(2) + "%";
-        row[6] = Math.round(dailyChangeAmt).toLocaleString('ko-KR');
-        row[11] = Math.round(dividend).toLocaleString('ko-KR');
+        row[6] = Math.round(dailyChangeAmt).toLocaleString("ko-KR");
+        row[11] = Math.round(dividend).toLocaleString("ko-KR");
         summaryData.push(row);
       });
-      
+
       const sumReturnRate = sumInvest > 0 ? (sumProfit / sumInvest) * 100 : 0;
       const prevSumEval = sumEval - sumDailyAmt;
-      const sumDailyPct = prevSumEval > 0 ? (sumDailyAmt / prevSumEval) * 100 : 0;
-      
+      const sumDailyPct =
+        prevSumEval > 0 ? (sumDailyAmt / prevSumEval) * 100 : 0;
+
       const totalRow = [];
       totalRow[0] = "합계";
-      totalRow[1] = Math.round(sumEval).toLocaleString('ko-KR');
-      totalRow[2] = Math.round(sumInvest).toLocaleString('ko-KR');
-      totalRow[3] = Math.round(sumProfit).toLocaleString('ko-KR');
+      totalRow[1] = Math.round(sumEval).toLocaleString("ko-KR");
+      totalRow[2] = Math.round(sumInvest).toLocaleString("ko-KR");
+      totalRow[3] = Math.round(sumProfit).toLocaleString("ko-KR");
       totalRow[4] = sumReturnRate.toFixed(2) + "%";
       totalRow[5] = sumDailyPct.toFixed(2) + "%";
-      totalRow[6] = Math.round(sumDailyAmt).toLocaleString('ko-KR');
-      totalRow[11] = Math.round(sumDividend).toLocaleString('ko-KR');
+      totalRow[6] = Math.round(sumDailyAmt).toLocaleString("ko-KR");
+      totalRow[11] = Math.round(sumDividend).toLocaleString("ko-KR");
       summaryData.push(totalRow);
-      
+
       // B. Holdings 어댑팅 (종목별 합산 처리 및 비중 재계산)
       const holdingsData = [
-        ["종목명", "Ticker", "", "수량", "매수금액", "평균단가", "현재가", "수익률", "평가금액", "비중", "일일변동", "", "", "", "평가손익"]
+        [
+          "종목명",
+          "Ticker",
+          "",
+          "수량",
+          "매수금액",
+          "평균단가",
+          "현재가",
+          "수익률",
+          "평가금액",
+          "비중",
+          "일일변동",
+          "",
+          "",
+          "",
+          "평가손익",
+        ],
       ];
 
       const aggregatedHoldings = {};
       let totalEvalKrw = 0;
 
-      holdingsList.forEach(item => {
+      holdingsList.forEach((item) => {
         const ticker = item.ticker;
         const evalKrw = parseFloat(item.eval_krw) || 0;
         const profit = parseFloat(item.profit) || 0;
         const quantity = parseFloat(item.quantity) || 0;
         const costBasisKrw = evalKrw - profit;
-        const currency = item.currency || 'KRW';
-        const isUSD = currency === 'USD';
+        const currency = item.currency || "KRW";
+        const isUSD = currency === "USD";
 
         totalEvalKrw += evalKrw;
 
@@ -1568,7 +1610,7 @@ async function fetchData(force = false) {
             evalForeign: 0,
             current_price: parseFloat(item.current_price) || 0,
             daily_change: parseFloat(item.daily_change) || 0,
-            currency: currency
+            currency: currency,
           };
         }
 
@@ -1584,8 +1626,14 @@ async function fetchData(force = false) {
         let costBasisForeignItem = 0;
         let evalForeignItem = 0;
         if (isUSD) {
-          costBasisForeignItem = itemAvgPrice > 0 ? (quantity * itemAvgPrice) : (costBasisKrw / (usdKrwRate || 1350.0));
-          evalForeignItem = itemCurrentPrice > 0 ? (quantity * itemCurrentPrice) : (evalKrw / (usdKrwRate || 1350.0));
+          costBasisForeignItem =
+            itemAvgPrice > 0
+              ? quantity * itemAvgPrice
+              : costBasisKrw / (usdKrwRate || 1350.0);
+          evalForeignItem =
+            itemCurrentPrice > 0
+              ? quantity * itemCurrentPrice
+              : evalKrw / (usdKrwRate || 1350.0);
         } else {
           costBasisForeignItem = costBasisKrw;
           evalForeignItem = evalKrw;
@@ -1595,20 +1643,31 @@ async function fetchData(force = false) {
         h.evalForeign += evalForeignItem;
       });
 
-      Object.values(aggregatedHoldings).forEach(h => {
+      Object.values(aggregatedHoldings).forEach((h) => {
         const row = [];
         row[0] = h.stock_name;
         row[1] = h.ticker;
         row[2] = h.currency;
         row[3] = h.quantity;
         row[4] = h.costBasisKrw;
-        row[5] = h.quantity > 0 ? (h.currency === 'USD' ? h.costBasisForeign / h.quantity : h.costBasisKrw / h.quantity) : 0;
+        row[5] =
+          h.quantity > 0
+            ? h.currency === "USD"
+              ? h.costBasisForeign / h.quantity
+              : h.costBasisKrw / h.quantity
+            : 0;
         row[6] = h.current_price;
 
-        const returnRate = h.currency === 'USD'
-          ? (h.costBasisForeign > 0 ? ((h.evalForeign - h.costBasisForeign) / h.costBasisForeign) * 100 : 0)
-          : (h.costBasisKrw > 0 ? (h.profit / h.costBasisKrw) * 100 : 0);
-          
+        const returnRate =
+          h.currency === "USD"
+            ? h.costBasisForeign > 0
+              ? ((h.evalForeign - h.costBasisForeign) / h.costBasisForeign) *
+                100
+              : 0
+            : h.costBasisKrw > 0
+              ? (h.profit / h.costBasisKrw) * 100
+              : 0;
+
         row[7] = returnRate.toFixed(2) + "%";
         row[8] = h.eval_krw;
 
@@ -1618,12 +1677,25 @@ async function fetchData(force = false) {
         row[14] = h.profit;
         holdingsData.push(row);
       });
-      
+
       // C. History 어댑팅
       const historyData = [
-        ["일자", "총 평가금", "총 투자금", "총 수입액", "", "", "", "", "", "", "", "총 배당금"]
+        [
+          "일자",
+          "총 평가금",
+          "총 투자금",
+          "총 수입액",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "총 배당금",
+        ],
       ];
-      historyList.forEach(item => {
+      historyList.forEach((item) => {
         const row = [];
         row[0] = item.record_date;
         row[1] = item.eval_total;
@@ -1632,7 +1704,7 @@ async function fetchData(force = false) {
         row[11] = item.dividend;
         historyData.push(row);
       });
-      
+
       if (historyList && historyList.length > 0) {
         const latestHistory = historyList[historyList.length - 1];
         if (latestHistory && latestHistory.usd_krw_rate) {
@@ -1649,7 +1721,7 @@ async function fetchData(force = false) {
         market_indices: globalMarketIndices,
         timestamp: new Date().getTime(),
       };
-      
+
       renderFromData(freshData);
       localStorage.setItem(CACHE_KEY, JSON.stringify(freshData));
       updateTimestamp(true, "Supabase Live");
@@ -1663,8 +1735,14 @@ async function fetchData(force = false) {
         url ? url + (url.includes("?") ? "&" : "?") + "t=" + ts : url;
 
       const [summaryRes, holdingsRes, historyRes] = await Promise.all([
-        fetchWithFallback(addTs(CONFIG.summaryURL), false, ["총 평가금", "총 투자금"]),
-        fetchWithFallback(addTs(CONFIG.holdingsURL), false, ["종목명", "Ticker"]),
+        fetchWithFallback(addTs(CONFIG.summaryURL), false, [
+          "총 평가금",
+          "총 투자금",
+        ]),
+        fetchWithFallback(addTs(CONFIG.holdingsURL), false, [
+          "종목명",
+          "Ticker",
+        ]),
         fetchWithFallback(addTs(CONFIG.historyURL), false, ["일자", "평가금"]),
       ]);
 
@@ -1694,10 +1772,13 @@ async function fetchData(force = false) {
         const snapshot = await response.json();
         renderFromData(snapshot);
         // 캐시도 스냅샷 데이터로 갱신하여 꼬인 상태 해결
-        localStorage.setItem(CACHE_KEY, JSON.stringify({
-          ...snapshot,
-          timestamp: new Date().getTime()
-        }));
+        localStorage.setItem(
+          CACHE_KEY,
+          JSON.stringify({
+            ...snapshot,
+            timestamp: new Date().getTime(),
+          }),
+        );
         updateTimestamp(false, "Snapshot");
         logger.log("로컬 스냅샷 데이터 로드 및 캐시 갱신 완료");
       } else {
@@ -1720,7 +1801,7 @@ function renderFromData(data) {
     return;
   }
   logger.log("데이터 렌더링 시작...", Object.keys(data));
-  
+
   try {
     if (data.usd_krw_rate) {
       usdKrwRate = parseFloat(data.usd_krw_rate);
@@ -1730,7 +1811,10 @@ function renderFromData(data) {
     if (data.market_indices) {
       globalMarketIndices = data.market_indices;
       if (globalMarketIndices && typeof globalMarketIndices === "object") {
-        logger.log("렌더러: 지수 캐시 복원 완료", Object.keys(globalMarketIndices));
+        logger.log(
+          "렌더러: 지수 캐시 복원 완료",
+          Object.keys(globalMarketIndices),
+        );
       }
     }
   } catch (e) {
@@ -1997,7 +2081,11 @@ function refreshKOSPI200() {
 /**
  * 프록시 레이싱(Racing) 기법을 사용하여 가장 빠른 응답을 반환하는 패치 함수
  */
-async function fetchWithFallback(targetUrl, isYahoo = false, requiredKeywords = []) {
+async function fetchWithFallback(
+  targetUrl,
+  isYahoo = false,
+  requiredKeywords = [],
+) {
   if (!targetUrl) return null;
 
   const fetchTask = async (url, options = {}) => {
@@ -2021,10 +2109,7 @@ async function fetchWithFallback(targetUrl, isYahoo = false, requiredKeywords = 
         text.includes("<html") ||
         text.includes("Unauthorized")
       ) {
-        throw new Error("Invalid data received (HTML or Unauthorized)");
-      }
-
-      // 1.1 JSON 에러 응답 필터링 (일부 프록시의 JSON 에러 문자열 방지)
+        // 1.1 JSON 에러 응답 필터링 (일부 프록시의 JSON 에러 문자열 방지)
       if (
         text.trim().startsWith("{") &&
         (text.includes('"error"') || text.includes('"Error"')) &&
@@ -2479,8 +2564,7 @@ function updateTimestamp(isLive, method) {
   const lastUpdated = document.getElementById("last-updated");
   if (!lastUpdated) return;
   const timeStr = new Date().toLocaleTimeString("ko-KR", { hour12: false });
-  lastUpdated.innerHTML =
-    isLive === null ? method : `${timeStr} (${method})`;
+  lastUpdated.innerHTML = isLive === null ? method : `${timeStr} (${method})`;
   lastUpdated.style.color = isLive
     ? "#2e7d32"
     : isLive === false
@@ -2546,7 +2630,9 @@ async function updateMarketCharts() {
               } else {
                 const prevClose = meta.chartPreviousClose || meta.previousClose;
                 if (lastPrice && prevClose) {
-                  changePercent = ((lastPrice / prevClose - 1) * 100).toFixed(2);
+                  changePercent = ((lastPrice / prevClose - 1) * 100).toFixed(
+                    2,
+                  );
                 }
               }
             }
@@ -2556,49 +2642,60 @@ async function updateMarketCharts() {
         }
 
         // 백업 데이터 캐시(data_snapshot.json에 저장된 FDR 수집값) 폴백
-        if ((lastPrice === null || lastPrice === undefined) && globalMarketIndices && globalMarketIndices[m.id]) {
+        if (
+          (lastPrice === null || lastPrice === undefined) &&
+          globalMarketIndices &&
+          globalMarketIndices[m.id]
+        ) {
           lastPrice = globalMarketIndices[m.id].price;
           changePercent = globalMarketIndices[m.id].change;
-          logger.log(`지수 데이터 백업 복원 성공 (${m.id}): ${lastPrice} (${changePercent}%)`);
+          logger.log(
+            `지수 데이터 백업 복원 성공 (${m.id}): ${lastPrice} (${changePercent}%)`,
+          );
         }
 
-        if (lastPrice !== null && lastPrice !== undefined && changePercent !== null && changePercent !== undefined) {
-              const isPositive = parseFloat(changePercent) >= 0;
+        if (
+          lastPrice !== null &&
+          lastPrice !== undefined &&
+          changePercent !== null &&
+          changePercent !== undefined
+        ) {
+          const isPositive = parseFloat(changePercent) >= 0;
 
-              if (valEl) {
-                // 모바일 모드 여부 확인 (화면 너비 768px 이하 또는 사용자 설정이 모바일인 경우)
-                const isMobileMode =
-                  userViewMode === "mobile" ||
-                  (userViewMode === "auto" && window.innerWidth <= 768);
+          if (valEl) {
+            // 모바일 모드 여부 확인 (화면 너비 768px 이하 또는 사용자 설정이 모바일인 경우)
+            const isMobileMode =
+              userViewMode === "mobile" ||
+              (userViewMode === "auto" && window.innerWidth <= 768);
 
-                if (m.id === "fx") {
-                  // 환율 표시: 모바일은 소수점 없이, PC는 소수점 2자리
-                  valEl.textContent = isMobileMode
-                    ? Math.round(lastPrice).toLocaleString()
-                    : lastPrice.toFixed(2);
-                  valEl.setAttribute("data-price", lastPrice);
-                  usdKrwRate = lastPrice;
-                  usdKrwRateUpdatedAt = Date.now();
-                } else {
-                  // 지수 표시: 모바일은 소수점 없이, PC는 소수점 2자리(천단위 구분자 포함)
-                  valEl.setAttribute("data-price", lastPrice);
-                  if (isMobileMode) {
-                    valEl.textContent = Math.round(lastPrice).toLocaleString();
-                  } else {
-                    valEl.textContent = lastPrice.toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    });
-                  }
-                }
+            if (m.id === "fx") {
+              // 환율 표시: 모바일은 소수점 없이, PC는 소수점 2자리
+              valEl.textContent = isMobileMode
+                ? Math.round(lastPrice).toLocaleString()
+                : lastPrice.toFixed(2);
+              valEl.setAttribute("data-price", lastPrice);
+              usdKrwRate = lastPrice;
+              usdKrwRateUpdatedAt = Date.now();
+            } else {
+              // 지수 표시: 모바일은 소수점 없이, PC는 소수점 2자리(천단위 구분자 포함)
+              valEl.setAttribute("data-price", lastPrice);
+              if (isMobileMode) {
+                valEl.textContent = Math.round(lastPrice).toLocaleString();
+              } else {
+                valEl.textContent = lastPrice.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                });
               }
-
-              if (chgEl) {
-                chgEl.textContent = `${isPositive ? "+" : ""}${changePercent}%`;
-                chgEl.className = `market-change ${isPositive ? "value-up" : "value-down"}`;
-              }
-              return;
             }
+          }
+
+          if (chgEl) {
+            chgEl.textContent = `${isPositive ? "+" : ""}${changePercent}%`;
+            chgEl.className = `market-change ${isPositive ? "value-up" : "value-down"}`;
+          }
+          return;
+        }
       } catch (e) {
         logger.error(`🚨 ${m.id} 업데이트 오류:`, e);
       }
@@ -2651,7 +2748,6 @@ function renderSummary(data, tableElement) {
     }
 
     if (totalRow) {
-
       // 현재 평가액 카드 업데이트 (KRW만 표기)
       const evalValEl = document.getElementById("card-eval-val");
       if (evalValEl) {
@@ -2775,7 +2871,8 @@ function processHoldingsData(data) {
     const weight = parseSafeFloat(row[HOLDINGS_COL.WEIGHT]);
     const evalKRW = parseSafeFloat(row[HOLDINGS_COL.EVAL_KRW]);
     const profit = parseSafeFloat(row[HOLDINGS_COL.PROFIT]);
-    const costBasis = parseSafeFloat(row[HOLDINGS_COL.COST_BASIS]) || (evalKRW - profit);
+    const costBasis =
+      parseSafeFloat(row[HOLDINGS_COL.COST_BASIS]) || evalKRW - profit;
     const shares = parseSafeFloat(row[HOLDINGS_COL.SHARES]);
 
     // 데이터 로드 중인 행이거나 유효하지 않은 데이터 건너뛰기
@@ -2806,7 +2903,7 @@ function processHoldingsData(data) {
         costBasisForeign: 0,
         evalForeign: 0,
         currentPrice: parseSafeFloat(row[HOLDINGS_COL.CURRENT_PRICE]),
-        dailyChange: parseSafeFloat(row[HOLDINGS_COL.DAILY_CHANGE])
+        dailyChange: parseSafeFloat(row[HOLDINGS_COL.DAILY_CHANGE]),
       };
     }
 
@@ -2832,8 +2929,14 @@ function processHoldingsData(data) {
     let costBasisForeignItem = 0;
     let evalForeignItem = 0;
     if (isUSD) {
-      costBasisForeignItem = rawAvgCost > 0 ? (shares * rawAvgCost) : (costBasis / (usdKrwRate || 1350.0));
-      evalForeignItem = rawCurrentPrice > 0 ? (shares * rawCurrentPrice) : (evalKRW / (usdKrwRate || 1350.0));
+      costBasisForeignItem =
+        rawAvgCost > 0
+          ? shares * rawAvgCost
+          : costBasis / (usdKrwRate || 1350.0);
+      evalForeignItem =
+        rawCurrentPrice > 0
+          ? shares * rawCurrentPrice
+          : evalKRW / (usdKrwRate || 1350.0);
     } else {
       costBasisForeignItem = costBasis;
       evalForeignItem = evalKRW;
@@ -2844,16 +2947,24 @@ function processHoldingsData(data) {
   });
 
   // 이제 globalHoldings를 채우고 비중/수익률 계산
-  Object.values(aggregated).forEach(a => {
+  Object.values(aggregated).forEach((a) => {
     const weight = totalEvalKrw > 0 ? (a.eval / totalEvalKrw) * 100 : 0;
-    
-    const returnRate = a.currency === "USD"
-      ? (a.costBasisForeign > 0 ? ((a.evalForeign - a.costBasisForeign) / a.costBasisForeign) * 100 : 0)
-      : (a.costBasis > 0 ? (a.profit / a.costBasis) * 100 : 0);
-      
-    const avgCost = a.shares > 0
-      ? (a.currency === "USD" ? a.costBasisForeign / a.shares : a.costBasis / a.shares)
-      : 0;
+
+    const returnRate =
+      a.currency === "USD"
+        ? a.costBasisForeign > 0
+          ? ((a.evalForeign - a.costBasisForeign) / a.costBasisForeign) * 100
+          : 0
+        : a.costBasis > 0
+          ? (a.profit / a.costBasis) * 100
+          : 0;
+
+    const avgCost =
+      a.shares > 0
+        ? a.currency === "USD"
+          ? a.costBasisForeign / a.shares
+          : a.costBasis / a.shares
+        : 0;
 
     globalHoldings.push({
       name: a.name,
@@ -2873,8 +2984,8 @@ function processHoldingsData(data) {
         evalKRW: formatKRWInteger(a.eval),
         profitKRW: formatKRWInteger(a.profit),
         dailyChange: a.dailyChange.toFixed(2) + "%",
-        currentPrice: a.currentPrice || a.eval
-      }
+        currentPrice: a.currentPrice || a.eval,
+      },
     });
   });
 
@@ -3330,7 +3441,7 @@ async function fetchModalChartData(ticker, range) {
         if (rawPrices[i] !== null && rawPrices[i] !== undefined) {
           validPoints.push({
             ts: rawTimestamps[i],
-            val: rawPrices[i]
+            val: rawPrices[i],
           });
         }
       }
@@ -3352,16 +3463,17 @@ async function fetchModalChartData(ticker, range) {
       const labels = validPoints.map((pt) => {
         const date = new Date(pt.ts * 1000);
         if (range === "1d") {
-          return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+          return `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}`;
         } else if (range === "5d") {
-          return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:00`;
+          return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, "0")}:00`;
         } else {
           return `${date.getMonth() + 1}/${date.getDate()}`;
         }
       });
 
       const prices = validPoints.map((pt) => pt.val);
-      const isPositive = prices.length > 0 ? prices[prices.length - 1] >= prices[0] : true;
+      const isPositive =
+        prices.length > 0 ? prices[prices.length - 1] >= prices[0] : true;
       const color = isPositive ? "#4ade80" : "#fb7185";
       const gradient = ctx.createLinearGradient(0, 0, 0, 200);
       gradient.addColorStop(
@@ -3450,7 +3562,7 @@ const marketInfo = {
   dow: { name: "Dow Jones", ticker: "^DJI", icon: "🇺🇸" },
   kospi: { name: "KOSPI", ticker: "^KS11", icon: "🇰🇷" },
   kosdaq: { name: "KOSDAQ", ticker: "^KQ11", icon: "🇰🇷" },
-  fx: { name: "USD/KRW", ticker: "KRW=X", icon: "💵" }
+  fx: { name: "USD/KRW", ticker: "KRW=X", icon: "💵" },
 };
 
 async function openMarketModal(marketId) {
@@ -3482,17 +3594,26 @@ async function openMarketModal(marketId) {
     const chgText = chgEl.textContent || "";
     if (modalPctEl) {
       modalPctEl.textContent = chgText;
-      modalPctEl.className = chgEl.classList.contains("value-up") ? "value-up" : chgEl.classList.contains("value-down") ? "value-down" : "";
+      modalPctEl.className = chgEl.classList.contains("value-up")
+        ? "value-up"
+        : chgEl.classList.contains("value-down")
+          ? "value-down"
+          : "";
     }
     if (modalDiffEl) {
       modalDiffEl.textContent = "";
     }
   }
 
-  const filterGroup = document.getElementById("market-modal-chart-filter-group");
+  const filterGroup = document.getElementById(
+    "market-modal-chart-filter-group",
+  );
   if (filterGroup) {
     filterGroup.querySelectorAll(".sort-btn").forEach((btn) => {
-      if (btn.getAttribute("onclick") && btn.getAttribute("onclick").includes("'1mo'")) {
+      if (
+        btn.getAttribute("onclick") &&
+        btn.getAttribute("onclick").includes("'1mo'")
+      ) {
         btn.classList.add("active");
       } else {
         btn.classList.remove("active");
@@ -3510,7 +3631,11 @@ async function openMarketModal(marketId) {
 }
 
 function closeMarketModal(e) {
-  if (e && e.target !== e.currentTarget && e.target.className !== "modal-close") {
+  if (
+    e &&
+    e.target !== e.currentTarget &&
+    e.target.className !== "modal-close"
+  ) {
     return;
   }
   const overlay = document.getElementById("market-modal-overlay");
@@ -3531,7 +3656,9 @@ async function updateMarketModalChartRange(range, btn) {
   if (btn) {
     const parent = btn.parentElement;
     if (parent) {
-      parent.querySelectorAll(".sort-btn").forEach((b) => b.classList.remove("active"));
+      parent
+        .querySelectorAll(".sort-btn")
+        .forEach((b) => b.classList.remove("active"));
     }
     btn.classList.add("active");
   }
@@ -3577,7 +3704,7 @@ async function fetchMarketChartData(ticker, range) {
         if (prices[i] !== null && prices[i] !== undefined) {
           validPoints.push({
             x: timestamps[i] * 1000,
-            y: prices[i]
+            y: prices[i],
           });
         }
       }
@@ -3589,11 +3716,11 @@ async function fetchMarketChartData(ticker, range) {
       const labels = validPoints.map((pt) => {
         const date = new Date(pt.x);
         if (range === "1d") {
-          return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+          return `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}`;
         } else if (range === "5d") {
-          return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:00`;
+          return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, "0")}:00`;
         } else {
-          return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+          return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`;
         }
       });
 
@@ -3603,11 +3730,11 @@ async function fetchMarketChartData(ticker, range) {
       const gradient = ctx.createLinearGradient(0, 0, 0, 200);
       gradient.addColorStop(
         0,
-        isPositive ? "rgba(74,222,128,0.2)" : "rgba(251,113,133,0.2)"
+        isPositive ? "rgba(74,222,128,0.2)" : "rgba(251,113,133,0.2)",
       );
       gradient.addColorStop(
         1,
-        getThemeColor("rgba(255,255,255,0)", "rgba(0,0,0,0)")
+        getThemeColor("rgba(255,255,255,0)", "rgba(0,0,0,0)"),
       );
 
       marketChart.destroy();
@@ -3638,7 +3765,7 @@ async function fetchMarketChartData(ticker, range) {
               grid: {
                 color: getThemeColor(
                   "rgba(0, 0, 0, 0.05)",
-                  "rgba(255, 255, 255, 0.05)"
+                  "rgba(255, 255, 255, 0.05)",
                 ),
               },
             },
@@ -3649,15 +3776,15 @@ async function fetchMarketChartData(ticker, range) {
               mode: "index",
               intersect: false,
               callbacks: {
-                label: function(context) {
+                label: function (context) {
                   let val = context.parsed.y;
                   if (ticker === "KRW=X") {
                     return `환율: ${val.toFixed(2)}원`;
                   } else {
                     return `지수: ${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                   }
-                }
-              }
+                },
+              },
             },
           },
         },
@@ -3674,7 +3801,10 @@ async function fetchMarketChartData(ticker, range) {
         data: { labels: [], datasets: [] },
         options: {
           plugins: {
-            title: { display: true, text: "차트 데이터를 불러오지 못했습니다." },
+            title: {
+              display: true,
+              text: "차트 데이터를 불러오지 못했습니다.",
+            },
           },
         },
       });
@@ -4445,15 +4575,16 @@ async function handleTransactionSubmit(e) {
   // 적용 환율 추출 (외화일 때만)
   let usdKrwRate = 1.0;
   if (currency === "USD") {
-    usdKrwRate = parseFloat(document.getElementById("usd-rate-input").value) || 1350.0;
+    usdKrwRate =
+      parseFloat(document.getElementById("usd-rate-input").value) || 1350.0;
   }
 
   try {
     submitBtn.disabled = true;
     submitBtn.textContent = "⏳ 전송 중...";
 
+    // 1. Supabase 직접 Insert (설정된 경우)
     if (CONFIG.supabaseURL && CONFIG.supabaseKey) {
-      // Supabase 직접 Insert
       const payload = {
         date: document.getElementById("date-input").value,
         stock_name: stockName,
@@ -4463,26 +4594,33 @@ async function handleTransactionSubmit(e) {
         quantity: quantity,
         price: price,
         account: document.getElementById("account-select").value,
-        usd_krw_rate: usdKrwRate
+        usd_krw_rate: usdKrwRate,
       };
 
-      const response = await fetch(`${CONFIG.supabaseURL}/rest/v1/transactions`, {
-        method: "POST",
-        headers: {
-          'apikey': CONFIG.supabaseKey,
-          'Authorization': `Bearer ${CONFIG.supabaseKey}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=minimal'
+      const response = await fetch(
+        `${CONFIG.supabaseURL}/rest/v1/transactions`,
+        {
+          method: "POST",
+          headers: {
+            apikey: CONFIG.supabaseKey,
+            Authorization: `Bearer ${CONFIG.supabaseKey}`,
+            "Content-Type": "application/json",
+            Prefer: "return=minimal",
+          },
+          body: JSON.stringify(payload),
         },
-        body: JSON.stringify(payload)
-      });
+      );
 
       if (!response.ok) {
         const errText = await response.text();
-        throw new Error(errText || `Supabase insert failed (status ${response.status})`);
+        throw new Error(
+          errText || `Supabase insert failed (status ${response.status})`,
+        );
       }
-    } else {
-      // 구글 시트 기존 전송
+    }
+
+    // 2. 구글 시트 기존 전송 (설정된 경우)
+    if (CONFIG.gasURL) {
       const formData = {
         date: document.getElementById("date-input").value,
         stockName: stockName,
@@ -4493,7 +4631,7 @@ async function handleTransactionSubmit(e) {
         price: price,
         account: document.getElementById("account-select").value,
       };
-      
+
       await fetch(CONFIG.gasURL, {
         method: "POST",
         mode: "no-cors",
@@ -4512,13 +4650,15 @@ async function handleTransactionSubmit(e) {
     if (searchInput) searchInput.value = "";
 
     // 신규 입력창 숨기기 및 초기화
-    const directInputContainer = document.getElementById("direct-input-container");
+    const directInputContainer = document.getElementById(
+      "direct-input-container",
+    );
     if (directInputContainer) {
       if (stockInput) stockInput.value = "";
       if (tickerInput) tickerInput.value = "";
       directInputContainer.style.display = "none";
     }
-    
+
     // 적용 환율 숨기기
     const usdRateGroup = document.getElementById("usd-rate-group");
     if (usdRateGroup) usdRateGroup.style.display = "none";
@@ -5368,27 +5508,27 @@ ${JSON.stringify(mddSummary, null, 2)}
 // TTM 배당금 비동기 조회
 async function fetchTTMDividend() {
   if (!CONFIG.supabaseURL || !CONFIG.supabaseKey) return 0;
-  
+
   const today = new Date();
   const oneYearAgo = new Date(today.getTime() - 365 * 24 * 60 * 60 * 1000);
-  const oneYearAgoStr = oneYearAgo.toISOString().split('T')[0];
-  
+  const oneYearAgoStr = oneYearAgo.toISOString().split("T")[0];
+
   const url = `${CONFIG.supabaseURL}/rest/v1/transactions?select=*&type=eq.배당금&date=gte.${oneYearAgoStr}`;
   try {
     const response = await fetch(url, {
       headers: {
-        'apikey': CONFIG.supabaseKey,
-        'Authorization': `Bearer ${CONFIG.supabaseKey}`
-      }
+        apikey: CONFIG.supabaseKey,
+        Authorization: `Bearer ${CONFIG.supabaseKey}`,
+      },
     });
     if (response.ok) {
       const data = await response.json();
       let totalTtmDiv = 0;
-      data.forEach(tx => {
+      data.forEach((tx) => {
         const qty = parseFloat(tx.quantity) || 0;
         const price = parseFloat(tx.price) || 0;
         const rate = parseFloat(tx.usd_krw_rate) || 1.0;
-        totalTtmDiv += (qty * price * rate);
+        totalTtmDiv += qty * price * rate;
       });
       return totalTtmDiv;
     }
@@ -5404,10 +5544,9 @@ async function getHistoricalExchangeRate(dateStr) {
     const dateObj = new Date(dateStr);
     const startTs = Math.floor(dateObj.getTime() / 1000) - 86400 * 3;
     const endTs = Math.floor(dateObj.getTime() / 1000) + 86400 * 3;
-    
+
     const ticker = "USDKRW=X";
     const yahooURL = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeYahooTicker(ticker)}?period1=${startTs}&period2=${endTs}&interval=1d&events=history`;
-    
     const res = await fetchWithFallback(yahooURL, true);
     if (res && res.type === "json") {
       const chart = res.data.chart;
@@ -5441,7 +5580,7 @@ function triggerExchangeRate(currency) {
   const usdRateGroup = document.getElementById("usd-rate-group");
   const usdRateInput = document.getElementById("usd-rate-input");
   const dateInput = document.getElementById("date-input");
-  
+
   if (currency === "USD") {
     if (usdRateGroup) usdRateGroup.style.display = "flex";
     if (dateInput && dateInput.value) {
@@ -5468,31 +5607,38 @@ let stockDictionary = {};
 async function loadStockDictionary() {
   try {
     const [sp500Res, kospiRes] = await Promise.all([
-      fetch("sp500_data.json?v=" + new Date().getTime()).then(r => r.ok ? r.json() : []),
-      fetch("kospi200_data.json?v=" + new Date().getTime()).then(r => r.ok ? r.json() : [])
+      fetch("sp500_data.json?v=" + new Date().getTime()).then((r) =>
+        r.ok ? r.json() : [],
+      ),
+      fetch("kospi200_data.json?v=" + new Date().getTime()).then((r) =>
+        r.ok ? r.json() : [],
+      ),
     ]);
-    
-    sp500Res.forEach(item => {
+
+    sp500Res.forEach((item) => {
       if (!item.ticker || !item.name) return;
       const ticker = item.ticker.trim().toUpperCase();
       const name = item.name.trim();
-      const info = { ticker, name, currency: 'USD' };
+      const info = { ticker, name, currency: "USD" };
       stockDictionary[ticker] = info;
       stockDictionary[name.toLowerCase()] = info;
     });
-    
-    kospiRes.forEach(item => {
+
+    kospiRes.forEach((item) => {
       if (!item.ticker || !item.name) return;
       const rawTicker = item.ticker.trim().toUpperCase();
       const cleanTicker = rawTicker.replace(".KS", "").replace(".KQ", "");
       const name = item.name.trim();
-      const info = { ticker: cleanTicker, name, currency: 'KRW' };
+      const info = { ticker: cleanTicker, name, currency: "KRW" };
       stockDictionary[cleanTicker] = info;
       stockDictionary[rawTicker] = info;
       stockDictionary[name.toLowerCase()] = info;
     });
-    
-    logger.log("스마트 매칭 사전 구성 완료. 종목수:", Object.keys(stockDictionary).length);
+
+    logger.log(
+      "스마트 매칭 사전 구성 완료. 종목수:",
+      Object.keys(stockDictionary).length,
+    );
     updateDatalistSuggestions();
   } catch (e) {
     logger.error("스마트 매칭 사전 구축 중 실패:", e);
@@ -5502,13 +5648,12 @@ async function loadStockDictionary() {
 function updateDatalistSuggestions() {
   const datalist = document.getElementById("ticker-suggestions");
   if (!datalist) return;
-  
+
   datalist.innerHTML = "";
   const uniqueItems = new Map();
-  
   // 1. 기존 보유 종목 우선 추가 및 사전에 동적 등록
   if (globalHoldings) {
-    globalHoldings.forEach(h => {
+    globalHoldings.forEach((h) => {
       uniqueItems.set(h.ticker, h.name);
       
       const tickerUpper = h.ticker.trim().toUpperCase();
@@ -5517,12 +5662,12 @@ function updateDatalistSuggestions() {
       stockDictionary[h.name.trim().toLowerCase()] = info;
     });
   }
-  
+
   // 2. 사전 데이터 추가
-  Object.values(stockDictionary).forEach(item => {
+  Object.values(stockDictionary).forEach((item) => {
     uniqueItems.set(item.ticker, item.name);
   });
-  
+
   uniqueItems.forEach((name, ticker) => {
     const option = document.createElement("option");
     option.value = `${name} (${ticker})`;
@@ -5534,12 +5679,14 @@ function initSmartMatching() {
   const searchInput = document.getElementById("stock-search-input");
   const nameInput = document.getElementById("stock-name-input");
   const tickerInput = document.getElementById("stock-ticker-input");
-  const directInputContainer = document.getElementById("direct-input-container");
+  const directInputContainer = document.getElementById(
+    "direct-input-container",
+  );
   const currencySelect = document.getElementById("currency-select");
   const dateInput = document.getElementById("date-input");
-  
+
   if (!searchInput) return;
-  
+
   const handleMatching = () => {
     const val = searchInput.value.trim();
     if (!val) {
@@ -5548,18 +5695,21 @@ function initSmartMatching() {
       if (tickerInput) tickerInput.value = "";
       return;
     }
-    
+
     const datalistMatch = val.match(/^(.+?)\s*\(([^)]+)\)$/);
     let searchKey = val.toLowerCase();
     let queryTicker = "";
-    
+
     if (datalistMatch) {
       searchKey = datalistMatch[1].trim().toLowerCase();
       queryTicker = datalistMatch[2].trim().toUpperCase();
     }
-    
-    const match = stockDictionary[queryTicker] || stockDictionary[searchKey] || stockDictionary[val.toUpperCase()];
-    
+
+    const match =
+      stockDictionary[queryTicker] ||
+      stockDictionary[searchKey] ||
+      stockDictionary[val.toUpperCase()];
+
     if (match) {
       if (nameInput) nameInput.value = match.name;
       if (tickerInput) tickerInput.value = match.ticker;
@@ -5578,7 +5728,7 @@ function initSmartMatching() {
         if (nameInput) nameInput.value = val;
         if (tickerInput) tickerInput.value = "";
       }
-      
+
       // 직접 입력인 경우 통화 자동 판별
       if (tickerInput && currencySelect) {
         const ticker = tickerInput.value;
@@ -5591,17 +5741,17 @@ function initSmartMatching() {
       }
     }
   };
-  
+
   searchInput.addEventListener("input", handleMatching);
   searchInput.addEventListener("change", handleMatching);
-  
+
   // 통화 변경 및 날짜 변경 이벤트 연동
   if (currencySelect) {
     currencySelect.addEventListener("change", (e) => {
       triggerExchangeRate(e.target.value);
     });
   }
-  
+
   if (dateInput) {
     dateInput.addEventListener("change", (e) => {
       if (currencySelect && currencySelect.value === "USD") {
@@ -5610,4 +5760,3 @@ function initSmartMatching() {
     });
   }
 }
-
