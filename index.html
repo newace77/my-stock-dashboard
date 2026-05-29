@@ -275,43 +275,43 @@
                       >
                         <button
                           class="sort-btn"
-                          onclick="updateHistoryRange('1M', this)"
+                          onclick="updateHistoryRange('1M', this)" aria-label="1개월"
                         >
                           1달
                         </button>
                         <button
                           class="sort-btn"
-                          onclick="updateHistoryRange('3M', this)"
+                          onclick="updateHistoryRange('3M', this)" aria-label="3개월"
                         >
                           3달
                         </button>
                         <button
                           class="sort-btn"
-                          onclick="updateHistoryRange('1Y', this)"
+                          onclick="updateHistoryRange('1Y', this)" aria-label="1년"
                         >
                           1년
                         </button>
                         <button
                           class="sort-btn"
-                          onclick="updateHistoryRange('YTD', this)"
+                          onclick="updateHistoryRange('YTD', this)" aria-label="연초대비"
                         >
                           YTD
                         </button>
                         <button
                           class="sort-btn"
-                          onclick="updateHistoryRange('3Y', this)"
+                          onclick="updateHistoryRange('3Y', this)" aria-label="3년"
                         >
                           3년
                         </button>
                         <button
                           class="sort-btn"
-                          onclick="updateHistoryRange('5Y', this)"
+                          onclick="updateHistoryRange('5Y', this)" aria-label="5년"
                         >
                           5년
                         </button>
                         <button
                           class="sort-btn active"
-                          onclick="updateHistoryRange('ALL', this)"
+                          onclick="updateHistoryRange('ALL', this)" aria-label="전체"
                         >
                           전체
                         </button>
@@ -329,19 +329,19 @@
                       <div class="holdings-sort-group" id="bubble-filter-group">
                         <button
                           class="sort-btn active"
-                          onclick="filterBubbleChart('ALL', this)"
+                          onclick="filterBubbleChart('ALL', this)" aria-label="전체 통화"
                         >
                           전체
                         </button>
                         <button
                           class="sort-btn"
-                          onclick="filterBubbleChart('KRW', this)"
+                          onclick="filterBubbleChart('KRW', this)" aria-label="원화"
                         >
                           원화
                         </button>
                         <button
                           class="sort-btn"
-                          onclick="filterBubbleChart('USD', this)"
+                          onclick="filterBubbleChart('USD', this)" aria-label="달러"
                         >
                           달러
                         </button>
@@ -352,17 +352,17 @@
                 </div>
 
                 <!-- 슬라이더 컨트롤 -->
-                <button class="slider-btn prev" onclick="moveSlider(-1)">
+                <button class="slider-btn prev" onclick="moveSlider(-1)" aria-label="이전 슬라이드">
                   ❮
                 </button>
-                <button class="slider-btn next" onclick="moveSlider(1)">
+                <button class="slider-btn next" onclick="moveSlider(1)" aria-label="다음 슬라이드">
                   ❯
                 </button>
 
                 <!-- 슬라이더 인디케이터 -->
                 <div class="slider-nav">
-                  <div class="slider-dot active" onclick="goSlide(0)"></div>
-                  <div class="slider-dot" onclick="goSlide(1)"></div>
+                  <div class="slider-dot active" onclick="goSlide(0)" aria-label="슬라이드 1"></div>
+                  <div class="slider-dot" onclick="goSlide(1)" aria-label="슬라이드 2"></div>
                 </div>
               </div>
             </section>
@@ -382,10 +382,10 @@
                 </div>
 
                 <!-- 슬라이더 컨트롤 -->
-                <button class="slider-btn prev" onclick="moveSummarySlider(-1)">
+                <button class="slider-btn prev" onclick="moveSummarySlider(-1)" aria-label="이전 요약 슬라이드">
                   ❮
                 </button>
-                <button class="slider-btn next" onclick="moveSummarySlider(1)">
+                <button class="slider-btn next" onclick="moveSummarySlider(1)" aria-label="다음 요약 슬라이드">
                   ❯
                 </button>
 
@@ -393,9 +393,9 @@
                 <div class="slider-nav" id="summary-slider-dots">
                   <div
                     class="slider-dot active"
-                    onclick="goSummarySlide(0)"
+                    onclick="goSummarySlide(0)" aria-label="요약 슬라이드 1"
                   ></div>
-                  <div class="slider-dot" onclick="goSummarySlide(1)"></div>
+                  <div class="slider-dot" onclick="goSummarySlide(1)" aria-label="요약 슬라이드 2"></div>
                 </div>
               </div>
 
@@ -435,42 +435,42 @@
                     <tr>
                       <th
                         scope="col"
-                        onclick="sortHoldings('name')"
+                        onclick="sortHoldings('name')" aria-label="종목명 기준 정렬"
                         style="cursor: pointer"
                       >
                         종목명↕
                       </th>
                       <th
                         scope="col"
-                        onclick="sortHoldings('weight')"
+                        onclick="sortHoldings('weight')" aria-label="비중 기준 정렬"
                         style="cursor: pointer"
                       >
                         비중↕
                       </th>
                       <th
                         scope="col"
-                        onclick="sortHoldings('returnRate')"
+                        onclick="sortHoldings('returnRate')" aria-label="수익률 기준 정렬"
                         style="cursor: pointer"
                       >
                         수익률↕
                       </th>
                       <th
                         scope="col"
-                        onclick="sortHoldings('profit')"
+                        onclick="sortHoldings('profit')" aria-label="수익금 기준 정렬"
                         style="cursor: pointer"
                       >
                         수익액↕
                       </th>
                       <th
                         scope="col"
-                        onclick="sortHoldings('eval')"
+                        onclick="sortHoldings('eval')" aria-label="평가금 기준 정렬"
                         style="cursor: pointer"
                       >
                         평가금↕
                       </th>
                       <th
                         scope="col"
-                        onclick="sortHoldings('dailyChange')"
+                        onclick="sortHoldings('dailyChange')" aria-label="변동률 기준 정렬"
                         style="cursor: pointer"
                       >
                         일일변동↕
@@ -517,7 +517,7 @@
                     cursor: pointer;
                     transition: transform 0.3s;
                   "
-                  onclick="refreshPodcast()"
+                  onclick="refreshPodcast()" aria-label="팟캐스트 새로고침"
                 >
                   🔄
                 </button>
@@ -675,7 +675,7 @@
                       align-items: center;
                       gap: 0.3rem;
                     "
-                    onclick="togglePodcast()"
+                    onclick="togglePodcast()" aria-label="팟캐스트 재생/일시정지"
                   >
                     <span id="play-icon">▶</span>
                     <span id="play-text">재생</span>
@@ -850,7 +850,7 @@
               />
               <button
                 id="mdd-analyze-btn"
-                onclick="analyzeMDD()"
+                onclick="analyzeMDD()" aria-label="MDD 분석 실행"
                 class="submit-btn"
                 style="margin: 0; padding: 0 1.5rem"
               >
@@ -978,7 +978,7 @@
             </div>
             <button
               class="submit-btn"
-              onclick="refreshHoldingsAnalysis()"
+              onclick="refreshHoldingsAnalysis()" aria-label="분석 새로고침"
               style="margin: 0; width: auto; padding: 0.5rem 1rem"
             >
               새로 갱신 🔄
@@ -993,63 +993,63 @@
                     <th
                       scope="col"
                       style="cursor: pointer"
-                      onclick="sortHoldingsAnalysis('name')"
+                      onclick="sortHoldingsAnalysis('name')" aria-label="종목명 기준 정렬"
                     >
                       종목명↕
                     </th>
                     <th
                       scope="col"
                       style="cursor: pointer"
-                      onclick="sortHoldingsAnalysis('weight')"
+                      onclick="sortHoldingsAnalysis('weight')" aria-label="비중 기준 정렬"
                     >
                       비중↕
                     </th>
                     <th
                       scope="col"
                       style="cursor: pointer"
-                      onclick="sortHoldingsAnalysis('price')"
+                      onclick="sortHoldingsAnalysis('price')" aria-label="현재가 기준 정렬"
                     >
                       현재가↕
                     </th>
                     <th
                       scope="col"
                       style="cursor: pointer"
-                      onclick="sortHoldingsAnalysis('change')"
+                      onclick="sortHoldingsAnalysis('change')" aria-label="변동률 기준 정렬"
                     >
                       변동률↕
                     </th>
                     <th
                       scope="col"
                       style="cursor: pointer"
-                      onclick="sortHoldingsAnalysis('returnRate')"
+                      onclick="sortHoldingsAnalysis('returnRate')" aria-label="수익률 기준 정렬"
                     >
                       수익률↕
                     </th>
                     <th
                       scope="col"
                       style="cursor: pointer"
-                      onclick="sortHoldingsAnalysis('mdd')"
+                      onclick="sortHoldingsAnalysis('mdd')" aria-label="최대낙폭 기준 정렬"
                     >
                       MDD↕
                     </th>
                     <th
                       scope="col"
                       style="cursor: pointer"
-                      onclick="sortHoldingsAnalysis('recoveryProb')"
+                      onclick="sortHoldingsAnalysis('recoveryProb')" aria-label="회복확률 기준 정렬"
                     >
                       회복확률↕
                     </th>
                     <th
                       scope="col"
                       style="cursor: pointer"
-                      onclick="sortHoldingsAnalysis('rsi')"
+                      onclick="sortHoldingsAnalysis('rsi')" aria-label="RSI 기준 정렬"
                     >
                       RSI(14)↕
                     </th>
                     <th
                       scope="col"
                       style="cursor: pointer"
-                      onclick="sortHoldingsAnalysis('dividendYield')"
+                      onclick="sortHoldingsAnalysis('dividendYield')" aria-label="배당수익률 기준 정렬"
                     >
                       분배율/배당률↕
                     </th>
@@ -1093,7 +1093,7 @@
             </div>
             <button
               class="submit-btn"
-              onclick="refreshSP500()"
+              onclick="refreshSP500()" aria-label="S&P 500 새로고침"
               style="margin: 0; width: auto; padding: 0.5rem 1rem"
             >
               새로 갱신 🔄
@@ -1107,63 +1107,63 @@
                   <tr>
                     <th
                       scope="col"
-                      onclick="sortSP500('rank')"
+                      onclick="sortSP500('rank')" aria-label="순위 기준 정렬"
                       style="cursor: pointer"
                     >
                       순위↕
                     </th>
                     <th
                       scope="col"
-                      onclick="sortSP500('name')"
+                      onclick="sortSP500('name')" aria-label="종목명 기준 정렬"
                       style="cursor: pointer"
                     >
                       종목명↕
                     </th>
                     <th
                       scope="col"
-                      onclick="sortSP500('marketCap')"
+                      onclick="sortSP500('marketCap')" aria-label="시가총액 기준 정렬"
                       style="cursor: pointer"
                     >
                       시가 총액↕
                     </th>
                     <th
                       scope="col"
-                      onclick="sortSP500('price')"
+                      onclick="sortSP500('price')" aria-label="현재가 기준 정렬"
                       style="cursor: pointer"
                     >
                       현재가↕
                     </th>
                     <th
                       scope="col"
-                      onclick="sortSP500('change')"
+                      onclick="sortSP500('change')" aria-label="변동률 기준 정렬"
                       style="cursor: pointer"
                     >
                       변동률↕
                     </th>
                     <th
                       scope="col"
-                      onclick="sortSP500('mdd')"
+                      onclick="sortSP500('mdd')" aria-label="최대낙폭 기준 정렬"
                       style="cursor: pointer"
                     >
                       MDD↕
                     </th>
                     <th
                       scope="col"
-                      onclick="sortSP500('recoveryProb')"
+                      onclick="sortSP500('recoveryProb')" aria-label="회복확률 기준 정렬"
                       style="cursor: pointer"
                     >
                       회복확률↕
                     </th>
                     <th
                       scope="col"
-                      onclick="sortSP500('rsi')"
+                      onclick="sortSP500('rsi')" aria-label="RSI 기준 정렬"
                       style="cursor: pointer"
                     >
                       RSI(14)↕
                     </th>
                     <th
                       scope="col"
-                      onclick="sortSP500('dividendYield')"
+                      onclick="sortSP500('dividendYield')" aria-label="배당수익률 기준 정렬"
                       style="cursor: pointer"
                     >
                       배당률↕
@@ -1211,7 +1211,7 @@
             </div>
             <button
               class="submit-btn"
-              onclick="refreshKOSPI200()"
+              onclick="refreshKOSPI200()" aria-label="KOSPI 200 새로고침"
               style="margin: 0; width: auto; padding: 0.5rem 1rem"
             >
               새로 갱신 🔄
@@ -1225,63 +1225,63 @@
                   <tr>
                     <th
                       scope="col"
-                      onclick="sortKOSPI200('rank')"
+                      onclick="sortKOSPI200('rank')" aria-label="순위 기준 정렬"
                       style="cursor: pointer"
                     >
                       순위↕
                     </th>
                     <th
                       scope="col"
-                      onclick="sortKOSPI200('name')"
+                      onclick="sortKOSPI200('name')" aria-label="종목명 기준 정렬"
                       style="cursor: pointer"
                     >
                       종목명↕
                     </th>
                     <th
                       scope="col"
-                      onclick="sortKOSPI200('marketCap')"
+                      onclick="sortKOSPI200('marketCap')" aria-label="시가총액 기준 정렬"
                       style="cursor: pointer"
                     >
                       시가 총액↕
                     </th>
                     <th
                       scope="col"
-                      onclick="sortKOSPI200('price')"
+                      onclick="sortKOSPI200('price')" aria-label="현재가 기준 정렬"
                       style="cursor: pointer"
                     >
                       현재가↕
                     </th>
                     <th
                       scope="col"
-                      onclick="sortKOSPI200('change')"
+                      onclick="sortKOSPI200('change')" aria-label="변동률 기준 정렬"
                       style="cursor: pointer"
                     >
                       변동률↕
                     </th>
                     <th
                       scope="col"
-                      onclick="sortKOSPI200('mdd')"
+                      onclick="sortKOSPI200('mdd')" aria-label="최대낙폭 기준 정렬"
                       style="cursor: pointer"
                     >
                       MDD↕
                     </th>
                     <th
                       scope="col"
-                      onclick="sortKOSPI200('recoveryProb')"
+                      onclick="sortKOSPI200('recoveryProb')" aria-label="회복확률 기준 정렬"
                       style="cursor: pointer"
                     >
                       회복확률↕
                     </th>
                     <th
                       scope="col"
-                      onclick="sortKOSPI200('rsi')"
+                      onclick="sortKOSPI200('rsi')" aria-label="RSI 기준 정렬"
                       style="cursor: pointer"
                     >
                       RSI(14)↕
                     </th>
                     <th
                       scope="col"
-                      onclick="sortKOSPI200('dividendYield')"
+                      onclick="sortKOSPI200('dividendYield')" aria-label="배당수익률 기준 정렬"
                       style="cursor: pointer"
                     >
                       배당률↕
@@ -1336,7 +1336,7 @@
             >
               <button
                 class="calendar-nav-btn"
-                onclick="changeDividendMonth(-1)"
+                onclick="changeDividendMonth(-1)" aria-label="이전 달"
                 style="
                   background: none;
                   border: none;
@@ -1360,7 +1360,7 @@
               </h3>
               <button
                 class="calendar-nav-btn"
-                onclick="changeDividendMonth(1)"
+                onclick="changeDividendMonth(1)" aria-label="다음 달"
                 style="
                   background: none;
                   border: none;
@@ -1469,14 +1469,14 @@
             <div class="heatmap-controls">
               <button
                 class="sort-btn active"
-                onclick="toggleHeatmapSort('desc')"
+                onclick="toggleHeatmapSort('desc')" aria-label="최신순 정렬"
                 id="hm-sort-desc"
               >
                 최신순
               </button>
               <button
                 class="sort-btn"
-                onclick="toggleHeatmapSort('asc')"
+                onclick="toggleHeatmapSort('asc')" aria-label="과거순 정렬"
                 id="hm-sort-asc"
               >
                 과거순
@@ -1517,7 +1517,7 @@
       aria-label="설정"
       onclick="closeSettingsModal(event)"
     >
-      <div class="modal-container settings-modal-container" id="settings-modal">
+          <div class="modal-container settings-modal-container" id="settings-modal" role="dialog" aria-modal="true" aria-label="설정">
         <div class="modal-header">
           <h2 style="margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
             ⚙️ 설정
@@ -1532,21 +1532,21 @@
               <button
                 class="theme-btn"
                 id="theme-auto-btn"
-                onclick="setThemeMode('auto')"
+                onclick="setThemeMode('auto')" aria-label="자동 테마"
               >
                 🌓 자동
               </button>
               <button
                 class="theme-btn"
                 id="theme-light-btn"
-                onclick="setThemeMode('light')"
+                onclick="setThemeMode('light')" aria-label="라이트 테마"
               >
                 ☀️ Light
               </button>
               <button
                 class="theme-btn"
                 id="theme-dark-btn"
-                onclick="setThemeMode('dark')"
+                onclick="setThemeMode('dark')" aria-label="다크 테마"
               >
                 🌙 Dark
               </button>
@@ -1559,7 +1559,7 @@
             <div
               id="view-mode-indicator"
               class="view-mode-container"
-              onclick="cycleViewMode()"
+              onclick="cycleViewMode()" aria-label="뷰 모드 변경"
               title="클릭하여 PC/모바일 모드 전환"
               style="cursor: pointer;"
             >
@@ -1592,7 +1592,7 @@
       aria-label="지수 및 환율 상세 정보"
       onclick="closeMarketModal(event)"
     >
-      <div class="modal-container" id="market-modal">
+          <div class="modal-container" id="market-modal" role="dialog" aria-modal="true" aria-label="시장 지수">
         <div class="modal-header">
           <div class="modal-title-row">
             <div class="modal-icon" id="market-modal-icon">📈</div>
@@ -1632,49 +1632,49 @@
               <div class="holdings-sort-group" id="market-modal-chart-filter-group">
                 <button
                   class="sort-btn"
-                  onclick="updateMarketModalChartRange('1d', this)"
+                  onclick="updateMarketModalChartRange('1d', this)" aria-label="1일"
                 >
                   1일
                 </button>
                 <button
                   class="sort-btn"
-                  onclick="updateMarketModalChartRange('5d', this)"
+                  onclick="updateMarketModalChartRange('5d', this)" aria-label="5일"
                 >
                   5일
                 </button>
                 <button
                   class="sort-btn active"
-                  onclick="updateMarketModalChartRange('1mo', this)"
+                  onclick="updateMarketModalChartRange('1mo', this)" aria-label="1개월"
                 >
                   1달
                 </button>
                 <button
                   class="sort-btn"
-                  onclick="updateMarketModalChartRange('3mo', this)"
+                  onclick="updateMarketModalChartRange('3mo', this)" aria-label="3개월"
                 >
                   3달
                 </button>
                 <button
                   class="sort-btn"
-                  onclick="updateMarketModalChartRange('6mo', this)"
+                  onclick="updateMarketModalChartRange('6mo', this)" aria-label="6개월"
                 >
                   6개월
                 </button>
                 <button
                   class="sort-btn"
-                  onclick="updateMarketModalChartRange('ytd', this)"
+                  onclick="updateMarketModalChartRange('ytd', this)" aria-label="연초대비"
                 >
                   YTD
                 </button>
                 <button
                   class="sort-btn"
-                  onclick="updateMarketModalChartRange('1y', this)"
+                  onclick="updateMarketModalChartRange('1y', this)" aria-label="1년"
                 >
                   1년
                 </button>
                 <button
                   class="sort-btn"
-                  onclick="updateMarketModalChartRange('5y', this)"
+                  onclick="updateMarketModalChartRange('5y', this)" aria-label="5년"
                 >
                   5년
                 </button>
@@ -1697,7 +1697,7 @@
       aria-label="종목 상세 정보"
       onclick="closeStockModal(event)"
     >
-      <div class="modal-container" id="stock-modal">
+          <div class="modal-container" id="stock-modal" role="dialog" aria-modal="true" aria-label="종목 상세">
         <div class="modal-header">
           <div class="modal-title-row">
             <div class="modal-icon" id="modal-icon"></div>
@@ -1769,31 +1769,31 @@
               <div class="holdings-sort-group" id="modal-chart-filter-group">
                 <button
                   class="sort-btn"
-                  onclick="updateModalChartRange('1d', this)"
+                  onclick="updateModalChartRange('1d', this)" aria-label="1일"
                 >
                   1일
                 </button>
                 <button
                   class="sort-btn"
-                  onclick="updateModalChartRange('5d', this)"
+                  onclick="updateModalChartRange('5d', this)" aria-label="5일"
                 >
                   5일
                 </button>
                 <button
                   class="sort-btn active"
-                  onclick="updateModalChartRange('1mo', this)"
+                  onclick="updateModalChartRange('1mo', this)" aria-label="1개월"
                 >
                   1달
                 </button>
                 <button
                   class="sort-btn"
-                  onclick="updateModalChartRange('6mo', this)"
+                  onclick="updateModalChartRange('6mo', this)" aria-label="6개월"
                 >
                   6개월
                 </button>
                 <button
                   class="sort-btn"
-                  onclick="updateModalChartRange('1y', this)"
+                  onclick="updateModalChartRange('1y', this)" aria-label="1년"
                 >
                   1년
                 </button>
@@ -1857,6 +1857,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <script src="config.js"></script>
-    <script src="script.js?v=1.1.5"></script>
+    <script type="module" src="js/main.js"></script>
   </body>
 </html>
