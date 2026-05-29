@@ -483,14 +483,50 @@ function getResponsiveValueHTML(valStr) {
   return valStr;
 }
 
+// 판별된 한국 주식 시장(KOSPI: .KS, KOSDAQ: .KQ)에 대한 캐시
+const resolvedKoreanMarkets = (() => {
+  try {
+    const cached = localStorage.getItem("korean_ticker_market_cache");
+    return cached ? JSON.parse(cached) : {};
+  } catch (e) {
+    return {};
+  }
+})();
+
+function saveKoreanMarketCache() {
+  try {
+    localStorage.setItem("korean_ticker_market_cache", JSON.stringify(resolvedKoreanMarkets));
+  } catch (e) {
+    // ignore
+  }
+}
+
 /**
  * 주식 티커 포맷팅 (한국 주식 6자리 숫자 처리 등)
  */
 function formatTicker(ticker) {
   if (!ticker) return ticker;
-  const cleanTicker = ticker.trim().toUpperCase();
+  let cleanTicker = ticker.trim().toUpperCase();
+  if (cleanTicker.startsWith("KRX:")) {
+    cleanTicker = cleanTicker.replace("KRX:", "");
+  }
+  
   if (isKoreanStock(cleanTicker)) {
-    // 기본적으로 .KS를 붙이되, 향후 시장 구분 로직 확장 가능
+    // 1. 캐시 확인
+    if (resolvedKoreanMarkets[cleanTicker]) {
+      return cleanTicker + resolvedKoreanMarkets[cleanTicker];
+    }
+    
+    // 2. stockDictionary (kospi200_data.json 등) 매핑 확인
+    const dictInfo = stockDictionary[cleanTicker] || stockDictionary[cleanTicker + ".KS"] || stockDictionary[cleanTicker + ".KQ"];
+    if (dictInfo && dictInfo.ticker) {
+      const suffix = dictInfo.ticker.endsWith(".KQ") ? ".KQ" : ".KS";
+      resolvedKoreanMarkets[cleanTicker] = suffix;
+      saveKoreanMarketCache();
+      return cleanTicker + suffix;
+    }
+    
+    // 기본값은 .KS로 시작
     return cleanTicker + ".KS";
   }
   return cleanTicker;
@@ -1060,17 +1096,6 @@ function initDashboard() {
   const dateInput = document.getElementById("date-input");
   if (dateInput) dateInput.value = new Date().toISOString().split("T")[0];
 
-  // 📅 MDD 분석용 날짜 설정 (최근 10년)
-  const mddStartInput = document.getElementById("mdd-start-date");
-  const mddEndInput = document.getElementById("mdd-end-date");
-  if (mddStartInput && mddEndInput) {
-    const now = new Date();
-    const tenYearsAgo = new Date();
-    tenYearsAgo.setFullYear(now.getFullYear() - 10);
-    mddEndInput.value = now.toISOString().split("T")[0];
-    mddStartInput.value = tenYearsAgo.toISOString().split("T")[0];
-  }
-
   // 🔄 거래 종류에 따라 입력 필드 토글
   document.getElementById("type-select")?.addEventListener("change", (e) => {
     const type = e.target.value;
@@ -1096,17 +1121,6 @@ function initDashboard() {
       if (qtyLabel) qtyLabel.textContent = "수량";
     }
   });
-
-  // 📈 종목 선택 시 통화 자동 변경
-  document
-    .getElementById("stock-name-select")
-    ?.addEventListener("change", (e) => {
-      const selectedOption = e.target.options[e.target.selectedIndex];
-      const currencySelect = document.getElementById("currency-select");
-      if (selectedOption && selectedOption.dataset.currency && currencySelect) {
-        currencySelect.value = selectedOption.dataset.currency;
-      }
-    });
 
   // 📈 신규 티커 직접 입력 시 통화 자동 판별
   document
@@ -1844,7 +1858,10 @@ async function fetchWithFallback(
         text.includes("<html") ||
         text.includes("Unauthorized")
       ) {
-        // 1.1 JSON 에러 응답 필터링 (일부 프록시의 JSON 에러 문자열 방지)
+        throw new Error("Invalid or empty response, or HTML error page received");
+      }
+
+      // 1.1 JSON 에러 응답 필터링 (일부 프록시의 JSON 에러 문자열 방지)
       if (
         text.trim().startsWith("{") &&
         (text.includes('"error"') || text.includes('"Error"')) &&
@@ -1886,56 +1903,88 @@ async function fetchWithFallback(
     }
   };
 
-  // 1단계: 구글 시트(isYahoo === false)인 경우 직접 페치 최우선 시도
-  if (!isYahoo) {
-    try {
-      logger.log(`[Fetch] 직접 페치 시도: ${targetUrl}`);
-      return await fetchTask(targetUrl, { timeout: 8000 });
-    } catch (e) {
-      logger.warn(`[Fetch] 직접 페치 실패, GAS 프록시 전환:`, e);
-      if (CONFIG.gasURL) {
-        try {
-          const apiKey = CONFIG.gasApiKey || "";
-          const gasProxyUrl = `${CONFIG.gasURL}?url=${encodeURIComponent(targetUrl)}&apiKey=${encodeURIComponent(apiKey)}`;
-          return await fetchTask(gasProxyUrl, { timeout: 8000 });
-        } catch (gasErr) {
-          logger.error(`[Fetch] GAS 프록시를 통한 페치도 실패했습니다:`, gasErr);
+  const performFetch = async (url) => {
+    // 1단계: 구글 시트(isYahoo === false)인 경우 직접 페치 최우선 시도
+    if (!isYahoo) {
+      try {
+        logger.log(`[Fetch] 직접 페치 시도: ${url}`);
+        return await fetchTask(url, { timeout: 8000 });
+      } catch (e) {
+        logger.warn(`[Fetch] 직접 페치 실패, GAS 프록시 전환:`, e);
+        if (CONFIG.gasURL) {
+          try {
+            const apiKey = CONFIG.gasApiKey || "";
+            const gasProxyUrl = `${CONFIG.gasURL}?url=${encodeURIComponent(url)}&apiKey=${encodeURIComponent(apiKey)}`;
+            return await fetchTask(gasProxyUrl, { timeout: 8000 });
+          } catch (gasErr) {
+            logger.error(`[Fetch] GAS 프록시를 통한 페치도 실패했습니다:`, gasErr);
+          }
         }
       }
     }
-  }
 
-  // 2단계: 야후 파이낸스(isYahoo === true)이거나, 직접 페치/GAS가 모두 실패했을 때
-  // GAS 프록시(GET 방식) 시도
-  if (CONFIG.gasURL) {
-    try {
-      const apiKey = CONFIG.gasApiKey || "";
-      const gasProxyUrl = `${CONFIG.gasURL}?url=${encodeURIComponent(targetUrl)}&apiKey=${encodeURIComponent(apiKey)}`;
-      logger.log(`[Fetch] GAS 프록시 시도: ${gasProxyUrl}`);
-      return await fetchTask(gasProxyUrl, { timeout: 10000 });
-    } catch (e) {
-      logger.warn(`[Fetch] GAS 프록시 실패, 공용 프록시 레이싱 전환:`, e);
+    // 2단계: 야후 파이낸스(isYahoo === true)이거나, 직접 페치/GAS가 모두 실패했을 때
+    // GAS 프록시(GET 방식) 시도
+    if (CONFIG.gasURL) {
+      try {
+        const apiKey = CONFIG.gasApiKey || "";
+        const gasProxyUrl = `${CONFIG.gasURL}?url=${encodeURIComponent(url)}&apiKey=${encodeURIComponent(apiKey)}`;
+        logger.log(`[Fetch] GAS 프록시 시도: ${gasProxyUrl}`);
+        return await fetchTask(gasProxyUrl, { timeout: 10000 });
+      } catch (e) {
+        logger.warn(`[Fetch] GAS 프록시 실패, 공용 프록시 레이싱 전환:`, e);
+      }
     }
-  }
 
-  // 3단계: GAS 프록시마저 실패하거나 설정되지 않은 경우, 공용 프록시 레이싱
-  const encodedTarget = encodeURIComponent(targetUrl);
-  const publicProxies = [
-    `https://api.allorigins.win/raw?url=${encodedTarget}`,
-    `https://thingproxy.freeboard.io/fetch/${targetUrl}`,
-    `https://api.codetabs.com/v1/proxy?url=${encodedTarget}`
-  ];
+    // 3단계: GAS 프록시마저 실패하거나 설정되지 않은 경우, 공용 프록시 레이싱
+    const encodedTarget = encodeURIComponent(url);
+    const publicProxies = [
+      `https://api.allorigins.win/raw?url=${encodedTarget}`,
+      `https://thingproxy.freeboard.io/fetch/${url}`,
+      `https://api.codetabs.com/v1/proxy?url=${encodedTarget}`
+    ];
 
-  const tasks = publicProxies.map((proxy) => fetchTask(proxy, { timeout: 6000 }));
+    const tasks = publicProxies.map((proxy) => fetchTask(proxy, { timeout: 6000 }));
 
-  // 야후 파이낸스가 아니라면 직접 호출도 레이싱에 포함
-  if (!isYahoo) {
-    tasks.push(fetchTask(targetUrl, { timeout: 5000 }));
-  }
+    // 야후 파이낸스가 아니라면 직접 호출도 레이싱에 포함
+    if (!isYahoo) {
+      tasks.push(fetchTask(url, { timeout: 5000 }));
+    }
+
+    return await Promise.any(tasks);
+  };
 
   try {
-    return await Promise.any(tasks);
+    return await performFetch(targetUrl);
   } catch (e) {
+    // 야후 파이낸스 호출이며 한국 주식인 경우 에러 복구 로직 (KOSPI vs KOSDAQ 자동 판별 및 재시도)
+    if (isYahoo && targetUrl.includes("query1.finance.yahoo.com")) {
+      const tickerMatch = targetUrl.match(/\/chart\/([^?]+)/);
+      if (tickerMatch) {
+        const fullTicker = decodeURIComponent(tickerMatch[1]);
+        const baseTicker = fullTicker.replace(".KS", "").replace(".KQ", "");
+        if (isKoreanStock(baseTicker)) {
+          const currentSuffix = fullTicker.endsWith(".KQ") ? ".KQ" : ".KS";
+          const altSuffix = currentSuffix === ".KS" ? ".KQ" : ".KS";
+          const altTicker = baseTicker + altSuffix;
+          const altUrl = targetUrl.replace(encodeYahooTicker(fullTicker), encodeYahooTicker(altTicker));
+          
+          try {
+            logger.warn(`[Fetch] 야후 API 호출 실패로 인한 대체 티커(${altTicker}) 자동 재시도 시작: ${altUrl}`);
+            const result = await performFetch(altUrl);
+            if (result) {
+              resolvedKoreanMarkets[baseTicker] = altSuffix;
+              saveKoreanMarketCache();
+              logger.log(`[Fetch] 대체 티커(${altTicker}) 자동 판별 성공 및 캐싱 완료!`);
+              return result;
+            }
+          } catch (retryErr) {
+            logger.error(`[Fetch] 대체 티커(${altTicker}) 재시도 역시 실패했습니다:`, retryErr);
+          }
+        }
+      }
+    }
+
     logger.error("[Fetch] 모든 페치 경로가 실패했습니다.", e);
     return null;
   }
@@ -2739,19 +2788,7 @@ function processHoldingsData(data) {
   renderBubbleChart(globalHoldings);
 }
 
-// 직접 입력 토글 로직 수정
-document.addEventListener("DOMContentLoaded", () => {
-  const stockSelect = document.getElementById("stock-name-select");
-  const directInputContainer = document.getElementById(
-    "direct-input-container",
-  );
-  if (stockSelect && directInputContainer) {
-    stockSelect.addEventListener("change", (e) => {
-      directInputContainer.style.display =
-        e.target.value === "DIRECT" ? "grid" : "none";
-    });
-  }
-});
+
 
 function sortHoldings(column, toggle = true) {
   if (toggle) {
