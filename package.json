@@ -4,7 +4,7 @@
   "description": "Stock Dashboard with Google Sheets Integration",
   "scripts": {
     "start": "npx serve .",
-    "dev": "python3 -m http.server 8000",
+    "dev": "npx serve -l 8000 .",
     "lint": "eslint script.js update_sp500.js update_kospi200.js helpers.js",
     "format": "prettier --write '*.{js,css,html}'"
   },
