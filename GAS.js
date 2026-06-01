@@ -134,12 +134,26 @@ function doPost(e) {
     }
 
     if (lastRow > 1) {
-      sheet.getRange(lastRow, 11).copyTo(sheet.getRange(nextRow, 11));
       var maxCols = sheet.getMaxColumns();
+      
+      // K열(11열) 복사 시도
+      if (maxCols >= 11) {
+        try {
+          sheet.getRange(lastRow, 11).copyTo(sheet.getRange(nextRow, 11));
+        } catch (err) {
+          Logger.log("K열 복사 실패: " + err.toString());
+        }
+      }
+      
+      // M열(13열) 이상 수식 복사 시도
       if (maxCols >= 13) {
-        sheet
-          .getRange(lastRow, 13, 1, maxCols - 12)
-          .copyTo(sheet.getRange(nextRow, 13));
+        try {
+          sheet
+            .getRange(lastRow, 13, 1, maxCols - 12)
+            .copyTo(sheet.getRange(nextRow, 13));
+        } catch (err) {
+          Logger.log("M열 이상 복사 실패: " + err.toString());
+        }
       }
 
       var typeValues = sheet.getRange(1, 5, lastRow, 1).getValues();
@@ -154,24 +168,43 @@ function doPost(e) {
 
       if (sourceRow === -1) sourceRow = lastRow;
 
-      sheet
-        .getRange(sourceRow, 6)
-        .copyTo(
-          sheet.getRange(nextRow, 6),
-          SpreadsheetApp.CopyPasteType.PASTE_FORMATS,
-          false,
-        );
-      sheet
-        .getRange(sourceRow, 9)
-        .copyTo(
-          sheet.getRange(nextRow, 9),
-          SpreadsheetApp.CopyPasteType.PASTE_FORMATS,
-          false,
-        );
+      // F열(6열) 서식 복사 시도
+      if (maxCols >= 6 && sourceRow > 0) {
+        try {
+          sheet
+            .getRange(sourceRow, 6)
+            .copyTo(
+              sheet.getRange(nextRow, 6),
+              SpreadsheetApp.CopyPasteType.PASTE_FORMATS,
+              false,
+            );
+        } catch (err) {
+          Logger.log("F열 서식 복사 실패: " + err.toString());
+        }
+      }
+      
+      // I열(9열) 서식 복사 시도
+      if (maxCols >= 9 && sourceRow > 0) {
+        try {
+          sheet
+            .getRange(sourceRow, 9)
+            .copyTo(
+              sheet.getRange(nextRow, 9),
+              SpreadsheetApp.CopyPasteType.PASTE_FORMATS,
+              false,
+            );
+        } catch (err) {
+          Logger.log("I열 서식 복사 실패: " + err.toString());
+        }
+      }
 
       if (data.currency === "USD") {
-        sheet.getRange(nextRow, 6).setFormula("=G" + nextRow + "*L" + nextRow);
-        sheet.getRange(nextRow, 9).setFormula("=J" + nextRow + "*L" + nextRow);
+        try {
+          sheet.getRange(nextRow, 6).setFormula("=G" + nextRow + "*L" + nextRow);
+          sheet.getRange(nextRow, 9).setFormula("=J" + nextRow + "*L" + nextRow);
+        } catch (err) {
+          Logger.log("USD 환산 수식 적용 실패: " + err.toString());
+        }
       }
     }
 
