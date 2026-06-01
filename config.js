@@ -5,6 +5,7 @@ const CONFIG = {
     historyURL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyAvQcej4ON8V6_bjKeqDwbYP9SQL7gGWf9JPREaA5xzoFK3xrwqb4u1IL6lJYjUz5e0IZ9hGRkCKn/pub?gid=1345768416&single=true&output=csv",
     snapshotURL: "data_snapshot.json",
     gasURL: "https://script.google.com/macros/s/AKfycbydNic7HWjGGIQ9JWnARsJRvoNr3EvPq-79HkMqGpJ5D2nw2ThKyGuYBbAYSg4BBSMRAw/exec",
+    gasApiKey: "", // 구글 Apps Script API Key 입력 (선택사항)
     supabaseURL: "", // 사용자 제공 필요
     supabaseKey: "", // 사용자 제공 필요
     geminiAPIKey: "", // 구글 제미나이 API 키 입력 (선택사항)

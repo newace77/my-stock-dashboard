@@ -4372,7 +4372,7 @@ async function handleTransactionSubmit(e) {
         method: "POST",
         mode: "no-cors",
         cache: "no-cache",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({ ...formData, apiKey: CONFIG.gasApiKey || "" }),
       });
     }
