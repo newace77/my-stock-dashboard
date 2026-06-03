@@ -547,6 +547,23 @@ tr:hover td:not(.hm-cell) {
   color: var(--negative);
 }
 
+/* Sortable table header styles */
+#holdings-table th.u-cursor-pointer {
+  user-select: none;
+  transition: color 0.2s ease, background 0.2s ease;
+  white-space: nowrap;
+}
+
+#holdings-table th.u-cursor-pointer:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+#holdings-table th.sort-active {
+  color: var(--primary);
+  border-bottom: 2px solid var(--primary);
+}
+
 /* Forms & Inputs */
 .transaction-grid {
   display: grid;
@@ -883,13 +900,6 @@ body.force-pc .container {
     margin-top: 0.5rem;
   }
 
-  body:not(.force-pc) .holdings-cards-grid {
-    grid-template-columns: 1fr; /* 모바일에서는 1열로 큼직하게 */
-  }
-
-  body:not(.force-pc) .stock-card {
-    padding: 1rem;
-  }
 
   body:not(.force-pc) .tabs {
     width: 100%;
@@ -2698,3 +2708,15 @@ body.force-pc .container {
     gap: 0.3rem 0.2rem;
   }
 }
+
+/* ===== 유틸리티 클래스 (인라인 스타일 대체) ===== */
+.u-cursor-pointer { cursor: pointer; }
+.u-hidden { display: none; }
+.u-m-0 { margin: 0; }
+.u-mt-1 { margin-top: 1.5rem; }
+.u-mt-2 { margin-top: 2rem; }
+.u-w-auto { width: auto; }
+.u-btn-sm { margin: 0; width: auto; padding: 0.5rem 1rem; }
+.u-label-text { font-weight: 600; font-size: 0.9rem; color: var(--text-main); }
+.u-flex-1 { flex: 1; }
+.u-text-sm { font-size: 0.85rem; }

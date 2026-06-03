@@ -1,0 +1,45 @@
+[      47ms] [ERROR] 🚨 [보안 경고] ... @ http://localhost:3000/js/main.js:27
+[      54ms] [WARNING] 렌더러: 환율/지수 복원 중 오류 발생: TypeError: Assignment to constant variable.
+    at renderFromData (http://localhost:3000/js/ui.js:486:18)
+    at fetchData (http://localhost:3000/js/main.js:122:11) @ http://localhost:3000/js/state.js:19
+[      54ms] [WARNING] Summary parsing error ReferenceError: parseSafeFloat is not defined
+    at http://localhost:3000/js/ui.js:759:23
+    at Array.find (<anonymous>)
+    at renderSummary (http://localhost:3000/js/ui.js:756:25)
+    at renderFromData (http://localhost:3000/js/ui.js:502:7)
+    at fetchData (http://localhost:3000/js/main.js:122:11) @ http://localhost:3000/js/state.js:19
+[      54ms] [ERROR] Summary rendering failed: ReferenceError: parseSafeFloat is not defined
+    at http://localhost:3000/js/ui.js:846:21
+    at Array.forEach (<anonymous>)
+    at renderSummary (http://localhost:3000/js/ui.js:833:8)
+    at renderFromData (http://localhost:3000/js/ui.js:502:7)
+    at fetchData (http://localhost:3000/js/main.js:122:11) @ http://localhost:3000/js/state.js:20
+[      54ms] [ERROR] Holdings rendering failed: TypeError: Assignment to constant variable.
+    at processHoldingsData (http://localhost:3000/js/ui.js:879:18)
+    at renderFromData (http://localhost:3000/js/ui.js:513:7)
+    at fetchData (http://localhost:3000/js/main.js:122:11) @ http://localhost:3000/js/state.js:20
+[      54ms] [ERROR] History rendering failed: TypeError: Assignment to constant variable.
+    at renderFromData (http://localhost:3000/js/ui.js:521:22)
+    at fetchData (http://localhost:3000/js/main.js:122:11) @ http://localhost:3000/js/state.js:20
+[    1665ms] [WARNING] 렌더러: 환율/지수 복원 중 오류 발생: TypeError: Assignment to constant variable.
+    at renderFromData (http://localhost:3000/js/ui.js:486:18)
+    at fetchData (http://localhost:3000/js/main.js:317:7) @ http://localhost:3000/js/state.js:19
+[    1665ms] [WARNING] Summary parsing error ReferenceError: parseSafeFloat is not defined
+    at http://localhost:3000/js/ui.js:759:23
+    at Array.find (<anonymous>)
+    at renderSummary (http://localhost:3000/js/ui.js:756:25)
+    at renderFromData (http://localhost:3000/js/ui.js:502:7)
+    at fetchData (http://localhost:3000/js/main.js:317:7) @ http://localhost:3000/js/state.js:19
+[    1665ms] [ERROR] Summary rendering failed: ReferenceError: parseSafeFloat is not defined
+    at http://localhost:3000/js/ui.js:846:21
+    at Array.forEach (<anonymous>)
+    at renderSummary (http://localhost:3000/js/ui.js:833:8)
+    at renderFromData (http://localhost:3000/js/ui.js:502:7)
+    at fetchData (http://localhost:3000/js/main.js:317:7) @ http://localhost:3000/js/state.js:20
+[    1665ms] [ERROR] Holdings rendering failed: TypeError: Assignment to constant variable.
+    at processHoldingsData (http://localhost:3000/js/ui.js:879:18)
+    at renderFromData (http://localhost:3000/js/ui.js:513:7)
+    at fetchData (http://localhost:3000/js/main.js:317:7) @ http://localhost:3000/js/state.js:20
+[    1665ms] [ERROR] History rendering failed: TypeError: Assignment to constant variable.
+    at renderFromData (http://localhost:3000/js/ui.js:521:22)
+    at fetchData (http://localhost:3000/js/main.js:317:7) @ http://localhost:3000/js/state.js:20

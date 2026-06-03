@@ -35,8 +35,7 @@
           <!-- 구글 로그인 영역 -->
           <div
             id="google-auth-container"
-            class="google-auth-container"
-            style="display: none"
+            class="google-auth-container u-hidden"
           >
             <button
               id="google-login-btn"
@@ -70,8 +69,7 @@
             </button>
             <div
               id="google-user-profile"
-              class="google-user-profile"
-              style="display: none"
+              class="google-user-profile u-hidden"
             >
               <span id="google-user-email" class="google-user-email"></span>
               <button
@@ -421,13 +419,6 @@
                 <h2>📋 보유 종목 (Holdings)</h2>
               </div>
 
-              <!-- 카드 뷰 -->
-              <div
-                id="holdings-cards-view"
-                class="holdings-cards-grid"
-                style="display: none"
-              ></div>
-
               <!-- 테이블 뷰 -->
               <div id="holdings-table-view" class="table-wrapper">
                 <table id="holdings-table">
@@ -436,42 +427,49 @@
                       <th
                         scope="col"
                         onclick="sortHoldings('name')"
-                        style="cursor: pointer"
+                        class="u-cursor-pointer"
                       >
                         종목명↕
                       </th>
                       <th
                         scope="col"
                         onclick="sortHoldings('weight')"
-                        style="cursor: pointer"
+                        class="u-cursor-pointer"
                       >
                         비중↕
                       </th>
                       <th
                         scope="col"
                         onclick="sortHoldings('returnRate')"
-                        style="cursor: pointer"
+                        class="u-cursor-pointer"
                       >
                         수익률↕
                       </th>
                       <th
                         scope="col"
                         onclick="sortHoldings('profit')"
-                        style="cursor: pointer"
+                        class="u-cursor-pointer"
                       >
                         수익액↕
                       </th>
                       <th
                         scope="col"
                         onclick="sortHoldings('eval')"
-                        style="cursor: pointer"
+                        class="u-cursor-pointer"
                       >
                         평가금↕
                       </th>
                       <th
                         scope="col"
+                        onclick="sortHoldings('costBasis')"
+                        class="u-cursor-pointer"
+                      >
+                        매수금↕
+                      </th>
+                      <th
+                        scope="col"
                         onclick="sortHoldings('dailyChange')"
-                        style="cursor: pointer"
+                        class="u-cursor-pointer"
                       >
                         일일변동↕
                       </th>
@@ -780,7 +778,7 @@
                     placeholder="종목명 또는 티커 입력"
                   />
                   <datalist id="ticker-suggestions"></datalist>
-                  <div id="direct-input-container" style="display: none; margin-top: 8px; gap: 8px;">
+                  <div id="direct-input-container" class="u-hidden" style="margin-top: 8px; gap: 8px;">
                     <input
                       type="text"
                       id="stock-name-input"
@@ -797,7 +795,7 @@
                   <label>💵 단가</label>
                   <input type="number" step="any" id="price-input" />
                 </div>
-                <div class="input-group" id="usd-rate-group" style="display: none;">
+                <div class="input-group u-hidden" id="usd-rate-group">
                   <label>💱 적용 환율 (USD/KRW)</label>
                   <input
                     type="number"
@@ -977,9 +975,8 @@
               </p>
             </div>
             <button
-              class="submit-btn"
+              class="submit-btn u-btn-sm"
               onclick="refreshHoldingsAnalysis()"
-              style="margin: 0; width: auto; padding: 0.5rem 1rem"
             >
               새로 갱신 🔄
             </button>
@@ -992,63 +989,63 @@
                   <tr>
                     <th
                       scope="col"
-                      style="cursor: pointer"
+                      class="u-cursor-pointer"
                       onclick="sortHoldingsAnalysis('name')"
                     >
                       종목명↕
                     </th>
                     <th
                       scope="col"
-                      style="cursor: pointer"
+                      class="u-cursor-pointer"
                       onclick="sortHoldingsAnalysis('weight')"
                     >
                       비중↕
                     </th>
                     <th
                       scope="col"
-                      style="cursor: pointer"
+                      class="u-cursor-pointer"
                       onclick="sortHoldingsAnalysis('price')"
                     >
                       현재가↕
                     </th>
                     <th
                       scope="col"
-                      style="cursor: pointer"
+                      class="u-cursor-pointer"
                       onclick="sortHoldingsAnalysis('change')"
                     >
                       변동률↕
                     </th>
                     <th
                       scope="col"
-                      style="cursor: pointer"
+                      class="u-cursor-pointer"
                       onclick="sortHoldingsAnalysis('returnRate')"
                     >
                       수익률↕
                     </th>
                     <th
                       scope="col"
-                      style="cursor: pointer"
+                      class="u-cursor-pointer"
                       onclick="sortHoldingsAnalysis('mdd')"
                     >
                       MDD↕
                     </th>
                     <th
                       scope="col"
-                      style="cursor: pointer"
+                      class="u-cursor-pointer"
                       onclick="sortHoldingsAnalysis('recoveryProb')"
                     >
                       회복확률↕
                     </th>
                     <th
                       scope="col"
-                      style="cursor: pointer"
+                      class="u-cursor-pointer"
                       onclick="sortHoldingsAnalysis('rsi')"
                     >
                       RSI(14)↕
                     </th>
                     <th
                       scope="col"
-                      style="cursor: pointer"
+                      class="u-cursor-pointer"
                       onclick="sortHoldingsAnalysis('dividendYield')"
                     >
                       분배율/배당률↕
@@ -1092,9 +1089,8 @@
               <p id="sp500-status" class="status-msg">데이터 로딩 대기 중...</p>
             </div>
             <button
-              class="submit-btn"
+              class="submit-btn u-btn-sm"
               onclick="refreshSP500()"
-              style="margin: 0; width: auto; padding: 0.5rem 1rem"
             >
               새로 갱신 🔄
             </button>
@@ -1108,63 +1104,63 @@
                     <th
                       scope="col"
                       onclick="sortSP500('rank')"
-                      style="cursor: pointer"
+                      class="u-cursor-pointer"
                     >
                       순위↕
                     </th>
                     <th
                       scope="col"
                       onclick="sortSP500('name')"
-                      style="cursor: pointer"
+                      class="u-cursor-pointer"
                     >
                       종목명↕
                     </th>
                     <th
                       scope="col"
                       onclick="sortSP500('marketCap')"
-                      style="cursor: pointer"
+                      class="u-cursor-pointer"
                     >
                       시가 총액↕
                     </th>
                     <th
                       scope="col"
                       onclick="sortSP500('price')"
-                      style="cursor: pointer"
+                      class="u-cursor-pointer"
                     >
                       현재가↕
                     </th>
                     <th
                       scope="col"
                       onclick="sortSP500('change')"
-                      style="cursor: pointer"
+                      class="u-cursor-pointer"
                     >
                       변동률↕
                     </th>
                     <th
                       scope="col"
                       onclick="sortSP500('mdd')"
-                      style="cursor: pointer"
+                      class="u-cursor-pointer"
                     >
                       MDD↕
                     </th>
                     <th
                       scope="col"
                       onclick="sortSP500('recoveryProb')"
-                      style="cursor: pointer"
+                      class="u-cursor-pointer"
                     >
                       회복확률↕
                     </th>
                     <th
                       scope="col"
                       onclick="sortSP500('rsi')"
-                      style="cursor: pointer"
+                      class="u-cursor-pointer"
                     >
                       RSI(14)↕
                     </th>
                     <th
                       scope="col"
                       onclick="sortSP500('dividendYield')"
-                      style="cursor: pointer"
+                      class="u-cursor-pointer"
                     >
                       배당률↕
                     </th>
@@ -1210,9 +1206,8 @@
               </p>
             </div>
             <button
-              class="submit-btn"
+              class="submit-btn u-btn-sm"
               onclick="refreshKOSPI200()"
-              style="margin: 0; width: auto; padding: 0.5rem 1rem"
             >
               새로 갱신 🔄
             </button>
@@ -1226,63 +1221,63 @@
                     <th
                       scope="col"
                       onclick="sortKOSPI200('rank')"
-                      style="cursor: pointer"
+                      class="u-cursor-pointer"
                     >
                       순위↕
                     </th>
                     <th
                       scope="col"
                       onclick="sortKOSPI200('name')"
-                      style="cursor: pointer"
+                      class="u-cursor-pointer"
                     >
                       종목명↕
                     </th>
                     <th
                       scope="col"
                       onclick="sortKOSPI200('marketCap')"
-                      style="cursor: pointer"
+                      class="u-cursor-pointer"
                     >
                       시가 총액↕
                     </th>
                     <th
                       scope="col"
                       onclick="sortKOSPI200('price')"
-                      style="cursor: pointer"
+                      class="u-cursor-pointer"
                     >
                       현재가↕
                     </th>
                     <th
                       scope="col"
                       onclick="sortKOSPI200('change')"
-                      style="cursor: pointer"
+                      class="u-cursor-pointer"
                     >
                       변동률↕
                     </th>
                     <th
                       scope="col"
                       onclick="sortKOSPI200('mdd')"
-                      style="cursor: pointer"
+                      class="u-cursor-pointer"
                     >
                       MDD↕
                     </th>
                     <th
                       scope="col"
                       onclick="sortKOSPI200('recoveryProb')"
-                      style="cursor: pointer"
+                      class="u-cursor-pointer"
                     >
                       회복확률↕
                     </th>
                     <th
                       scope="col"
                       onclick="sortKOSPI200('rsi')"
-                      style="cursor: pointer"
+                      class="u-cursor-pointer"
                     >
                       RSI(14)↕
                     </th>
                     <th
                       scope="col"
                       onclick="sortKOSPI200('dividendYield')"
-                      style="cursor: pointer"
+                      class="u-cursor-pointer"
                     >
                       배당률↕
                     </th>
@@ -1527,7 +1522,7 @@
         <div class="settings-content" style="display: flex; flex-direction: column; gap: 1.2rem; margin-top: 1.5rem;">
           <!-- 테마 선택기 -->
           <div class="setting-item">
-            <span style="font-weight: 600; font-size: 0.9rem; color: var(--text-main);">🌓 화면 테마</span>
+            <span class="u-label-text">🌓 화면 테마</span>
             <div class="theme-select-container">
               <button
                 class="theme-btn"
@@ -1555,13 +1550,13 @@
           
           <!-- PC/모바일 모드 전환 -->
           <div class="setting-item">
-            <span style="font-weight: 600; font-size: 0.9rem; color: var(--text-main);">🖥️ 뷰 모드</span>
+            <span class="u-label-text">🖥️ 뷰 모드</span>
             <div
               id="view-mode-indicator"
               class="view-mode-container"
               onclick="cycleViewMode()"
               title="클릭하여 PC/모바일 모드 전환"
-              style="cursor: pointer;"
+              class="u-cursor-pointer"
             >
               <span id="view-mode-icon"></span>
               <span id="view-mode-text" class="view-mode-label">감지 중...</span>
@@ -1570,7 +1565,7 @@
           
           <!-- Privacy Mode 스위치 -->
           <div class="setting-item">
-            <span style="font-weight: 600; font-size: 0.9rem; color: var(--text-main);">🕶️ 프라이버시 모드</span>
+            <span class="u-label-text">🕶️ 프라이버시 모드</span>
             <div class="privacy-toggle-container">
               <span class="privacy-label">Privacy Mode</span>
               <label class="switch">
@@ -1625,10 +1620,10 @@
               gap: 0.5rem;
             "
           >
-            <h3 class="modal-chart-title" style="margin: 0">
+            <h3 class="modal-chart-title">
               시장 지수 추이
             </h3>
-            <div class="chart-filter-container" style="margin: 0">
+            <div class="chart-filter-container">
               <div class="holdings-sort-group" id="market-modal-chart-filter-group">
                 <button
                   class="sort-btn"
@@ -1762,10 +1757,10 @@
               gap: 0.5rem;
             "
           >
-            <h3 class="modal-chart-title" style="margin: 0">
+            <h3 class="modal-chart-title">
               Performance History
             </h3>
-            <div class="chart-filter-container" style="margin: 0">
+            <div class="chart-filter-container">
               <div class="holdings-sort-group" id="modal-chart-filter-group">
                 <button
                   class="sort-btn"
@@ -1844,9 +1839,8 @@
     <!-- 맨 위로 가기 버튼 -->
     <button
       id="scroll-to-top"
-      class="scroll-to-top"
+      class="scroll-to-top u-hidden"
       title="맨 위로 가기"
-      style="display: none"
     >
       ⬆️
     </button>

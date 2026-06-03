@@ -1,0 +1,172 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - heading "🐶 바둑이 주식 대시보드" [level=1] [ref=e4]
+    - generic [ref=e5]:
+      - button "Google 로그인" [ref=e7] [cursor=pointer]:
+        - img [ref=e8]
+        - generic [ref=e13]: Google 로그인
+      - button "⚙️ 설정" [ref=e14] [cursor=pointer]
+      - generic [ref=e15]: 업데이트 확인 중...
+  - banner [ref=e16]:
+    - paragraph [ref=e17]: 데이터로 보는 스마트한 투자 생활
+  - tablist "대시보드 탭" [ref=e18]:
+    - tab "📊 포트폴리오" [selected] [ref=e19] [cursor=pointer]
+    - tab "📉 MDD 분석" [ref=e20] [cursor=pointer]
+    - tab "💼 My holdings" [ref=e21] [cursor=pointer]
+    - tab "🇺🇸 S&P 500" [ref=e22] [cursor=pointer]
+    - tab "🇰🇷 KOSPI 200" [ref=e23] [cursor=pointer]
+    - tab "🎁 배당" [ref=e24] [cursor=pointer]
+    - tab "🔥 Heatmap" [ref=e25] [cursor=pointer]
+  - tabpanel [ref=e26]:
+    - generic [ref=e27]:
+      - button "새로 갱신 🔄" [ref=e28] [cursor=pointer]
+      - generic [ref=e29]:
+        - generic [ref=e30]: 💰 현재 평가액
+        - generic [ref=e31]: "-"
+      - generic [ref=e32]:
+        - generic [ref=e33]: 💳 총 투자액
+        - generic [ref=e34]: "-"
+      - generic [ref=e35]:
+        - generic [ref=e36]: 💵 수익액
+        - generic [ref=e37]: "-"
+      - generic [ref=e38]:
+        - generic [ref=e39]: 📈 수익률
+        - generic [ref=e40]: "-"
+      - generic [ref=e41]:
+        - generic [ref=e42]: 🌓 일일 변동액(원)
+        - generic [ref=e43]: "-"
+      - generic [ref=e44]:
+        - generic [ref=e45]: 🎁 총 배당금
+        - generic [ref=e46]: "-"
+    - generic [ref=e47]:
+      - generic [ref=e48] [cursor=pointer]:
+        - generic [ref=e49]: S&P 500
+        - generic [ref=e50]: 7,165.08
+        - generic [ref=e51]: +0.80%
+      - generic [ref=e52] [cursor=pointer]:
+        - generic [ref=e53]: Nasdaq
+        - generic [ref=e54]: 24,836.60
+        - generic [ref=e55]: +1.63%
+      - generic [ref=e56] [cursor=pointer]:
+        - generic [ref=e57]: Dow Jones
+        - generic [ref=e58]: 49,230.71
+        - generic [ref=e59]: "-0.16%"
+      - generic [ref=e60] [cursor=pointer]:
+        - generic [ref=e61]: KOSPI
+        - generic [ref=e62]: 6,615.03
+        - generic [ref=e63]: +2.15%
+      - generic [ref=e64] [cursor=pointer]:
+        - generic [ref=e65]: KOSDAQ
+        - generic [ref=e66]: 1,226.18
+        - generic [ref=e67]: +1.86%
+      - generic [ref=e68] [cursor=pointer]:
+        - generic [ref=e69]: USD/KRW
+        - generic [ref=e70]: "1476.40"
+        - generic [ref=e71]: (-)
+    - generic [ref=e72]:
+      - generic [ref=e73]:
+        - generic [ref=e74]:
+          - heading "📈 자산 추이 (History)" [level=2] [ref=e75]
+          - generic [ref=e76]:
+            - generic [ref=e77]:
+              - generic [ref=e80]:
+                - button "1개월" [ref=e81] [cursor=pointer]: 1달
+                - button "3개월" [ref=e82] [cursor=pointer]: 3달
+                - button "1년" [ref=e83] [cursor=pointer]
+                - button "연초대비" [ref=e84] [cursor=pointer]: YTD
+                - button "3년" [ref=e85] [cursor=pointer]
+                - button "5년" [ref=e86] [cursor=pointer]
+                - button "전체" [ref=e87] [cursor=pointer]
+              - generic [ref=e92]:
+                - button "전체 통화" [ref=e93] [cursor=pointer]: 전체
+                - button "원화" [ref=e94] [cursor=pointer]
+                - button "달러" [ref=e95] [cursor=pointer]
+            - button "이전 슬라이드" [ref=e97] [cursor=pointer]: ❮
+            - button "다음 슬라이드" [ref=e98] [cursor=pointer]: ❯
+            - generic [ref=e99]:
+              - generic "슬라이드 1" [ref=e100] [cursor=pointer]
+              - generic "슬라이드 2" [ref=e101] [cursor=pointer]
+        - generic [ref=e102]:
+          - heading "📊 계좌별 요약 (자산 비중)" [level=2] [ref=e103]
+          - generic [ref=e104]:
+            - button "이전 요약 슬라이드" [ref=e110] [cursor=pointer]: ❮
+            - button "다음 요약 슬라이드" [ref=e111] [cursor=pointer]: ❯
+            - generic [ref=e112]:
+              - generic "요약 슬라이드 1" [ref=e113] [cursor=pointer]
+              - generic "요약 슬라이드 2" [ref=e114] [cursor=pointer]
+          - table [ref=e116]:
+            - rowgroup [ref=e117]:
+              - row "계좌명 평가금 투자금 수입액 수익률 일일변동" [ref=e118]:
+                - columnheader "계좌명" [ref=e119]
+                - columnheader "평가금" [ref=e120]
+                - columnheader "투자금" [ref=e121]
+                - columnheader "수입액" [ref=e122]
+                - columnheader "수익률" [ref=e123]
+                - columnheader "일일변동" [ref=e124]
+            - rowgroup
+        - generic [ref=e125]:
+          - heading "📋 보유 종목 (Holdings)" [level=2] [ref=e127]
+          - table [ref=e129]:
+            - rowgroup [ref=e130]:
+              - row "종목명 기준 정렬 비중 기준 정렬 수익률 기준 정렬 수익금 기준 정렬 평가금 기준 정렬 변동률 기준 정렬" [ref=e131]:
+                - columnheader "종목명 기준 정렬" [ref=e132] [cursor=pointer]: 종목명↕
+                - columnheader "비중 기준 정렬" [ref=e133] [cursor=pointer]: 비중↕
+                - columnheader "수익률 기준 정렬" [ref=e134] [cursor=pointer]: 수익률↕
+                - columnheader "수익금 기준 정렬" [ref=e135] [cursor=pointer]: 수익액↕
+                - columnheader "평가금 기준 정렬" [ref=e136] [cursor=pointer]: 평가금↕
+                - columnheader "변동률 기준 정렬" [ref=e137] [cursor=pointer]: 일일변동↕
+            - rowgroup
+      - complementary [ref=e138]:
+        - generic [ref=e139]:
+          - generic [ref=e140]:
+            - heading "🎧 AI 브리핑 팟캐스트" [level=2] [ref=e141]:
+              - generic [ref=e142]: 🎧 AI 브리핑 팟캐스트
+            - button "팟캐스트 새로고침" [ref=e143] [cursor=pointer]: 🔄
+          - generic [ref=e144]:
+            - generic [ref=e156]:
+              - generic [ref=e157]: 재생 대기 중
+              - generic [ref=e158]: 00:00 / 00:00
+            - button "팟캐스트 재생/일시정지" [ref=e160] [cursor=pointer]:
+              - generic [ref=e161]: ▶
+              - generic [ref=e162]: 재생
+            - generic [ref=e164]: "\"재생 버튼을 누르면 오늘의 보유 자산 및 최신 시장 전망 브리핑 팟캐스트가 시작됩니다.\""
+        - generic [ref=e165]:
+          - heading "✍️ 매매 기록" [level=2] [ref=e166]
+          - generic [ref=e167]:
+            - generic [ref=e168]:
+              - generic [ref=e169]: 💳 계좌
+              - combobox [ref=e170]:
+                - option "선택하세요" [selected]
+                - option "AJM"
+                - option "AJMjr"
+                - option "JJG-w-AJM"
+                - option "JJG-w-KKO"
+                - option "JJG-w-AJMjr"
+                - option "JJG-w-AJM-ISA"
+                - option "JJG-w-KKO-ISA"
+            - generic [ref=e171]:
+              - generic [ref=e172]: 🏷️ 종류
+              - combobox [ref=e173]:
+                - option "매수 🟢" [selected]
+                - option "매도 🔴"
+                - option "배당금 💰"
+                - option "현금입금 📥"
+                - option "현금출금 📤"
+            - generic [ref=e174]:
+              - generic [ref=e175]: 💱 통화
+              - combobox [ref=e176]:
+                - option "KRW 🇰🇷" [selected]
+                - option "USD 🇺🇸"
+            - generic [ref=e177]:
+              - generic [ref=e178]: 📅 날짜
+              - textbox [ref=e179]
+            - generic [ref=e180]:
+              - generic [ref=e181]: 🔍 종목 검색 / 입력
+              - combobox "종목명 또는 티커 입력" [ref=e182]
+            - generic [ref=e183]:
+              - generic [ref=e184]: 💵 단가
+              - spinbutton [ref=e185]
+            - generic [ref=e186]:
+              - generic [ref=e187]: 🔢 수량/금액
+              - spinbutton [ref=e188]
+            - button "💾 거래 기록 저장" [ref=e189] [cursor=pointer]

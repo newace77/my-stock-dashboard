@@ -1,0 +1,2 @@
+[    6047ms] The requested module './utils.js' does not provide an export named 'formatAmount'
+[    6411ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:3000/favicon.ico:0

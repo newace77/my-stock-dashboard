@@ -1,6 +1,76 @@
 // 🐶 바둑이의 주식 데이터 처리 스크립트
 // 업데이트: 2026-04-09 (탭 인터페이스 및 MDD 분석 기능 추가)
 
+// =========================================================================
+// 전역 상수 (CONSTANTS) — 매직 넘버/문자열 중앙 관리
+// =========================================================================
+const CONSTANTS = {
+  // 캐시 관련
+  CACHE_KEY: "dashboard_data_cache",
+  CACHE_TTL_MS: 30 * 1000,           // 캐시 유효기간: 30초
+  EXCHANGE_RATE_TTL_MS: 30 * 60 * 1000, // 환율 유효기간: 30분
+
+  // 기본값
+  DEFAULT_USD_KRW_RATE: 1400,
+  DEFAULT_FALLBACK_RATE: 1350.0,
+
+  // API 타임아웃 (ms)
+  FETCH_TIMEOUT_DIRECT: 8000,
+  FETCH_TIMEOUT_GAS: 10000,
+  FETCH_TIMEOUT_PUBLIC: 6000,
+  FETCH_TIMEOUT_RACE: 5000,
+
+  // 배치 크기
+  BATCH_SIZE_HOLDINGS: 3,
+  BATCH_SIZE_LIVE_PRICES: 10,
+
+  // 수익률 계산 관련
+  MDD_LEVEL_STEP: 5,          // MDD 구간 단위 (%)
+  MDD_MAX_LEVELS: 20,         // MDD 구간 최대 개수
+
+  // 차트 관련
+  CHART_BUBBLE_MAX_RADIUS: 35,
+  CHART_BUBBLE_MIN_RADIUS: 6,
+
+  // RSI 기준값
+  RSI_PERIOD: 14,
+  RSI_OVERBOUGHT: 70,
+  RSI_OVERSOLD: 30,
+
+  // 히트맵 변동률 임계값 (%)
+  HEATMAP_LEVEL_5: 3,
+  HEATMAP_LEVEL_4: 1.5,
+  HEATMAP_LEVEL_3: 0.5,
+  HEATMAP_LEVEL_2: 0.1,
+
+  // 기간 필터
+  HISTORY_RANGES: ["1M", "3M", "6M", "1Y", "3Y", "5Y", "YTD", "ALL"],
+
+  // 팟캐스트 TTS
+  PODCAST_TTS_RATE: 1.05,
+  PODCAST_CHARS_PER_SEC: 0.25, // 1자당 약 0.25초
+
+  // 배당 달력
+  DIVIDEND_HISTORY_YEARS: 5,
+  DIVIDEND_DATE_OFFSET_HOURS: 12, // 하루 밀림 방지용 시간 보정
+
+  // 배치 간 대기 시간 (ms)
+  SLEEP_DIVIDEND: 300,
+  SLEEP_HOLDINGS_BATCH: 100,
+  SLEEP_LIVE_PRICE_BATCH: 50,
+  SLEEP_MARKET_REFRESH: 3000,
+
+  // 인증 관련
+  GOOGLE_OAUTH_SCOPE: "https://www.googleapis.com/auth/cloud-platform email profile",
+  GOOGLE_USERINFO_URL: "https://www.googleapis.com/oauth2/v3/userinfo",
+
+  // 야후 파이낸스 URL
+  YAHOO_CHART_BASE: "https://query1.finance.yahoo.com/v8/finance/chart/",
+
+  // 스냅샷 캐시 TTL (ms)
+  SNAPSHOT_CACHE_TTL_MS: 30 * 1000,
+};
+
 
 // 야후 파이낸스 티커 인코딩 헬퍼 함수 (=X 형태의 특수 티커 이중 인코딩 및 디코딩 오작동 방지)
 function encodeYahooTicker(ticker) {
@@ -68,7 +138,7 @@ function initGoogleAuth() {
 async function handleTokenResponse(response) {
   if (response.error) {
     console.error("구글 OAuth 로그인 실패:", response.error);
-    alert("구글 로그인 중 에러가 발생했습니다: " + response.error);
+    showToast("구글 로그인 중 에러가 발생했습니다: " + response.error, "error");
     return;
   }
 
@@ -155,8 +225,9 @@ function loginGoogle() {
       });
       googleTokenClient.requestAccessToken({ prompt: "consent" });
     } else {
-      alert(
+      showToast(
         "구글 로그인 모듈이 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.",
+        "warning",
       );
     }
   }
@@ -252,13 +323,14 @@ const HOLDINGS_COL = {
   NAME: 0,
   TICKER: 1,
   SHARES: 3,
-  COST_BASIS: 4,
+  COST_BASIS_FOREIGN: 4, // 이 매수금액(현지통화)
   AVG_COST: 5,
   CURRENT_PRICE: 6,
   RETURN_RATE: 7,
   EVAL_KRW: 8,
   WEIGHT: 9,
   DAILY_CHANGE: 10,
+  COST_BASIS: 13, // 이 매수금액(원)
   PROFIT: 14,
 };
 
@@ -293,8 +365,7 @@ const HISTORY_COL = {
 function isExchangeRateValid() {
   if (usdKrwRate <= 100) return false;
   if (usdKrwRateUpdatedAt === 0) return true; // 초기값 1400 사용 허용
-  const THIRTY_MIN = 30 * 60 * 1000;
-  return Date.now() - usdKrwRateUpdatedAt < THIRTY_MIN;
+  return Date.now() - usdKrwRateUpdatedAt < CONSTANTS.EXCHANGE_RATE_TTL_MS;
 }
 
 /**
@@ -315,7 +386,7 @@ const logger = {
 
 // 뷰 모드 설정 (auto, pc, mobile)
 let globalHoldings = [];
-let usdKrwRate = 1400; // USD/KRW 환율 (기본값, Summary 시트에서 갱신)
+let usdKrwRate = CONSTANTS.DEFAULT_USD_KRW_RATE; // USD/KRW 환율 (기본값, Summary 시트에서 갱신)
 let usdKrwRateUpdatedAt = 0; // 환율 최근 갱신 시각 (ms)
 let globalMarketIndices = null; // 지수 및 환율 백업 캐시 (CORS/방화벽 대비용)
 let isPrivacyMode = localStorage.getItem("privacy_mode") === "true";
@@ -416,32 +487,26 @@ function formatValueByMode(val, isKRW = true) {
     );
   }
 
-  // 모바일 포맷팅 (만/억 단위)
+  // 모바일 포맷팅: 표시 숫자 3자리 이하, 소수점 1자리
   const absNum = Math.abs(num);
   const sign = num < 0 ? "-" : "";
   let result = "";
 
   if (isKRW) {
-    if (absNum >= 100000000) {
-      result = sign + (absNum / 100000000).toFixed(1) + "억(원)";
+    if (absNum >= 10000000) {
+      // 1000만 이상 → 억원 (XXX.X억원, 소수점 1자리)
+      result = sign + (absNum / 100000000).toFixed(1) + "억원";
     } else if (absNum >= 10000) {
-      result = sign + (absNum / 10000).toFixed(0) + "만";
+      // 1만 이상 → 만원 (XXX만원, 정수)
+      result = sign + Math.round(absNum / 10000).toLocaleString("ko-KR") + "만원";
     } else {
-      result = sign + Math.round(absNum).toLocaleString() + "원";
+      result = sign + Math.round(absNum).toLocaleString("ko-KR") + "원";
     }
   } else {
-    // USD는 모바일에서도 가급적 소수점 유지하되 $ 표시
     if (absNum >= 1000) {
-      result =
-        sign + "$" + (absNum / 1000).toFixed(1).replace(/\.0$/, "") + "K";
+      result = sign + "$" + (absNum / 1000).toFixed(1) + "K";
     } else {
-      result =
-        sign +
-        "$" +
-        absNum.toLocaleString(undefined, {
-          minimumFractionDigits: 1,
-          maximumFractionDigits: 1,
-        });
+      result = sign + "$" + absNum.toFixed(1);
     }
   }
   return result;
@@ -488,7 +553,7 @@ const resolvedKoreanMarkets = (() => {
   try {
     const cached = localStorage.getItem("korean_ticker_market_cache");
     return cached ? JSON.parse(cached) : {};
-  } catch (e) {
+  } catch {
     return {};
   }
 })();
@@ -496,7 +561,7 @@ const resolvedKoreanMarkets = (() => {
 function saveKoreanMarketCache() {
   try {
     localStorage.setItem("korean_ticker_market_cache", JSON.stringify(resolvedKoreanMarkets));
-  } catch (e) {
+  } catch {
     // ignore
   }
 }
@@ -1346,27 +1411,13 @@ function updateViewModeIndicator() {
   }
 
   // 5. 모바일/PC 전환에 따른 시장 데이터 포맷 즉시 갱신 (데이터가 있는 경우)
-  const isMobileMode = currentDisplayMode === "mobile";
   const markets = ["snp", "nasdaq", "dow", "kospi", "kosdaq", "fx"];
   markets.forEach((id) => {
     const valEl = document.getElementById(`card-${id}-val`);
     if (valEl && valEl.getAttribute("data-price")) {
       const lastPrice = parseFloat(valEl.getAttribute("data-price"));
       if (!isNaN(lastPrice)) {
-        if (id === "fx") {
-          valEl.textContent = isMobileMode
-            ? Math.round(lastPrice).toLocaleString()
-            : lastPrice.toFixed(2);
-        } else {
-          if (isMobileMode) {
-            valEl.textContent = Math.round(lastPrice).toLocaleString();
-          } else {
-            valEl.textContent = lastPrice.toLocaleString(undefined, {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            });
-          }
-        }
+        valEl.textContent = Math.round(lastPrice).toLocaleString();
       }
     }
   });
@@ -1385,14 +1436,6 @@ function cycleViewMode() {
 
   // 차트 크기 재조정을 위해 리사이즈 이벤트 발생
   window.dispatchEvent(new Event("resize"));
-
-  // 보유 종목 뷰 자동 전환 (모바일 모드일 때 카드 뷰)
-  if (
-    userViewMode === "mobile" ||
-    (userViewMode === "auto" && window.innerWidth <= 768)
-  ) {
-    switchHoldingsView("cards");
-  }
 }
 
 /**
@@ -1447,7 +1490,7 @@ async function fetchData(force = false) {
         const now = new Date().getTime();
         const cacheAge = (now - (cache.timestamp || 0)) / 1000;
         // 캐시가 30초 이내면 사용
-        if (cacheAge < 30) {
+        if (cacheAge < CONSTANTS.CACHE_TTL_MS / 1000) {
           updateTimestamp(true, "Cache");
           return;
         }
@@ -1839,7 +1882,7 @@ async function fetchWithFallback(
 
   const fetchTask = async (url, options = {}) => {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), options.timeout || 8000);
+    const timeoutId = setTimeout(() => controller.abort(), options.timeout || CONSTANTS.FETCH_TIMEOUT_DIRECT);
     
     try {
       const response = await fetch(url, {
@@ -1908,14 +1951,14 @@ async function fetchWithFallback(
     if (!isYahoo) {
       try {
         logger.log(`[Fetch] 직접 페치 시도: ${url}`);
-        return await fetchTask(url, { timeout: 8000 });
+        return await fetchTask(url, { timeout: CONSTANTS.FETCH_TIMEOUT_DIRECT });
       } catch (e) {
         logger.warn(`[Fetch] 직접 페치 실패, GAS 프록시 전환:`, e);
         if (CONFIG.gasURL) {
           try {
             const apiKey = CONFIG.gasApiKey || "";
             const gasProxyUrl = `${CONFIG.gasURL}?url=${encodeURIComponent(url)}&apiKey=${encodeURIComponent(apiKey)}`;
-            return await fetchTask(gasProxyUrl, { timeout: 8000 });
+            return await fetchTask(gasProxyUrl, { timeout: CONSTANTS.FETCH_TIMEOUT_DIRECT });
           } catch (gasErr) {
             logger.error(`[Fetch] GAS 프록시를 통한 페치도 실패했습니다:`, gasErr);
           }
@@ -1930,7 +1973,7 @@ async function fetchWithFallback(
         const apiKey = CONFIG.gasApiKey || "";
         const gasProxyUrl = `${CONFIG.gasURL}?url=${encodeURIComponent(url)}&apiKey=${encodeURIComponent(apiKey)}`;
         logger.log(`[Fetch] GAS 프록시 시도: ${gasProxyUrl}`);
-        return await fetchTask(gasProxyUrl, { timeout: 10000 });
+        return await fetchTask(gasProxyUrl, { timeout: CONSTANTS.FETCH_TIMEOUT_GAS });
       } catch (e) {
         logger.warn(`[Fetch] GAS 프록시 실패, 공용 프록시 레이싱 전환:`, e);
       }
@@ -1944,11 +1987,11 @@ async function fetchWithFallback(
       `https://api.codetabs.com/v1/proxy?url=${encodedTarget}`
     ];
 
-    const tasks = publicProxies.map((proxy) => fetchTask(proxy, { timeout: 6000 }));
+    const tasks = publicProxies.map((proxy) => fetchTask(proxy, { timeout: CONSTANTS.FETCH_TIMEOUT_PUBLIC }));
 
     // 야후 파이낸스가 아니라면 직접 호출도 레이싱에 포함
     if (!isYahoo) {
-      tasks.push(fetchTask(url, { timeout: 5000 }));
+      tasks.push(fetchTask(url, { timeout: CONSTANTS.FETCH_TIMEOUT_RACE }));
     }
 
     return await Promise.any(tasks);
@@ -2364,9 +2407,15 @@ function parseSafeFloat(val) {
   return isNaN(num) ? 0 : num;
 }
 
-function formatKRWInteger(val) {
-  const num = Math.round(parseSafeFloat(val));
-  return num.toLocaleString("ko-KR");
+
+
+/**
+ * 만원 단위로 포맷 (예: 1,234,567 → 123만)
+ */
+function formatManwon(val) {
+  const num = parseSafeFloat(val);
+  const manwon = Math.round(num / 10000);
+  return manwon.toLocaleString("ko-KR") + "만";
 }
 
 function getColorClass(value) {
@@ -2447,30 +2496,16 @@ async function updateMarketCharts() {
           const isPositive = parseFloat(changePercent) >= 0;
 
           if (valEl) {
-            // 모바일 모드 여부 확인 (화면 너비 768px 이하 또는 사용자 설정이 모바일인 경우)
-            const isMobileMode =
-              userViewMode === "mobile" ||
-              (userViewMode === "auto" && window.innerWidth <= 768);
-
             if (m.id === "fx") {
-              // 환율 표시: 모바일은 소수점 없이, PC는 소수점 2자리
-              valEl.textContent = isMobileMode
-                ? Math.round(lastPrice).toLocaleString()
-                : lastPrice.toFixed(2);
+              // 환율 표시: 소수점 없이 쉼표
+              valEl.textContent = Math.round(lastPrice).toLocaleString();
               valEl.setAttribute("data-price", lastPrice);
               usdKrwRate = lastPrice;
               usdKrwRateUpdatedAt = Date.now();
             } else {
-              // 지수 표시: 모바일은 소수점 없이, PC는 소수점 2자리(천단위 구분자 포함)
+              // 지수 표시: 소수점 없이 쉼표
               valEl.setAttribute("data-price", lastPrice);
-              if (isMobileMode) {
-                valEl.textContent = Math.round(lastPrice).toLocaleString();
-              } else {
-                valEl.textContent = lastPrice.toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                });
-              }
+              valEl.textContent = Math.round(lastPrice).toLocaleString();
             }
           }
 
@@ -2708,15 +2743,18 @@ function processHoldingsData(data) {
 
     const rawAvgCost = parseSafeFloat(row[HOLDINGS_COL.AVG_COST]);
     const rawCurrentPrice = parseSafeFloat(row[HOLDINGS_COL.CURRENT_PRICE]);
+    const rawCostBasisForeign = parseSafeFloat(row[HOLDINGS_COL.COST_BASIS_FOREIGN]);
     const isUSD = currency === "USD";
 
     let costBasisForeignItem = 0;
     let evalForeignItem = 0;
     if (isUSD) {
       costBasisForeignItem =
-        rawAvgCost > 0
-          ? shares * rawAvgCost
-          : costBasis / (usdKrwRate || 1350.0);
+        rawCostBasisForeign > 0
+          ? rawCostBasisForeign
+          : rawAvgCost > 0
+            ? shares * rawAvgCost
+            : costBasis / (usdKrwRate || 1350.0);
       evalForeignItem =
         rawCurrentPrice > 0
           ? shares * rawCurrentPrice
@@ -2758,6 +2796,7 @@ function processHoldingsData(data) {
       returnRate: returnRate,
       eval: a.eval,
       profit: a.profit,
+      costBasis: a.costBasis,
       dailyChange: a.dailyChange,
       shares: a.shares,
       avgCost: avgCost,
@@ -2765,8 +2804,9 @@ function processHoldingsData(data) {
       display: {
         weight: weight.toFixed(2) + "%",
         returnRate: returnRate.toFixed(2) + "%",
-        evalKRW: formatKRWInteger(a.eval),
-        profitKRW: formatKRWInteger(a.profit),
+        evalKRW: formatManwon(a.eval),
+        profitKRW: formatManwon(a.profit),
+        costBasisKRW: formatManwon(a.costBasis),
         dailyChange: a.dailyChange.toFixed(2) + "%",
         currentPrice: a.currentPrice || a.eval,
       },
@@ -2835,14 +2875,17 @@ function renderHoldingsTable() {
       returnRate: 2,
       profit: 3,
       eval: 4,
-      dailyChange: 5,
+      costBasis: 5,
+      dailyChange: 6,
     };
     headers.forEach((th, idx) => {
       let text = th.textContent.replace(/[▲▼↕]/g, "");
       if (idx === headerMap[sortState.column]) {
         th.textContent = text + (sortState.direction === "asc" ? "▲" : "▼");
+        th.classList.add("sort-active");
       } else {
         th.textContent = text + "↕";
+        th.classList.remove("sort-active");
       }
     });
   }
@@ -2855,12 +2898,9 @@ function renderHoldingsTable() {
     const weightFmt = formatPercent(item.display.weight);
     const returnRateFmt = formatPercent(item.display.returnRate);
     const dailyChangeFmt = formatPercent(item.display.dailyChange);
-    const formattedProfit = getResponsiveValueHTML(
-      maskValue(item.display.profitKRW + "원"),
-    );
-    const formattedEval = getResponsiveValueHTML(
-      maskValue(item.display.evalKRW + "원"),
-    );
+    const formattedProfit = maskValue(item.display.profitKRW);
+    const formattedEval = maskValue(item.display.evalKRW);
+    const formattedCostBasis = maskValue(item.display.costBasisKRW);
 
     const currencyLabel = item.currency === "KRW" ? "KRW" : "USD";
     const currencyClass = item.currency === "KRW" ? "krw" : "";
@@ -2876,94 +2916,13 @@ function renderHoldingsTable() {
             <td data-label="수익률" class="${getColorClass(item.display.returnRate)}"><span>${returnRateFmt}</span></td>
             <td data-label="수익액" class="${getColorClass(item.display.profitKRW)}"><span>${formattedProfit}</span></td>
             <td data-label="평가금"><span>${formattedEval}</span></td>
+            <td data-label="매수금"><span>${formattedCostBasis}</span></td>
             <td data-label="일일변동" class="${getColorClass(item.display.dailyChange)}"><span>${dailyChangeFmt}</span></td>
         `;
     tbody.appendChild(tr);
   });
-
-  // 카드 뷰도 항상 함께 갱신
-  renderHoldingsCards();
 }
 
-/**
- * 보유 종목 테이블/카드 뷰 전환
- */
-function switchHoldingsView(viewType) {
-  const cardsView = document.getElementById("holdings-cards-view");
-  const tableView = document.getElementById("holdings-table-view");
-  if (!cardsView || !tableView) return;
-
-  if (viewType === "cards") {
-    cardsView.style.display = "grid";
-    tableView.style.display = "none";
-  } else {
-    cardsView.style.display = "none";
-    tableView.style.display = "block";
-  }
-}
-
-/**
- * 보유 종목 카드 뷰 렌더링
- */
-function renderHoldingsCards() {
-  const container = document.getElementById("holdings-cards-view");
-  if (!container) return;
-  container.innerHTML = "";
-
-  globalHoldings.forEach((item) => {
-    const isPositive = item.display.dailyChange >= 0;
-    const posClass = isPositive ? "positive" : "negative";
-    const changeSign = isPositive ? "+" : "";
-    const weightFmt = formatPercent(item.display.weight);
-    const returnRateFmt = formatPercent(item.display.returnRate);
-    const dailyChangeFmt = formatPercent(item.display.dailyChange);
-    const formattedProfit = maskValue(item.display.profitKRW + "원");
-    const formattedEval = maskValue(item.display.evalKRW + "원");
-
-    const currencyLabel = item.currency === "KRW" ? "KRW" : "USD";
-    const currencyClass = item.currency === "KRW" ? "krw" : "";
-
-    const card = document.createElement("div");
-    card.className = `stock-card ${posClass}`;
-    card.onclick = () => openStockModal(item);
-
-    card.innerHTML = `
-      <div class="card-top">
-        <div class="card-ticker-section">
-          <div class="card-ticker-row">
-            <span class="card-ticker">${safeValue(item.name, true)}</span>
-            <span class="card-currency-badge ${currencyClass}">${currencyLabel}</span>
-          </div>
-          <div class="card-company">${safeValue(item.ticker, true)}</div>
-        </div>
-        <div class="card-trend-icon ${posClass}">
-          ${
-            isPositive
-              ? `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>`
-              : `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 17h8m0 0v-8m0 8l-8-8-4 4-6-6"></path></svg>`
-          }
-        </div>
-      </div>
-      <div class="card-price-section">
-        <div class="card-price">${formattedEval}</div>
-        <div class="card-change ${posClass}">
-          ${changeSign}${dailyChangeFmt} (${formattedProfit})
-        </div>
-      </div>
-      <div class="card-bottom">
-        <div class="card-bottom-row">
-          <span class="label">비중</span>
-          <span class="value">${weightFmt}</span>
-        </div>
-        <div class="card-bottom-row">
-          <span class="label">수익률</span>
-          <span class="value ${getColorClass(item.display.returnRate)}">${returnRateFmt}</span>
-        </div>
-      </div>
-    `;
-    container.appendChild(card);
-  });
-}
 
 // Global variable to keep track of the current item in the modal for chart range updates
 let currentModalItem = null;
@@ -4342,13 +4301,6 @@ async function handleTransactionSubmit(e) {
   if (currency === "KRW") {
     quantity = Math.round(quantity);
     price = Math.round(price);
-  }
-
-  // 적용 환율 추출 (외화일 때만)
-  let usdKrwRate = 1.0;
-  if (currency === "USD") {
-    usdKrwRate =
-      parseFloat(document.getElementById("usd-rate-input").value) || 1350.0;
   }
 
   try {

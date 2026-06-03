@@ -1,0 +1,8 @@
+[      40ms] [ERROR] 🚨 [보안 경고] ... @ http://localhost:3000/js/main.js:27
+[      50ms] ReferenceError: isPrivacyMode is not defined
+    at initDashboard (http://localhost:3000/js/ui.js:2112:29)
+    at HTMLDocument.<anonymous> (http://localhost:3000/js/main.js:54:3)
+[      50ms] ReferenceError: lastSummaryLabels is not defined
+    at refreshAllCharts (http://localhost:3000/js/charts.js:755:3)
+    at applyTheme (http://localhost:3000/js/charts.js:825:5)
+    at HTMLDocument.<anonymous> (http://localhost:3000/js/main.js:596:3)

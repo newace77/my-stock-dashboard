@@ -1,0 +1,56 @@
+[      45ms] [ERROR] 🚨 [보안 경고] ... @ http://localhost:3000/js/main.js:27
+[      49ms] [WARNING] Summary parsing error ReferenceError: getResponsiveValueHTML is not defined
+    at renderSummary (http://localhost:3000/js/ui.js:786:24)
+    at renderFromData (http://localhost:3000/js/ui.js:502:7)
+    at fetchData (http://localhost:3000/js/main.js:103:9)
+    at HTMLDocument.<anonymous> (http://localhost:3000/js/main.js:72:3) @ http://localhost:3000/js/state.js:19
+[      49ms] [ERROR] Summary rendering failed: ReferenceError: safeValue is not defined
+    at http://localhost:3000/js/ui.js:853:20
+    at Array.forEach (<anonymous>)
+    at renderSummary (http://localhost:3000/js/ui.js:833:8)
+    at renderFromData (http://localhost:3000/js/ui.js:502:7)
+    at fetchData (http://localhost:3000/js/main.js:103:9)
+    at HTMLDocument.<anonymous> (http://localhost:3000/js/main.js:72:3) @ http://localhost:3000/js/state.js:20
+[      50ms] [ERROR] Holdings rendering failed: ReferenceError: isKoreanStock is not defined
+    at http://localhost:3000/js/ui.js:900:7
+    at Array.forEach (<anonymous>)
+    at processHoldingsData (http://localhost:3000/js/ui.js:887:8)
+    at renderFromData (http://localhost:3000/js/ui.js:513:7)
+    at fetchData (http://localhost:3000/js/main.js:103:9)
+    at HTMLDocument.<anonymous> (http://localhost:3000/js/main.js:72:3) @ http://localhost:3000/js/state.js:20
+[      50ms] [ERROR] History rendering failed: ReferenceError: parseSafeFloat is not defined
+    at http://localhost:3000/js/charts.js:460:5
+    at Array.map (<anonymous>)
+    at renderHistoryChartWithRange (http://localhost:3000/js/charts.js:459:30)
+    at renderFromData (http://localhost:3000/js/ui.js:522:7)
+    at fetchData (http://localhost:3000/js/main.js:103:9)
+    at HTMLDocument.<anonymous> (http://localhost:3000/js/main.js:72:3) @ http://localhost:3000/js/state.js:20
+[      51ms] ReferenceError: parseSafeFloat is not defined
+    at http://localhost:3000/js/charts.js:460:5
+    at Array.map (<anonymous>)
+    at renderHistoryChartWithRange (http://localhost:3000/js/charts.js:459:30)
+    at refreshAllCharts (http://localhost:3000/js/charts.js:752:5)
+    at applyTheme (http://localhost:3000/js/charts.js:824:5)
+    at HTMLDocument.<anonymous> (http://localhost:3000/js/main.js:596:3)
+[     967ms] [WARNING] Summary parsing error ReferenceError: getResponsiveValueHTML is not defined
+    at renderSummary (http://localhost:3000/js/ui.js:786:24)
+    at renderFromData (http://localhost:3000/js/ui.js:502:7)
+    at fetchData (http://localhost:3000/js/main.js:317:7) @ http://localhost:3000/js/state.js:19
+[     968ms] [ERROR] Summary rendering failed: ReferenceError: safeValue is not defined
+    at http://localhost:3000/js/ui.js:853:20
+    at Array.forEach (<anonymous>)
+    at renderSummary (http://localhost:3000/js/ui.js:833:8)
+    at renderFromData (http://localhost:3000/js/ui.js:502:7)
+    at fetchData (http://localhost:3000/js/main.js:317:7) @ http://localhost:3000/js/state.js:20
+[     969ms] [ERROR] Holdings rendering failed: ReferenceError: isKoreanStock is not defined
+    at http://localhost:3000/js/ui.js:900:7
+    at Array.forEach (<anonymous>)
+    at processHoldingsData (http://localhost:3000/js/ui.js:887:8)
+    at renderFromData (http://localhost:3000/js/ui.js:513:7)
+    at fetchData (http://localhost:3000/js/main.js:317:7) @ http://localhost:3000/js/state.js:20
+[     969ms] [ERROR] History rendering failed: ReferenceError: parseSafeFloat is not defined
+    at http://localhost:3000/js/charts.js:460:5
+    at Array.map (<anonymous>)
+    at renderHistoryChartWithRange (http://localhost:3000/js/charts.js:459:30)
+    at renderFromData (http://localhost:3000/js/ui.js:522:7)
+    at fetchData (http://localhost:3000/js/main.js:317:7) @ http://localhost:3000/js/state.js:20

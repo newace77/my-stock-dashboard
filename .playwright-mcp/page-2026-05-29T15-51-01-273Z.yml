@@ -1,0 +1,496 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - heading "🐶 바둑이 주식 대시보드" [level=1] [ref=e4]
+    - generic [ref=e5]:
+      - button "Google 로그인" [ref=e7] [cursor=pointer]:
+        - img [ref=e8]
+        - generic [ref=e13]: Google 로그인
+      - button "⚙️ 설정" [ref=e14] [cursor=pointer]
+      - generic [ref=e15]: ⏳ 데이터 로드 중...
+  - banner [ref=e16]:
+    - paragraph [ref=e17]: 데이터로 보는 스마트한 투자 생활
+  - tablist "대시보드 탭" [ref=e18]:
+    - tab "📊 포트폴리오" [selected] [ref=e19] [cursor=pointer]
+    - tab "📉 MDD 분석" [ref=e20] [cursor=pointer]
+    - tab "💼 My holdings" [ref=e21] [cursor=pointer]
+    - tab "🇺🇸 S&P 500" [ref=e22] [cursor=pointer]
+    - tab "🇰🇷 KOSPI 200" [ref=e23] [cursor=pointer]
+    - tab "🎁 배당" [ref=e24] [cursor=pointer]
+    - tab "🔥 Heatmap" [ref=e25] [cursor=pointer]
+  - tabpanel [ref=e26]:
+    - generic [ref=e27]:
+      - button "새로 갱신 🔄" [ref=e28] [cursor=pointer]
+      - generic [ref=e29]:
+        - generic [ref=e30]: 💰 현재 평가액
+        - generic [ref=e31]: 980,341,495
+      - generic [ref=e32]:
+        - generic [ref=e33]: 💳 총 투자액
+        - generic [ref=e34]: 646,348,050
+      - generic [ref=e35]:
+        - generic [ref=e36]: 💵 수익액
+        - generic [ref=e37]: 333,993,445
+      - generic [ref=e38]:
+        - generic [ref=e39]: 📈 수익률
+        - generic [ref=e40]: 51.67%
+      - generic [ref=e41]:
+        - generic [ref=e42]: 🌓 일일 변동액(원)
+        - generic [ref=e43]:
+          - text: 0.75%
+          - generic [ref=e44]: (7,321,594 )
+      - generic [ref=e45]:
+        - generic [ref=e46]: 🎁 총 배당금
+        - generic [ref=e47]: 29,104,113
+    - generic [ref=e48]:
+      - generic [ref=e49] [cursor=pointer]:
+        - generic [ref=e50]: S&P 500
+        - generic [ref=e51]: 7,165.08
+        - generic [ref=e52]: +0.80%
+      - generic [ref=e53] [cursor=pointer]:
+        - generic [ref=e54]: Nasdaq
+        - generic [ref=e55]: 24,836.60
+        - generic [ref=e56]: +1.63%
+      - generic [ref=e57] [cursor=pointer]:
+        - generic [ref=e58]: Dow Jones
+        - generic [ref=e59]: 49,230.71
+        - generic [ref=e60]: "-0.16%"
+      - generic [ref=e61] [cursor=pointer]:
+        - generic [ref=e62]: KOSPI
+        - generic [ref=e63]: 6,615.03
+        - generic [ref=e64]: +2.15%
+      - generic [ref=e65] [cursor=pointer]:
+        - generic [ref=e66]: KOSDAQ
+        - generic [ref=e67]: 1,226.18
+        - generic [ref=e68]: +1.86%
+      - generic [ref=e69] [cursor=pointer]:
+        - generic [ref=e70]: USD/KRW
+        - generic [ref=e71]: "1476.40"
+        - generic [ref=e72]: (-)
+    - generic [ref=e73]:
+      - generic [ref=e74]:
+        - generic [ref=e75]:
+          - heading "📈 자산 추이 (History)" [level=2] [ref=e76]
+          - generic [ref=e77]:
+            - generic [ref=e78]:
+              - generic [ref=e79]:
+                - generic [ref=e81]:
+                  - button "1개월" [ref=e82] [cursor=pointer]: 1달
+                  - button "3개월" [ref=e83] [cursor=pointer]: 3달
+                  - button "1년" [ref=e84] [cursor=pointer]
+                  - button "연초대비" [ref=e85] [cursor=pointer]: YTD
+                  - button "3년" [ref=e86] [cursor=pointer]
+                  - button "5년" [ref=e87] [cursor=pointer]
+                  - button "전체" [ref=e88] [cursor=pointer]
+                - generic [ref=e89]:
+                  - generic [ref=e92] [cursor=pointer]: 총 평가액
+                  - generic [ref=e95] [cursor=pointer]: 총 투자액
+                  - generic [ref=e98] [cursor=pointer]: 수익금
+                  - generic [ref=e101] [cursor=pointer]: 배당액
+              - generic [ref=e105]:
+                - button "전체 통화" [ref=e106] [cursor=pointer]: 전체
+                - button "원화" [ref=e107] [cursor=pointer]
+                - button "달러" [ref=e108] [cursor=pointer]
+            - button "이전 슬라이드" [ref=e110] [cursor=pointer]: ❮
+            - button "다음 슬라이드" [ref=e111] [cursor=pointer]: ❯
+            - generic [ref=e112]:
+              - generic "슬라이드 1" [ref=e113] [cursor=pointer]
+              - generic "슬라이드 2" [ref=e114] [cursor=pointer]
+        - generic [ref=e115]:
+          - heading "📊 계좌별 요약 (자산 비중)" [level=2] [ref=e116]
+          - generic [ref=e117]:
+            - button "이전 요약 슬라이드" [ref=e123] [cursor=pointer]: ❮
+            - button "다음 요약 슬라이드" [ref=e124] [cursor=pointer]: ❯
+            - generic [ref=e125]:
+              - generic "요약 슬라이드 1" [ref=e126] [cursor=pointer]
+              - generic "요약 슬라이드 2" [ref=e127] [cursor=pointer]
+          - table [ref=e129]:
+            - rowgroup [ref=e130]:
+              - row "계좌명 평가금 투자금 수입액 수익률 일일변동" [ref=e131]:
+                - columnheader "계좌명" [ref=e132]
+                - columnheader "평가금" [ref=e133]
+                - columnheader "투자금" [ref=e134]
+                - columnheader "수입액" [ref=e135]
+                - columnheader "수익률" [ref=e136]
+                - columnheader "일일변동" [ref=e137]
+            - rowgroup [ref=e138]:
+              - row "AJM 492,801,180 273,382,947 219,418,233 80.26% 0.63% (3,103,672)" [ref=e139]:
+                - cell "AJM" [ref=e140]
+                - cell "492,801,180" [ref=e141]
+                - cell "273,382,947" [ref=e142]
+                - cell "219,418,233" [ref=e143]
+                - cell "80.26%" [ref=e144]
+                - cell "0.63% (3,103,672)" [ref=e145]:
+                  - generic [ref=e146]: 0.63% (3,103,672)
+              - row "AJMjr 13,652,389 9,900,000 3,752,389 37.90% 0.99% (133,234)" [ref=e147]:
+                - cell "AJMjr" [ref=e148]
+                - cell "13,652,389" [ref=e149]
+                - cell "9,900,000" [ref=e150]
+                - cell "3,752,389" [ref=e151]
+                - cell "37.90%" [ref=e152]
+                - cell "0.99% (133,234)" [ref=e153]:
+                  - generic [ref=e154]: 0.99% (133,234)
+              - row "JJG-w-AJM-ISA 57,941,937 39,757,337 18,184,600 45.74% 1.61% (919,285)" [ref=e155]:
+                - cell "JJG-w-AJM-ISA" [ref=e156]
+                - cell "57,941,937" [ref=e157]
+                - cell "39,757,337" [ref=e158]
+                - cell "18,184,600" [ref=e159]
+                - cell "45.74%" [ref=e160]
+                - cell "1.61% (919,285)" [ref=e161]:
+                  - generic [ref=e162]: 1.61% (919,285)
+              - row "JJG-w-AJMjr 122,364,857 91,270,000 31,094,857 34.07% 0.80% (965,584)" [ref=e163]:
+                - cell "JJG-w-AJMjr" [ref=e164]
+                - cell "122,364,857" [ref=e165]
+                - cell "91,270,000" [ref=e166]
+                - cell "31,094,857" [ref=e167]
+                - cell "34.07%" [ref=e168]
+                - cell "0.80% (965,584)" [ref=e169]:
+                  - generic [ref=e170]: 0.80% (965,584)
+              - row "JJG-w-KKO 171,751,363 139,097,001 32,654,362 23.48% 0.49% (839,579)" [ref=e171]:
+                - cell "JJG-w-KKO" [ref=e172]
+                - cell "171,751,363" [ref=e173]
+                - cell "139,097,001" [ref=e174]
+                - cell "32,654,362" [ref=e175]
+                - cell "23.48%" [ref=e176]
+                - cell "0.49% (839,579)" [ref=e177]:
+                  - generic [ref=e178]: 0.49% (839,579)
+              - row "JJG-w-KKO-ISA 37,840,521 32,940,765 4,899,756 14.87% 1.06% (398,175)" [ref=e179]:
+                - cell "JJG-w-KKO-ISA" [ref=e180]
+                - cell "37,840,521" [ref=e181]
+                - cell "32,940,765" [ref=e182]
+                - cell "4,899,756" [ref=e183]
+                - cell "14.87%" [ref=e184]
+                - cell "1.06% (398,175)" [ref=e185]:
+                  - generic [ref=e186]: 1.06% (398,175)
+              - row "JJG-w-AJM 83,989,248 60,000,000 23,989,248 39.98% 1.16% (962,065)" [ref=e187]:
+                - cell "JJG-w-AJM" [ref=e188]
+                - cell "83,989,248" [ref=e189]
+                - cell "60,000,000" [ref=e190]
+                - cell "23,989,248" [ref=e191]
+                - cell "39.98%" [ref=e192]
+                - cell "1.16% (962,065)" [ref=e193]:
+                  - generic [ref=e194]: 1.16% (962,065)
+        - generic [ref=e195]:
+          - heading "📋 보유 종목 (Holdings)" [level=2] [ref=e197]
+          - table [ref=e199]:
+            - rowgroup [ref=e200]:
+              - row "종목명 기준 정렬 비중 기준 정렬 수익률 기준 정렬 수익금 기준 정렬 평가금 기준 정렬 변동률 기준 정렬" [ref=e201]:
+                - columnheader "종목명 기준 정렬" [ref=e202] [cursor=pointer]: 종목명 ↕
+                - columnheader "비중 기준 정렬" [ref=e203] [cursor=pointer]: 비중 ▼
+                - columnheader "수익률 기준 정렬" [ref=e204] [cursor=pointer]: 수익률 ↕
+                - columnheader "수익금 기준 정렬" [ref=e205] [cursor=pointer]: 수익액 ↕
+                - columnheader "평가금 기준 정렬" [ref=e206] [cursor=pointer]: 평가금 ↕
+                - columnheader "변동률 기준 정렬" [ref=e207] [cursor=pointer]: 일일변동 ↕
+            - rowgroup [ref=e208]:
+              - row "SPYM USD 16.37% 14.82% 26,295,998원 155,052,511원 0.55%" [ref=e209] [cursor=pointer]:
+                - cell "SPYM USD" [ref=e210]:
+                  - generic [ref=e211]:
+                    - text: SPYM
+                    - generic [ref=e212]: USD
+                - cell "16.37%" [ref=e213]
+                - cell "14.82%" [ref=e214]
+                - cell "26,295,998원" [ref=e215]
+                - cell "155,052,511원" [ref=e216]
+                - cell "0.55%" [ref=e217]
+              - row "QQQM USD 8.16% 29.76% 21,589,195원 77,328,690원 0.82%" [ref=e218] [cursor=pointer]:
+                - cell "QQQM USD" [ref=e219]:
+                  - generic [ref=e220]:
+                    - text: QQQM
+                    - generic [ref=e221]: USD
+                - cell "8.16%" [ref=e222]
+                - cell "29.76%" [ref=e223]
+                - cell "21,589,195원" [ref=e224]
+                - cell "77,328,690원" [ref=e225]
+                - cell "0.82%" [ref=e226]
+              - row "K_NASDAQ(ETF) KRW 7.31% 31.11% 16,444,990원 69,304,320원 1.08%" [ref=e227] [cursor=pointer]:
+                - cell "K_NASDAQ(ETF) KRW" [ref=e228]:
+                  - generic [ref=e229]:
+                    - text: K_NASDAQ(ETF)
+                    - generic [ref=e230]: KRW
+                - cell "7.31%" [ref=e231]
+                - cell "31.11%" [ref=e232]
+                - cell "16,444,990원" [ref=e233]
+                - cell "69,304,320원" [ref=e234]
+                - cell "1.08%" [ref=e235]
+              - row "K_S&P500(ETF) KRW 7.03% 22.82% 12,381,060원 66,627,135원 0.71%" [ref=e236] [cursor=pointer]:
+                - cell "K_S&P500(ETF) KRW" [ref=e237]:
+                  - generic [ref=e238]:
+                    - text: K_S&P500(ETF)
+                    - generic [ref=e239]: KRW
+                - cell "7.03%" [ref=e240]
+                - cell "22.82%" [ref=e241]
+                - cell "12,381,060원" [ref=e242]
+                - cell "66,627,135원" [ref=e243]
+                - cell "0.71%" [ref=e244]
+              - row "T_S&P500(ETF) KRW 6.31% 38.95% 16,763,512원 59,797,960원 0.64%" [ref=e245] [cursor=pointer]:
+                - cell "T_S&P500(ETF) KRW" [ref=e246]:
+                  - generic [ref=e247]:
+                    - text: T_S&P500(ETF)
+                    - generic [ref=e248]: KRW
+                - cell "6.31%" [ref=e249]
+                - cell "38.95%" [ref=e250]
+                - cell "16,763,512원" [ref=e251]
+                - cell "59,797,960원" [ref=e252]
+                - cell "0.64%" [ref=e253]
+              - row "PLUS50(ETF) KRW 5.34% 41.65% 14,863,520원 50,548,700원 2.68%" [ref=e254] [cursor=pointer]:
+                - cell "PLUS50(ETF) KRW" [ref=e255]:
+                  - generic [ref=e256]:
+                    - text: PLUS50(ETF)
+                    - generic [ref=e257]: KRW
+                - cell "5.34%" [ref=e258]
+                - cell "41.65%" [ref=e259]
+                - cell "14,863,520원" [ref=e260]
+                - cell "50,548,700원" [ref=e261]
+                - cell "2.68%" [ref=e262]
+              - row "T_NASDAQ(ETF) KRW 5.19% 69.77% 20,227,190원 49,218,050원 1.08%" [ref=e263] [cursor=pointer]:
+                - cell "T_NASDAQ(ETF) KRW" [ref=e264]:
+                  - generic [ref=e265]:
+                    - text: T_NASDAQ(ETF)
+                    - generic [ref=e266]: KRW
+                - cell "5.19%" [ref=e267]
+                - cell "69.77%" [ref=e268]
+                - cell "20,227,190원" [ref=e269]
+                - cell "49,218,050원" [ref=e270]
+                - cell "1.08%" [ref=e271]
+              - row "S_SCHD(ETF) KRW 4.97% 25.93% 9,697,662원 47,093,970원 0.04%" [ref=e272] [cursor=pointer]:
+                - cell "S_SCHD(ETF) KRW" [ref=e273]:
+                  - generic [ref=e274]:
+                    - text: S_SCHD(ETF)
+                    - generic [ref=e275]: KRW
+                - cell "4.97%" [ref=e276]
+                - cell "25.93%" [ref=e277]
+                - cell "9,697,662원" [ref=e278]
+                - cell "47,093,970원" [ref=e279]
+                - cell "0.04%" [ref=e280]
+              - row "K_AI테크(ETF) KRW 4.21% 22.99% 7,451,365원 39,869,600원 1.93%" [ref=e281] [cursor=pointer]:
+                - cell "K_AI테크(ETF) KRW" [ref=e282]:
+                  - generic [ref=e283]:
+                    - text: K_AI테크(ETF)
+                    - generic [ref=e284]: KRW
+                - cell "4.21%" [ref=e285]
+                - cell "22.99%" [ref=e286]
+                - cell "7,451,365원" [ref=e287]
+                - cell "39,869,600원" [ref=e288]
+                - cell "1.93%" [ref=e289]
+              - row "O USD 3.68% 16.18% 5,989,990원 34,839,086원 -0.80%" [ref=e290] [cursor=pointer]:
+                - cell "O USD" [ref=e291]:
+                  - generic [ref=e292]:
+                    - text: O
+                    - generic [ref=e293]: USD
+                - cell "3.68%" [ref=e294]
+                - cell "16.18%" [ref=e295]
+                - cell "5,989,990원" [ref=e296]
+                - cell "34,839,086원" [ref=e297]
+                - cell "-0.80%" [ref=e298]
+              - row "DGRO USD 3.20% 31.42% 10,207,801원 30,281,267원 0.13%" [ref=e299] [cursor=pointer]:
+                - cell "DGRO USD" [ref=e300]:
+                  - generic [ref=e301]:
+                    - text: DGRO
+                    - generic [ref=e302]: USD
+                - cell "3.20%" [ref=e303]
+                - cell "31.42%" [ref=e304]
+                - cell "10,207,801원" [ref=e305]
+                - cell "30,281,267원" [ref=e306]
+                - cell "0.13%" [ref=e307]
+              - row "GOOGLE USD 3.09% 15.73% 4,552,546원 29,298,373원 0.33%" [ref=e308] [cursor=pointer]:
+                - cell "GOOGLE USD" [ref=e309]:
+                  - generic [ref=e310]:
+                    - text: GOOGLE
+                    - generic [ref=e311]: USD
+                - cell "3.09%" [ref=e312]
+                - cell "15.73%" [ref=e313]
+                - cell "4,552,546원" [ref=e314]
+                - cell "29,298,373원" [ref=e315]
+                - cell "0.33%" [ref=e316]
+              - row "SCHD USD 2.87% 22.03% 1,294,938원 27,200,333원 0.25%" [ref=e317] [cursor=pointer]:
+                - cell "SCHD USD" [ref=e318]:
+                  - generic [ref=e319]:
+                    - text: SCHD
+                    - generic [ref=e320]: USD
+                - cell "2.87%" [ref=e321]
+                - cell "22.03%" [ref=e322]
+                - cell "1,294,938원" [ref=e323]
+                - cell "27,200,333원" [ref=e324]
+                - cell "0.25%" [ref=e325]
+              - row "AAPL USD 2.82% 43.99% 9,941,088원 26,754,875원 0.53%" [ref=e326] [cursor=pointer]:
+                - cell "AAPL USD" [ref=e327]:
+                  - generic [ref=e328]:
+                    - text: AAPL
+                    - generic [ref=e329]: USD
+                - cell "2.82%" [ref=e330]
+                - cell "43.99%" [ref=e331]
+                - cell "9,941,088원" [ref=e332]
+                - cell "26,754,875원" [ref=e333]
+                - cell "0.53%" [ref=e334]
+              - row "RKLB USD 2.58% 152.32% 15,163,076원 24,457,190원 -1.46%" [ref=e335] [cursor=pointer]:
+                - cell "RKLB USD" [ref=e336]:
+                  - generic [ref=e337]:
+                    - text: RKLB
+                    - generic [ref=e338]: USD
+                - cell "2.58%" [ref=e339]
+                - cell "152.32%" [ref=e340]
+                - cell "15,163,076원" [ref=e341]
+                - cell "24,457,190원" [ref=e342]
+                - cell "-1.46%" [ref=e343]
+              - row "AMD USD 2.46% 114.85% 12,772,419원 23,344,825원 4.55%" [ref=e344] [cursor=pointer]:
+                - cell "AMD USD" [ref=e345]:
+                  - generic [ref=e346]:
+                    - text: AMD
+                    - generic [ref=e347]: USD
+                - cell "2.46%" [ref=e348]
+                - cell "114.85%" [ref=e349]
+                - cell "12,772,419원" [ref=e350]
+                - cell "23,344,825원" [ref=e351]
+                - cell "4.55%" [ref=e352]
+              - row "VOO USD 2.42% 74.73% 12,205,535원 22,929,256원 0.57%" [ref=e353] [cursor=pointer]:
+                - cell "VOO USD" [ref=e354]:
+                  - generic [ref=e355]:
+                    - text: VOO
+                    - generic [ref=e356]: USD
+                - cell "2.42%" [ref=e357]
+                - cell "74.73%" [ref=e358]
+                - cell "12,205,535원" [ref=e359]
+                - cell "22,929,256원" [ref=e360]
+                - cell "0.57%" [ref=e361]
+              - row "JNJ USD 2.23% 39.89% 9,287,429원 21,146,076원 -0.21%" [ref=e362] [cursor=pointer]:
+                - cell "JNJ USD" [ref=e363]:
+                  - generic [ref=e364]:
+                    - text: JNJ
+                    - generic [ref=e365]: USD
+                - cell "2.23%" [ref=e366]
+                - cell "39.89%" [ref=e367]
+                - cell "9,287,429원" [ref=e368]
+                - cell "21,146,076원" [ref=e369]
+                - cell "-0.21%" [ref=e370]
+              - row "TSLA USD 2.10% 83.78% 10,058,147원 19,920,761원 0.40%" [ref=e371] [cursor=pointer]:
+                - cell "TSLA USD" [ref=e372]:
+                  - generic [ref=e373]:
+                    - text: TSLA
+                    - generic [ref=e374]: USD
+                - cell "2.10%" [ref=e375]
+                - cell "83.78%" [ref=e376]
+                - cell "10,058,147원" [ref=e377]
+                - cell "19,920,761원" [ref=e378]
+                - cell "0.40%" [ref=e379]
+              - row "MO USD 2.02% 48.23% 9,112,806원 19,133,258원 -0.19%" [ref=e380] [cursor=pointer]:
+                - cell "MO USD" [ref=e381]:
+                  - generic [ref=e382]:
+                    - text: MO
+                    - generic [ref=e383]: USD
+                - cell "2.02%" [ref=e384]
+                - cell "48.23%" [ref=e385]
+                - cell "9,112,806원" [ref=e386]
+                - cell "19,133,258원" [ref=e387]
+                - cell "-0.19%" [ref=e388]
+              - row "ABBV USD 1.80% 67.01% 8,718,239원 17,075,650원 1.50%" [ref=e389] [cursor=pointer]:
+                - cell "ABBV USD" [ref=e390]:
+                  - generic [ref=e391]:
+                    - text: ABBV
+                    - generic [ref=e392]: USD
+                - cell "1.80%" [ref=e393]
+                - cell "67.01%" [ref=e394]
+                - cell "8,718,239원" [ref=e395]
+                - cell "17,075,650원" [ref=e396]
+                - cell "1.50%" [ref=e397]
+              - row "NVIDIA USD 1.63% 10.18% 1,753,333원 15,446,362원 0.78%" [ref=e398] [cursor=pointer]:
+                - cell "NVIDIA USD" [ref=e399]:
+                  - generic [ref=e400]:
+                    - text: NVIDIA
+                    - generic [ref=e401]: USD
+                - cell "1.63%" [ref=e402]
+                - cell "10.18%" [ref=e403]
+                - cell "1,753,333원" [ref=e404]
+                - cell "15,446,362원" [ref=e405]
+                - cell "0.78%" [ref=e406]
+              - row "NEE USD 1.19% 17.01% 3,304,833원 11,270,107원 -0.46%" [ref=e407] [cursor=pointer]:
+                - cell "NEE USD" [ref=e408]:
+                  - generic [ref=e409]:
+                    - text: NEE
+                    - generic [ref=e410]: USD
+                - cell "1.19%" [ref=e411]
+                - cell "17.01%" [ref=e412]
+                - cell "3,304,833원" [ref=e413]
+                - cell "11,270,107원" [ref=e414]
+                - cell "-0.46%" [ref=e415]
+              - row "T-우주테크(ETF) KRW 0.96% 28.93% 2,049,850원 9,135,780원 -0.17%" [ref=e416] [cursor=pointer]:
+                - cell "T-우주테크(ETF) KRW" [ref=e417]:
+                  - generic [ref=e418]:
+                    - text: T-우주테크(ETF)
+                    - generic [ref=e419]: KRW
+                - cell "0.96%" [ref=e420]
+                - cell "28.93%" [ref=e421]
+                - cell "2,049,850원" [ref=e422]
+                - cell "9,135,780원" [ref=e423]
+                - cell "-0.17%" [ref=e424]
+              - row "현대차2우B KRW 0.03% 69.25% 108,422원 265,000원 0.57%" [ref=e425] [cursor=pointer]:
+                - cell "현대차2우B KRW" [ref=e426]:
+                  - generic [ref=e427]:
+                    - text: 현대차2우B
+                    - generic [ref=e428]: KRW
+                - cell "0.03%" [ref=e429]
+                - cell "69.25%" [ref=e430]
+                - cell "108,422원" [ref=e431]
+                - cell "265,000원" [ref=e432]
+                - cell "0.57%" [ref=e433]
+              - row "하나금융지주 KRW 0.01% 89.61% 54,209원 114,700원 -0.52%" [ref=e434] [cursor=pointer]:
+                - cell "하나금융지주 KRW" [ref=e435]:
+                  - generic [ref=e436]:
+                    - text: 하나금융지주
+                    - generic [ref=e437]: KRW
+                - cell "0.01%" [ref=e438]
+                - cell "89.61%" [ref=e439]
+                - cell "54,209원" [ref=e440]
+                - cell "114,700원" [ref=e441]
+                - cell "-0.52%" [ref=e442]
+      - complementary [ref=e443]:
+        - generic [ref=e444]:
+          - generic [ref=e445]:
+            - heading "🎧 AI 브리핑 팟캐스트" [level=2] [ref=e446]:
+              - generic [ref=e447]: 🎧 AI 브리핑 팟캐스트
+            - button "팟캐스트 새로고침" [ref=e448] [cursor=pointer]: 🔄
+          - generic [ref=e449]:
+            - generic [ref=e461]:
+              - generic [ref=e462]: 재생 대기 중
+              - generic [ref=e463]: 00:00 / 00:00
+            - button "팟캐스트 재생/일시정지" [ref=e465] [cursor=pointer]:
+              - generic [ref=e466]: ▶
+              - generic [ref=e467]: 재생
+            - generic [ref=e469]: "\"재생 버튼을 누르면 오늘의 보유 자산 및 최신 시장 전망 브리핑 팟캐스트가 시작됩니다.\""
+        - generic [ref=e470]:
+          - heading "✍️ 매매 기록" [level=2] [ref=e471]
+          - generic [ref=e472]:
+            - generic [ref=e473]:
+              - generic [ref=e474]: 💳 계좌
+              - combobox [ref=e475]:
+                - option "선택하세요" [selected]
+                - option "AJM"
+                - option "AJMjr"
+                - option "JJG-w-AJM"
+                - option "JJG-w-KKO"
+                - option "JJG-w-AJMjr"
+                - option "JJG-w-AJM-ISA"
+                - option "JJG-w-KKO-ISA"
+            - generic [ref=e476]:
+              - generic [ref=e477]: 🏷️ 종류
+              - combobox [ref=e478]:
+                - option "매수 🟢" [selected]
+                - option "매도 🔴"
+                - option "배당금 💰"
+                - option "현금입금 📥"
+                - option "현금출금 📤"
+            - generic [ref=e479]:
+              - generic [ref=e480]: 💱 통화
+              - combobox [ref=e481]:
+                - option "KRW 🇰🇷" [selected]
+                - option "USD 🇺🇸"
+            - generic [ref=e482]:
+              - generic [ref=e483]: 📅 날짜
+              - textbox [ref=e484]: 2026-05-29
+            - generic [ref=e485]:
+              - generic [ref=e486]: 🔍 종목 검색 / 입력
+              - combobox "종목명 또는 티커 입력" [ref=e487]
+            - generic [ref=e488]:
+              - generic [ref=e489]: 💵 단가
+              - spinbutton [ref=e490]
+            - generic [ref=e491]:
+              - generic [ref=e492]: 🔢 수량/금액
+              - spinbutton [ref=e493]
+            - button "💾 거래 기록 저장" [ref=e494] [cursor=pointer]

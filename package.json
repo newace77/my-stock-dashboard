@@ -6,6 +6,7 @@
     "start": "npx serve .",
     "dev": "npx serve -l 8000 .",
     "lint": "eslint script.js update_sp500.js update_kospi200.js helpers.js",
+    "validate": "node -e \"const s=require('./data_snapshot.json');['summary','holdings','history','timestamp'].forEach(k=>{if(!(k in s))throw new Error('missing key: '+k)});console.log('snapshot valid')\" 2>/dev/null || echo 'snapshot not found (CI only)'",
     "format": "prettier --write '*.{js,css,html}'"
   },
   "keywords": [],

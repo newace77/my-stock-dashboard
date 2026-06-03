@@ -30,7 +30,6 @@ module.exports = [
         Buffer: "readonly",
         ChartDataLabels: "readonly",
         google: "readonly",
-        alert: "readonly",
       },
     },
     rules: {
@@ -41,7 +40,7 @@ module.exports = [
           vars: "all",
           args: "none",
           varsIgnorePattern:
-            "^(openTab|changeDividendMonth|sortHoldingsAnalysis|cycleViewMode|sortSP500|sortKOSPI200|refreshHoldingsAnalysis|refreshSP500|refreshKOSPI200|analyzeMDD|closeStockModal|updateModalChartRange|updateHistoryRange|filterBubbleChart|moveSlider|switchHoldingsView|toggleHeatmapSort|moveSummarySlider|goSummarySlide|setThemeMode|togglePodcast|refreshPodcast|loginGoogle|logoutGoogle|openSettingsModal|closeSettingsModal|openMarketModal|closeMarketModal|updateMarketModalChartRange)$",
+            "^(openTab|changeDividendMonth|sortHoldingsAnalysis|cycleViewMode|sortSP500|sortKOSPI200|refreshHoldingsAnalysis|refreshSP500|refreshKOSPI200|analyzeMDD|closeStockModal|updateModalChartRange|updateHistoryRange|filterBubbleChart|moveSlider|toggleHeatmapSort|moveSummarySlider|goSummarySlide|setThemeMode|togglePodcast|refreshPodcast|loginGoogle|logoutGoogle|openSettingsModal|closeSettingsModal|openMarketModal|closeMarketModal|updateMarketModalChartRange)$",
         },
       ],
       "no-redeclare": "warn",

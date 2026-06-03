@@ -1,0 +1,8 @@
+// .opencode/oh-my-openagent.jsonc
+{
+  "team_mode": {
+    "enabled": true,
+    "max_parallel_members": 4,
+    "tmux_visualization": true
+  }
+}
