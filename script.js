@@ -4077,6 +4077,7 @@ function setThemeMode(mode) {
 function refreshAllCharts() {
   if (rawHistoryData && rawHistoryData.length > 0) {
     renderHistoryChartWithRange();
+    renderHeatmap();
   }
   if (lastSummaryLabels && lastSummaryLabels.length > 0) {
     renderSummaryChart(lastSummaryLabels, lastSummaryInvests, lastSummaryEvals);
@@ -4583,6 +4584,8 @@ function renderHeatmap() {
 
   let winDays = 0;
   let totalDays = 0;
+  const changeAmounts = [];
+  let prevD = null;
 
   data.forEach((row, idx) => {
     let dateStr = row[0];
@@ -4598,13 +4601,33 @@ function renderHeatmap() {
     totalDays++;
     if (!minDate || d < minDate) minDate = d;
 
-    // 전날 대비 변동률 계산
+    // 전날 대비 변동률 및 등락액 계산
     let changePercent = 0;
+    let changeAmount = 0;
     if (idx > 0) {
-      const currentEval = parseSafeFloat(row[1]);
-      const prevEval = parseSafeFloat(data[idx - 1][1]);
+      const currentEval = parseSafeFloat(row[HISTORY_COL.EVAL_TOTAL]);
+      const prevEval = parseSafeFloat(data[idx - 1][HISTORY_COL.EVAL_TOTAL]);
       if (prevEval > 0) {
         changePercent = (currentEval / prevEval - 1) * 100;
+        changeAmount = currentEval - prevEval;
+        
+        // 날짜가 하루 차이로 연속하는지 확인
+        if (prevD) {
+          const nextDayOfPrev = new Date(prevD.getFullYear(), prevD.getMonth(), prevD.getDate() + 1);
+          const isConsecutive = 
+            nextDayOfPrev.getFullYear() === d.getFullYear() &&
+            nextDayOfPrev.getMonth() === d.getMonth() &&
+            nextDayOfPrev.getDate() === d.getDate();
+          
+          // 매도로 인해 총 투자액(투자원금)이 줄어들었는지 확인
+          const currentInvest = parseSafeFloat(row[HISTORY_COL.INVEST_TOTAL]);
+          const prevInvest = parseSafeFloat(data[idx - 1][HISTORY_COL.INVEST_TOTAL]);
+          const isSold = (currentInvest - prevInvest) < 0;
+          
+          if (isConsecutive && !isSold) {
+            changeAmounts.push(changeAmount);
+          }
+        }
       }
     }
 
@@ -4615,9 +4638,12 @@ function renderHeatmap() {
     const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     historyMap.set(dateKey, {
       percent: changePercent,
-      eval: parseSafeFloat(row[1]),
-      invest: parseSafeFloat(row[2]),
+      amount: changeAmount,
+      eval: parseSafeFloat(row[HISTORY_COL.EVAL_TOTAL]),
+      invest: parseSafeFloat(row[HISTORY_COL.INVEST_TOTAL]),
     });
+
+    prevD = d;
   });
 
   // 통계 업데이트
@@ -4692,7 +4718,8 @@ function renderHeatmap() {
                 colorClass = "hm-missing";
               }
 
-              const tooltip = `${dateKey}: ${p.toFixed(2)}% (${entry.eval.toLocaleString()}원)`;
+              const amountStr = entry.amount >= 0 ? `+${entry.amount.toLocaleString()}` : entry.amount.toLocaleString();
+              const tooltip = `${dateKey}: ${p > 0 ? '+' : ''}${p.toFixed(2)}% (등락: ${amountStr}원 / 평가: ${entry.eval.toLocaleString()}원)`;
               html += `<td class="hm-cell ${colorClass}" title="${tooltip}"></td>`;
             } else {
               html += '<td class="hm-cell hm-missing"></td>';
@@ -4742,7 +4769,8 @@ function renderHeatmap() {
                 colorClass = "hm-missing";
               }
 
-              const tooltip = `${dateKey}: ${p.toFixed(2)}% (${entry.eval.toLocaleString()}원)`;
+              const amountStr = entry.amount >= 0 ? `+${entry.amount.toLocaleString()}` : entry.amount.toLocaleString();
+              const tooltip = `${dateKey}: ${p > 0 ? '+' : ''}${p.toFixed(2)}% (등락: ${amountStr}원 / 평가: ${entry.eval.toLocaleString()}원)`;
               html += `<td class="hm-cell ${colorClass}" title="${tooltip}"></td>`;
             } else {
               html += '<td class="hm-cell hm-missing"></td>';
@@ -4756,6 +4784,231 @@ function renderHeatmap() {
 
   html += "</tbody></table>";
   container.innerHTML = html;
+
+  // 히스토그램 차트 렌더링 호출
+  renderHeatmapHistogram(changeAmounts);
+}
+
+let heatmapHistogramChart = null;
+
+function renderHeatmapHistogram(changeAmounts) {
+  const canvas = document.getElementById("heatmap-histogram-chart");
+  if (!canvas) return;
+
+  const ctx = canvas.getContext("2d");
+
+  // 기존 차트 파괴
+  if (heatmapHistogramChart) {
+    heatmapHistogramChart.destroy();
+    heatmapHistogramChart = null;
+  }
+
+  if (!changeAmounts || changeAmounts.length === 0) {
+    return;
+  }
+
+  // 1. 데이터 분류
+  const negAmounts = changeAmounts.filter((x) => x < 0);
+  const posAmounts = changeAmounts.filter((x) => x >= 0);
+
+  const minNeg = negAmounts.length > 0 ? Math.min(...negAmounts) : 0;
+  const maxPos = posAmounts.length > 0 ? Math.max(...posAmounts) : 0;
+
+  const bins = [];
+  const binCountEach = 6; // 음수 6개, 양수 6개로 세분화
+
+  // 음수 구간 추가 (minNeg부터 0까지)
+  if (minNeg < 0) {
+    const stepNeg = Math.abs(minNeg) / binCountEach;
+    for (let i = 0; i < binCountEach; i++) {
+      bins.push({
+        start: minNeg + i * stepNeg,
+        end: minNeg + (i + 1) * stepNeg,
+        count: 0,
+        type: "negative",
+      });
+    }
+  }
+
+  // 양수 구간 추가 (0부터 maxPos까지)
+  if (maxPos > 0) {
+    const stepPos = maxPos / binCountEach;
+    for (let i = 0; i < binCountEach; i++) {
+      bins.push({
+        start: i * stepPos,
+        end: (i + 1) * stepPos,
+        count: 0,
+        type: "positive",
+      });
+    }
+  }
+
+  if (bins.length === 0) {
+    bins.push({
+      start: 0,
+      end: 0,
+      count: changeAmounts.length,
+      type: "positive",
+    });
+  }
+
+  // 각 데이터를 해당하는 구간에 매핑
+  changeAmounts.forEach((amt) => {
+    let placed = false;
+    for (let i = 0; i < bins.length; i++) {
+      const bin = bins[i];
+
+      if (bin.type === "negative") {
+        if (amt >= bin.start && amt < bin.end) {
+          bin.count++;
+          placed = true;
+          break;
+        }
+      } else {
+        const isLastPos = i === bins.length - 1;
+        if (isLastPos) {
+          if (amt >= bin.start && amt <= bin.end) {
+            bin.count++;
+            placed = true;
+            break;
+          }
+        } else {
+          if (amt >= bin.start && amt < bin.end) {
+            bin.count++;
+            placed = true;
+            break;
+          }
+        }
+      }
+    }
+    if (!placed) {
+      if (amt < 0 && bins.length > 0) {
+        const negBins = bins.filter((b) => b.type === "negative");
+        if (negBins.length > 0) {
+          negBins[negBins.length - 1].count++;
+        }
+      } else if (amt >= 0 && bins.length > 0) {
+        const posBins = bins.filter((b) => b.type === "positive");
+        if (posBins.length > 0) {
+          posBins[0].count++;
+        }
+      }
+    }
+  });
+
+  // 금액 포맷팅 함수
+  function formatAmountShort(val) {
+    if (val === 0) return "0";
+    const absVal = Math.abs(val);
+    let result = "";
+    if (absVal >= 100000000) {
+      result = (val / 100000000).toFixed(1) + "억";
+    } else if (absVal >= 10000) {
+      result = (val / 10000).toFixed(0) + "만";
+    } else {
+      result = val.toLocaleString() + "원";
+    }
+    if (val > 0) return "+" + result;
+    return result;
+  }
+
+  const labels = bins.map((bin) => {
+    return `${formatAmountShort(bin.start)} ~ ${formatAmountShort(bin.end)}`;
+  });
+
+  const dataValues = bins.map((bin) => bin.count);
+  const textColor = getThemeColor("rgba(15, 23, 42, 0.8)", "rgba(248, 250, 252, 0.8)");
+  const gridColor = getThemeColor("rgba(0, 0, 0, 0.05)", "rgba(255, 255, 255, 0.05)");
+
+  const bgColors = bins.map((bin) => {
+    return bin.type === "negative"
+      ? "rgba(59, 130, 246, 0.7)"
+      : "rgba(239, 68, 68, 0.7)";
+  });
+
+  const borderColors = bins.map((bin) => {
+    return bin.type === "negative"
+      ? "rgb(59, 130, 246)"
+      : "rgb(239, 68, 68)";
+  });
+
+  heatmapHistogramChart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: "빈도 (일수)",
+          data: dataValues,
+          backgroundColor: bgColors,
+          borderColor: borderColors,
+          borderWidth: 1.5,
+          borderRadius: 4,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: {
+          grid: {
+            display: false,
+          },
+          ticks: {
+            color: textColor,
+            font: {
+              size: 10,
+              family: "Inter, system-ui, sans-serif",
+            },
+          },
+        },
+        y: {
+          grid: {
+            color: gridColor,
+          },
+          ticks: {
+            color: textColor,
+            font: {
+              size: 10,
+              family: "Inter, system-ui, sans-serif",
+            },
+            precision: 0,
+          },
+          title: {
+            display: true,
+            text: "일 수 (Days)",
+            color: textColor,
+            font: {
+              size: 11,
+              weight: "600",
+            },
+          },
+        },
+      },
+      plugins: {
+        legend: {
+          display: false,
+        },
+        tooltip: {
+          backgroundColor: "rgba(15, 23, 42, 0.9)",
+          titleColor: "#fff",
+          bodyColor: "#fff",
+          padding: 10,
+          cornerRadius: 6,
+          displayColors: false,
+          callbacks: {
+            title: function (context) {
+              return `구간: ${context[0].label}`;
+            },
+            label: function (context) {
+              return `해당 일수: ${context.raw}일`;
+            },
+          },
+        },
+      },
+    },
+  });
 }
 
 // =========================================================================
