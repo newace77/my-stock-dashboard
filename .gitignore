@@ -20,6 +20,17 @@ backup_*/
 
 # Local tool files & scratch folders
 .antigravitycli/
+.opencode/
+.omc/
+.playwright-mcp/
 scratch/
 o_div.json
 record/
+
+# Temp / review files
+temp_*.js
+temp_*.md
+temp_*.txt
+A.md
+CODE_REVIEW_REPORT.md
+read_skills.py
