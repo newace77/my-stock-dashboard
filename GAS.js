@@ -36,6 +36,49 @@ const ALLOWED_PROXY_DOMAINS = [
 const API_KEY =
   PropertiesService.getScriptProperties().getProperty("API_KEY") || "";
 
+// ===== 한국투자증권 API 설정 =====
+const KIS_API_URL = "https://openapi.koreainvestment.com:9443";
+const KIS_APP_KEY = PropertiesService.getScriptProperties().getProperty("KIS_APP_KEY") || "";
+const KIS_APP_SECRET = PropertiesService.getScriptProperties().getProperty("KIS_APP_SECRET") || "";
+
+/**
+ * 한국투자증권 API 토큰 발급 및 캐싱
+ */
+function getKisAccessToken() {
+  const cache = CacheService.getScriptCache();
+  let token = cache.get("KIS_TOKEN");
+  if (token) return token;
+
+  const url = KIS_API_URL + "/oauth2/tokenP";
+  const payload = {
+    "grant_type": "client_credentials",
+    "appkey": KIS_APP_KEY,
+    "appsecret": KIS_APP_SECRET
+  };
+  
+  const options = {
+    method: "post",
+    contentType: "application/json",
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+  
+  try {
+    const response = UrlFetchApp.fetch(url, options);
+    const json = JSON.parse(response.getContentText());
+    if (json.access_token) {
+      // 만료시간(초)에서 10분 여유두고 캐싱
+      const expiresIn = parseInt(json.expires_in) || 86400;
+      cache.put("KIS_TOKEN", json.access_token, Math.max(0, expiresIn - 600)); 
+      return json.access_token;
+    } else {
+      throw new Error("토큰 발급 실패: " + response.getContentText());
+    }
+  } catch(e) {
+    throw new Error("KIS API 토큰 요청 중 오류: " + e.toString());
+  }
+}
+
 // ===== SpreadsheetApp 캐시 (동일 실행 내 중복 호출 방지) =====
 const _ssCache = {};
 
@@ -151,6 +194,29 @@ function doPost(e) {
       return ContentService.createTextOutput(
         UrlFetchApp.fetch(data.url).getContentText(),
       );
+    }
+
+    if (data.command === "proxy_kis" && data.endpoint) {
+      try {
+        const token = getKisAccessToken();
+        const headers = {
+          "content-type": "application/json",
+          "authorization": "Bearer " + token,
+          "appkey": KIS_APP_KEY,
+          "appsecret": KIS_APP_SECRET,
+          "tr_id": data.tr_id,
+          "custtype": "P"
+        };
+        const options = {
+          method: "get",
+          headers: headers,
+          muteHttpExceptions: true
+        };
+        const response = UrlFetchApp.fetch(KIS_API_URL + data.endpoint, options);
+        return ContentService.createTextOutput(response.getContentText()).setMimeType(ContentService.MimeType.JSON);
+      } catch (e) {
+        return createErrorResponse(e.toString());
+      }
     }
 
     if (data.command === "refresh_market") {

@@ -161,6 +161,15 @@
         >
           🔥 Heatmap
         </button>
+        <button
+          class="tab-btn"
+          role="tab"
+          aria-selected="false"
+          aria-controls="stock-info-tab"
+          onclick="openTab(event, 'stock-info-tab')"
+        >
+          🔍 종목 정보
+        </button>
       </nav>
 
       <!-- 1. 포트폴리오 탭 -->
@@ -1508,6 +1517,33 @@
             <div style="position: relative; height: 320px; width: 100%;">
               <canvas id="heatmap-histogram-chart"></canvas>
             </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- 8. 종목 정보 탭 -->
+      <div
+        id="stock-info-tab"
+        class="tab-content"
+        role="tabpanel"
+        aria-labelledby="tab-stock-info"
+      >
+        <section class="card">
+          <h2>🔍 종목 정보 검색 (KIS)</h2>
+          <div class="search-container" style="display: flex; gap: 10px; margin-bottom: 20px;">
+            <input type="text" id="ticker-input" placeholder="티커 입력 (예: 005930, AAPL)" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main);" onkeypress="if(event.key === 'Enter') searchTicker()">
+            <button class="submit-btn" onclick="searchTicker()" style="margin: 0; padding: 10px 20px;">검색</button>
+          </div>
+          
+          <div id="stock-info-result" class="stock-info-result u-hidden">
+             <div id="stock-basic-info" style="margin-bottom: 20px;"></div>
+             
+             <div style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 20px;">
+                 <h3>📈 일별 시세 차트</h3>
+                 <div style="position: relative; height: 350px; width: 100%;">
+                     <canvas id="stockInfoChart"></canvas>
+                 </div>
+             </div>
           </div>
         </section>
       </div>

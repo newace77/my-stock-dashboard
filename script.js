@@ -5662,9 +5662,202 @@ function initSmartMatching() {
 
   if (dateInput) {
     dateInput.addEventListener("change", (e) => {
+  if (dateInput) {
+    dateInput.addEventListener("change", (e) => {
       if (currencySelect && currencySelect.value === "USD") {
         updateRateForDate(e.target.value);
       }
     });
   }
+}
+
+// ==========================================
+// 8. 종목 정보 탭 (KIS API 연동)
+// ==========================================
+let currentStockInfoChart = null;
+
+async function searchTicker() {
+  const inputEl = document.getElementById('ticker-input');
+  if (!inputEl) return;
+  const ticker = inputEl.value.trim().toUpperCase();
+  if (!ticker) return;
+
+  const resultContainer = document.getElementById('stock-info-result');
+  const basicInfoContainer = document.getElementById('stock-basic-info');
+  
+  if (resultContainer.classList.contains('u-hidden')) {
+    resultContainer.classList.remove('u-hidden');
+  }
+  
+  basicInfoContainer.innerHTML = '데이터를 불러오는 중입니다...';
+  if (currentStockInfoChart) {
+    currentStockInfoChart.destroy();
+    currentStockInfoChart = null;
+  }
+
+  // 국내 주식 판별 (숫자 6자리)
+  const isDomestic = /^[0-9]{6}$/.test(ticker);
+
+  try {
+    let quoteEndpoint, chartEndpoint;
+    let quoteTrId, chartTrId;
+
+    if (isDomestic) {
+      quoteTrId = "FHKST01010100"; // 주식현재가 시세
+      quoteEndpoint = `/uapi/domestic-stock/v1/quotations/inquire-price?FID_COND_MRKT_DIV_CODE=J&FID_INPUT_ISCD=${ticker}`;
+      
+      chartTrId = "FHKST03010100"; // 주식현재가 일자별
+      chartEndpoint = `/uapi/domestic-stock/v1/quotations/inquire-daily-price?FID_COND_MRKT_DIV_CODE=J&FID_INPUT_ISCD=${ticker}&FID_PERIOD_DIV_CODE=D&FID_ORG_ADJ_PRC=1`;
+    } else {
+      quoteTrId = "JHNFC10T0200"; // 해외주식 현재체결가
+      quoteEndpoint = `/uapi/overseas-price/v1/quotations/price?AUTH=&EXCD=NAS&SYMB=${ticker}`;
+      
+      chartTrId = "FHKST03030100"; // 해외주식 기간별주가
+      chartEndpoint = `/uapi/overseas-price/v1/quotations/dailyprice?AUTH=&EXCD=NAS&SYMB=${ticker}&GUBN=0&BYMD=&MODP=1`;
+    }
+
+    const [quoteData, chartData] = await Promise.all([
+      fetchKisProxy(quoteEndpoint, quoteTrId),
+      fetchKisProxy(chartEndpoint, chartTrId)
+    ]);
+
+    renderStockBasicInfo(quoteData, ticker, isDomestic);
+    renderStockChart(chartData, isDomestic);
+
+  } catch (err) {
+    console.error("KIS 검색 오류:", err);
+    basicInfoContainer.innerHTML = `<span style="color:var(--down-color);">오류 발생: ${err.message}</span>`;
+  }
+}
+
+async function fetchKisProxy(endpoint, tr_id) {
+  const payload = {
+    command: 'proxy_kis',
+    endpoint: endpoint,
+    tr_id: tr_id
+  };
+
+  const response = await fetch(CONFIG.gasURL, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+  
+  const data = await response.json();
+  if (data.status === "error") {
+      throw new Error(data.message);
+  }
+  // KIS API 에러 메시지 처리
+  if (data.rt_cd !== "0") {
+      throw new Error(data.msg1 || "조회 실패");
+  }
+  return data;
+}
+
+function renderStockBasicInfo(data, ticker, isDomestic) {
+  const container = document.getElementById('stock-basic-info');
+  if (!data || !data.output) {
+      container.innerHTML = "데이터를 불러올 수 없습니다. 티커를 확인해주세요.";
+      return;
+  }
+  
+  let price, change, changeRate, vol, name;
+  const output = data.output;
+  
+  if (isDomestic) {
+      price = parseFloat(output.stck_prpr || 0);
+      change = parseFloat(output.prdy_vrss || 0);
+      changeRate = parseFloat(output.prdy_ctrt || 0);
+      vol = parseFloat(output.acml_vol || 0);
+      name = ticker; // KIS 국내 시세에는 종목명이 미포함됨
+  } else {
+      price = parseFloat(output.last || 0);
+      const sign = output.sign; // 1,2:상승, 3:보합, 4,5:하락
+      const baseDiff = parseFloat(output.diff || 0);
+      change = (sign === "4" || sign === "5") ? -baseDiff : baseDiff;
+      changeRate = parseFloat(output.rate || 0);
+      vol = parseFloat(output.tvol || 0);
+      name = ticker;
+  }
+  
+  const isUp = change > 0;
+  const isDown = change < 0;
+  let colorClass = "";
+  if (isUp) colorClass = "value-up";
+  else if (isDown) colorClass = "value-down";
+  
+  const signStr = isUp ? "+" : "";
+  const currency = isDomestic ? "₩" : "$";
+  
+  container.innerHTML = `
+    <div style="background: var(--bg-secondary); padding: 20px; border-radius: 12px;">
+      <h3 style="margin-top:0;">${name}</h3>
+      <div style="font-size: 28px; font-weight: bold; margin-bottom: 10px;">
+         ${currency}${price.toLocaleString()} 
+         <span class="${colorClass}" style="font-size: 16px; margin-left: 10px;">
+           ${signStr}${change.toLocaleString()} (${signStr}${changeRate.toFixed(2)}%)
+         </span>
+      </div>
+      <div style="color: var(--text-muted); font-size: 14px;">
+         거래량: ${vol.toLocaleString()}
+      </div>
+    </div>
+  `;
+}
+
+function renderStockChart(data, isDomestic) {
+    if (!data || !data.output || !Array.isArray(data.output)) return;
+    
+    let labels = [];
+    let prices = [];
+    
+    const outputList = data.output.slice(0, 30).reverse(); // 최근 30일
+    
+    outputList.forEach(item => {
+        if (isDomestic) {
+            labels.push(item.stck_bsop_date);
+            prices.push(parseFloat(item.stck_clpr));
+        } else {
+            labels.push(item.xymd);
+            prices.push(parseFloat(item.clos));
+        }
+    });
+    
+    const ctx = document.getElementById('stockInfoChart');
+    if (!ctx) return;
+    
+    const isUp = prices[prices.length - 1] >= prices[0];
+    const color = isUp ? '#ef4444' : '#3b82f6'; // 한국식 (빨강 상승, 파랑 하락)
+    
+    currentStockInfoChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels.map(l => l ? l.substring(4,6) + '/' + l.substring(6,8) : ''),
+            datasets: [{
+                label: '종가',
+                data: prices,
+                borderColor: color,
+                backgroundColor: color + '20',
+                borderWidth: 2,
+                fill: true,
+                pointRadius: 0,
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                datalabels: { display: false }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: { grid: { color: 'rgba(255, 255, 255, 0.1)' } }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index',
+            }
+        }
+    });
 }
